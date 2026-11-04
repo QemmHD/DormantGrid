@@ -22,3 +22,4 @@ Newest last. Each entry: what, why, and what would change it.
 14. **Building grid.** Cells are 4 m and storeys 3 m (logical). Visual storey height is 3.25 m including the floor slab; foundations are 0.4 m.
 15. **Title.** Kept *DORMANT GRID*. Alternatives for the owner to consider: *Brownout*, *Restart City*, *Lights On*.
 16. **World seed is fixed (1337) for everyone for now.** This keeps co-op and saves simple. Per-save seeds are a later option, since the save already stores `world.seed`.
+17. **Bundle baseline raised to ~0.54 MB gzip** (from 0.46 MB). The chunk-mesher Web Worker bundles its own copy of the sim worldgen, three.js math and the mesher. That's an intentional trade of ~80 KB download for zero main-thread mesh hitches. Still 22× under the 12 MB budget.
