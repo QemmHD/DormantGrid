@@ -189,7 +189,7 @@ export class HavenCamp {
       f.scale.set(s, s * (1 + Math.sin(this.t * 9 + i) * 0.15), s);
       f.rotation.y += dt * 2;
     }
-    this.light.intensity = (4 + night * 22) * (0.85 + Math.sin(this.t * 11) * 0.08 + Math.sin(this.t * 4.7) * 0.07);
+    this.light.intensity = (3 + night * 13) * (0.85 + Math.sin(this.t * 11) * 0.08 + Math.sin(this.t * 4.7) * 0.07);
     const mat = (this.bulbs as unknown as THREE.InstancedMesh).material as THREE.MeshBasicMaterial;
     mat.color.setRGB(1, 0.82, 0.54).multiplyScalar(0.35 + night * 0.9);
   }

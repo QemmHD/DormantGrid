@@ -115,6 +115,10 @@ export class Atmosphere {
         uniform float uNight; uniform float uCloud; uniform float uTime;
         varying vec3 vDir;
         float hash(vec3 p){ p = fract(p*0.3183099+.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+        float h2(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
+        float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+          return mix(mix(h2(i),h2(i+vec2(1,0)),f.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),f.x), f.y); }
+        float fbm(vec2 p){ float a=0.5, s=0.0; for(int i=0;i<4;i++){ s+=a*n2(p); p=p*2.03+vec2(17.0,9.0); a*=0.5; } return s; }
         void main(){
           vec3 d = normalize(vDir);
           float h = d.y;
@@ -131,9 +135,18 @@ export class Atmosphere {
             float s = hash(sp);
             col += vec3(0.9,0.92,1.0) * step(0.9975, s) * uNight * (1.0-uCloud) * smoothstep(0.0,0.25,h) * (0.6+0.4*sin(uTime*2.0+s*50.0));
           }
-          // cheap cloud banding
-          float band = sin(d.x*7.0 + uTime*0.01) * sin(d.z*5.0 - uTime*0.013) * 0.5 + 0.5;
-          col = mix(col, mix(uHorizon, vec3(dot(uHorizon, vec3(0.33))), 0.5) * 0.95, uCloud * smoothstep(0.02, 0.4, h) * (0.55 + 0.45*band));
+          // drifting fbm clouds on a flattened dome; coverage follows the weather
+          if (h > 0.0) {
+            vec2 cuv = d.xz / (h + 0.18) * 1.6 + vec2(uTime * 0.004, uTime * 0.0025);
+            float f = fbm(cuv);
+            float cover = 0.62 - uCloud * 0.42;
+            float cl = smoothstep(cover, cover + 0.22, f) * smoothstep(0.0, 0.18, h);
+            float lit = pow(max(dot(d, uSunDir), 0.0), 4.0);
+            vec3 cbase = mix(uHorizon * 0.9, vec3(dot(uHorizon, vec3(0.33))), 0.4) * (0.75 + 0.35 * (1.0 - uNight));
+            vec3 ccol = cbase + uSunCol * lit * 0.35 * (1.0 - uNight) + vec3(0.06) * (f - cover);
+            col = mix(col, ccol, cl * (0.85 - uNight * 0.45));
+          }
+          col = mix(col, mix(uHorizon, vec3(dot(uHorizon, vec3(0.33))), 0.5) * 0.95, uCloud * 0.45 * smoothstep(0.02, 0.4, h));
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
         }`,

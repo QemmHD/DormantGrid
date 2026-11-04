@@ -6,6 +6,8 @@
   "dependencies": {
     "@dg/shared": "0.1.0",
     "@dg/sim": "0.1.0",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/chakra-petch": "^5.3.0",
     "fflate": "^0.8.3",
     "idb": "^8.0.4",
     "three": "^0.187.0"

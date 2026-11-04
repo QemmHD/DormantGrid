@@ -1,3 +1,9 @@
+import '@fontsource/chakra-petch/latin-600.css';
+import '@fontsource/chakra-petch/latin-700.css';
+import '@fontsource/barlow/latin-400.css';
+import '@fontsource/barlow/latin-500.css';
+import '@fontsource/barlow/latin-600.css';
+import './ui/theme.css';
 // Entry point: boot sequence, iOS Safari hardening, then hand off to Game.
 import { errors } from './core/errors';
 import { LOADING_TIPS } from './content/tips';
