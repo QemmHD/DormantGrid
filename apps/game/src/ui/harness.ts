@@ -82,6 +82,7 @@ export async function runHarness(): Promise<void> {
     },
     carryWeight: () => ({ kg: totalWeight(inv), max: 40 }),
     craftInfo: () => ({ stations: ['hands', 'workbench1', 'campfire'], blueprints: ['bp.crossbow'], rank: 1 }),
+    suggestedRecipe: () => null,
     craft: (id, n) => {
       const r = RECIPE_MAP.get(id);
       if (!r) return false;

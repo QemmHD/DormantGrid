@@ -170,6 +170,8 @@ async function start() {
     if (ui.openScreen === 'ledger' && game.save) game.save.world.flags['ledgerOpened'] = true;
   });
   (window as unknown as { __raids: unknown }).__raids = new Raids(game, enemies);
+  const { Opening } = await import('./game/opening');
+  (window as unknown as { __opening: unknown }).__opening = new Opening(game, enemies);
   trader.onLore = (title, header, body) => {
     const wrap = document.createElement('div');
     const hd = document.createElement('div');

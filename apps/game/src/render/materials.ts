@@ -17,6 +17,10 @@ export interface ChunkUniforms {
   uTint: { value: THREE.Color };
   /** facade pattern strength (0 disables the pattern branch entirely) */
   uPattern: { value: number };
+  /** occluder cutout: geometry on the lens→player line is dithered away (1 = on) */
+  uCut: { value: number };
+  uCamPos: { value: THREE.Vector3 };
+  uFocus: { value: THREE.Vector3 };
 }
 
 let shared: {
@@ -59,6 +63,9 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     uGrid: { value: 0 },
     uTint: { value: new THREE.Color(1, 1, 1) },
     uPattern: { value: 1 },
+    uCut: { value: 0 },
+    uCamPos: { value: new THREE.Vector3() },
+    uFocus: { value: new THREE.Vector3() },
   };
   const m = new THREE.MeshLambertMaterial({ vertexColors: true }) as THREE.MeshLambertMaterial & { userData: { u: ChunkUniforms } };
   m.userData.u = u;
@@ -67,6 +74,9 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     shader.uniforms.uGrid = u.uGrid;
     shader.uniforms.uTint = u.uTint;
     shader.uniforms.uPattern = u.uPattern;
+    shader.uniforms.uCut = u.uCut;
+    shader.uniforms.uCamPos = u.uCamPos;
+    shader.uniforms.uFocus = u.uFocus;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aEmit;\nvarying float vEmit;\nvarying vec3 vGritP;\nvarying vec3 vGritN;')
       .replace(
@@ -88,6 +98,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
         `#include <common>
         varying float vEmit; varying vec3 vGritP; varying vec3 vGritN;
         uniform float uWindow; uniform float uGrid; uniform vec3 uTint; uniform float uPattern;
+        uniform float uCut; uniform vec3 uCamPos; uniform vec3 uFocus;
         float dgHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float dgNoise(vec2 p) {
           vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -98,6 +109,19 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
         diffuseColor.rgb *= uTint;
+        // occluder cutout (review finding #5/#6): anything between the lens and the player,
+        // within ~0.9 m of that line, is dithered away so walls, cars and bushes never hide them
+        if (uCut > 0.5) {
+          vec3 seg = uFocus - uCamPos;
+          float L2 = dot(seg, seg);
+          float t = dot(vGritP - uCamPos, seg) / max(L2, 1e-4);
+          float along = t * sqrt(L2);
+          if (t > 0.0 && along < sqrt(L2) - 0.35) {
+            float r = length(vGritP - (uCamPos + seg * t));
+            float cut = 1.0 - smoothstep(0.55, 0.95, r);
+            if (cut > 0.0 && dgHash(floor(gl_FragCoord.xy)) < cut * 0.88) discard;
+          }
+        }
         // surface grit: world-space value noise on the dominant plane (stains, weathering, patchiness)
         {
           vec3 an = abs(vGritN);

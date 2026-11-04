@@ -112,6 +112,27 @@ export class WorldView {
     }
   }
 
+  /**
+   * Id of a building whose footprint contains (x, z) below its roofline (shrunk by `inset`),
+   * or -1. Used to keep the camera lens out of buildings the player is not inside.
+   */
+  buildingAt(x: number, y: number, z: number, inset = 0.15): number {
+    const cx = Math.floor(x / CELL_SIZE), cz = Math.floor(z / CELL_SIZE);
+    for (let dz = -1; dz <= 1; dz++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if (cx + dx < 0 || cz + dz < 0 || cx + dx >= CELLS || cz + dz >= CELLS) continue;
+        const cell = this.cells[cellKey(cx + dx, cz + dz)];
+        if (!cell) continue;
+        for (const bid of cell.buildings) {
+          const b = this.layout.buildings[bid];
+          const odd = b.rot & 1;
+          const hx = (odd ? b.d : b.w) / 2 - inset, hz = (odd ? b.w : b.d) / 2 - inset;
+          if (Math.abs(x - b.x) < hx && Math.abs(z - b.z) < hz && y < b.floors * 3.25 + 0.5) return bid;
+        }
+      }
+    return -1;
+  }
+
   /** Swap a prop kind's batch to its (possibly overridden) shape, keeping all instances. */
   applyPropShape(kind: PropKind): void {
     const b = this.batches.get(kind);

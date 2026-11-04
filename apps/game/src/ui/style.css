@@ -234,6 +234,7 @@ html:not(.touch) .actions, html:not(.touch) .stick { display: none; }
 .li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); min-height: 60px; cursor: pointer; }
 .li.sel { border-color: var(--accent); }
 .li.locked { opacity: 0.5; }
+.li.suggested { border-color: var(--accent, #39e6d0); box-shadow: inset 3px 0 0 var(--accent, #39e6d0); background: rgba(57,230,208,0.08); }
 .li .ic { width: 42px; height: 42px; flex: none; display: grid; place-items: center; }
 .li .main { flex: 1; min-width: 0; }
 .li .main b { display: block; font-size: calc(14px * var(--text-scale)); }

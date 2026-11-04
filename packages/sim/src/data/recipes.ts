@@ -22,7 +22,7 @@ r('comp.nails', 10, 'hands', 4, [['mat.scrap', 2]]);
 r('med.bandage', 1, 'hands', 2, [['mat.cloth', 2]]);
 r('med.splint', 1, 'hands', 3, [['mat.timber', 2], ['comp.rope', 1]]);
 r('tool.hammer', 1, 'hands', 4, [['mat.timber', 2], ['mat.scrap', 2]]);
-r('tool.crowbar', 1, 'hands', 5, [['mat.scrap', 6]]);
+r('tool.crowbar', 1, 'hands', 5, [['mat.scrap', 4], ['mat.timber', 1]]);
 r('wpn.pipe', 1, 'hands', 3, [['mat.scrap', 4], ['mat.cloth', 1]]);
 r('wpn.knife', 1, 'hands', 3, [['mat.scrap', 2], ['mat.plastic', 1]]);
 r('trap.snare', 1, 'hands', 3, [['comp.rope', 2], ['mat.timber', 1]]);

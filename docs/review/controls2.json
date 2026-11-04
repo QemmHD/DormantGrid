@@ -3,61 +3,61 @@
     {
       "district": "downtown",
       "building": 226,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "downtown",
       "building": 383,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "downtown",
       "building": 317,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "downtown",
       "building": 229,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "downtown",
       "building": 495,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "residential",
       "building": 167,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "residential",
       "building": 189,
-      "framesBehindWall": 5,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "residential",
       "building": 179,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "residential",
       "building": 180,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "residential",
       "building": 95,
-      "framesBehindWall": 4,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
@@ -75,13 +75,13 @@
     {
       "district": "market",
       "building": 417,
-      "framesBehindWall": 15,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "market",
       "building": 444,
-      "framesBehindWall": 15,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
@@ -93,19 +93,19 @@
     {
       "district": "industrial",
       "building": 762,
-      "framesBehindWall": 2,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "industrial",
       "building": 708,
-      "framesBehindWall": 6,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "industrial",
       "building": 615,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
@@ -117,25 +117,25 @@
     {
       "district": "industrial",
       "building": 758,
-      "framesBehindWall": 16,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "haven",
       "building": 134,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "haven",
       "building": 133,
-      "framesBehindWall": 4,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "haven",
       "building": 61,
-      "framesBehindWall": 5,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
@@ -147,7 +147,7 @@
     {
       "district": "haven",
       "building": 56,
-      "framesBehindWall": 5,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
@@ -159,36 +159,31 @@
     {
       "district": "hospital",
       "building": 1,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "hospital",
       "building": 47,
-      "framesBehindWall": 12,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "hospital",
       "building": 198,
-      "framesBehindWall": 5,
+      "framesBehindWall": 0,
       "of": 36
     },
     {
       "district": "hospital",
       "building": 211,
-      "framesBehindWall": 13,
+      "framesBehindWall": 0,
       "of": 36
     }
   ],
   "walkAlong": [
     {
       "district": "downtown",
-      "framesBehindWall": 1,
-      "of": 30
-    },
-    {
-      "district": "downtown",
       "framesBehindWall": 0,
       "of": 30
     },
@@ -199,7 +194,12 @@
     },
     {
       "district": "downtown",
-      "framesBehindWall": 6,
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "downtown",
+      "framesBehindWall": 0,
       "of": 30
     },
     {
@@ -249,7 +249,12 @@
     },
     {
       "district": "industrial",
-      "framesBehindWall": 7,
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "industrial",
+      "framesBehindWall": 0,
       "of": 30
     },
     {
@@ -258,13 +263,8 @@
       "of": 30
     },
     {
-      "district": "industrial",
-      "framesBehindWall": 1,
-      "of": 30
-    },
-    {
       "district": "haven",
-      "framesBehindWall": 1,
+      "framesBehindWall": 0,
       "of": 30
     },
     {
@@ -299,13 +299,13 @@
     },
     {
       "district": "hospital",
-      "framesBehindWall": 1,
+      "framesBehindWall": 0,
       "of": 30
     }
   ],
   "range": {
     "crate": {
-      "reached": 2
+      "reached": 3
     },
     "barrel": {
       "reached": 3
@@ -320,7 +320,7 @@
       "reached": 3
     },
     "tire": {
-      "reached": 2
+      "reached": 3
     },
     "cone": {
       "reached": 3
@@ -343,46 +343,23 @@
   },
   "ahead2m": {
     "tests": 60,
-    "correct": 43,
-    "wrong": 17,
+    "correct": 60,
+    "wrong": 0,
     "none": 0,
-    "winners": {
-      "prop:tire": 3,
-      "piece:Floor": 3,
-      "prop:bush": 1,
-      "prop:pallet": 2,
-      "prop:mailbox": 1,
-      "prop:crate": 2,
-      "prop:weeds": 1,
-      "piece:Door": 1,
-      "piece:Wall": 1,
-      "piece:Window": 1,
-      "prop:rubble": 1
-    },
-    "examples": [
-      "aimed at trashbag 2 m ahead → got prop:tire, 2.5 m away at 15° off-center",
-      "aimed at barrel 2 m ahead → got piece:Floor, 0.0 m away at 90° off-center",
-      "aimed at tire 2 m ahead → got prop:bush, 1.9 m away at 5° off-center",
-      "aimed at crate 2 m ahead → got prop:pallet, 2.9 m away at 48° off-center",
-      "aimed at barrel 2 m ahead → got prop:tire, 3.1 m away at 57° off-center",
-      "aimed at barrel 2 m ahead → got piece:Floor, 0.3 m away at 55° off-center",
-      "aimed at barrel 2 m ahead → got prop:tire, 2.7 m away at 82° off-center",
-      "aimed at trashbag 2 m ahead → got prop:mailbox, 1.5 m away at 17° off-center",
-      "aimed at crate 2 m ahead → got prop:crate, 1.1 m away at 63° off-center",
-      "aimed at trashbag 2 m ahead → got piece:Floor, 0.0 m away at 90° off-center"
-    ]
+    "winners": {},
+    "examples": []
   },
   "summary": {
     "wallSpin": {
       "probes": 30,
-      "probesWithCameraBehindWall": 24,
-      "framesBehindWall": 239,
+      "probesWithCameraBehindWall": 0,
+      "framesBehindWall": 0,
       "framesTotal": 1080
     },
     "walkAlong": {
       "probes": 24,
-      "probesWithCameraBehindWall": 6,
-      "framesBehindWall": 17,
+      "probesWithCameraBehindWall": 0,
+      "framesBehindWall": 0,
       "framesTotal": 720
     }
   }

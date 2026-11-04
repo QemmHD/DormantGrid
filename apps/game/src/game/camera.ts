@@ -12,6 +12,12 @@ export class ThirdPersonCamera {
   minDist = 2.4;
   maxDist = 8;
   private curDist = 5;
+  private curShoulder = 0.7;
+  private curLift = 0;
+  /** optional: true if a lens position is inside geometry the player is not in (building footprints) */
+  blocker: ((x: number, y: number, z: number) => boolean) | null = null;
+  /** distance from the lens to the focus point (after collision and crane) */
+  lensToFocus = 5;
   /** look targets; actual yaw/pitch ease toward them (≈30 ms) to remove touch jitter */
   private tYaw = Math.PI;
   private tPitch = -0.3;
@@ -57,6 +63,9 @@ export class ThirdPersonCamera {
   syncTargets(): void {
     this.tYaw = this.yaw;
     this.tPitch = this.pitch;
+    // also mark them applied, or update() would add the same direct change a second time
+    this.lastYaw = this.yaw;
+    this.lastPitch = this.pitch;
   }
 
   private lastYaw = Math.PI;
@@ -87,34 +96,63 @@ export class ThirdPersonCamera {
 
     const cp = Math.cos(this.pitch);
     const dir = this.tmp.set(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp);
-    // shoulder offset to the right of view
+    // shoulder offset to the right of view; shortened if a wall is on that side
     const rx = -Math.cos(this.yaw);
     const rz = Math.sin(this.yaw);
-    const fx = this.smoothFocus.x + rx * this.shoulder;
-    const fz = this.smoothFocus.z + rz * this.shoulder;
+    let shoulder = this.shoulder;
+    if (world) {
+      const sh = world.raycast(this.smoothFocus.x, this.smoothFocus.y, this.smoothFocus.z, this.smoothFocus.x + rx * (shoulder + 0.25), this.smoothFocus.y, this.smoothFocus.z + rz * (shoulder + 0.25), 'nocam');
+      if (sh < 1) shoulder = Math.max(0, (shoulder + 0.25) * sh - 0.25);
+    }
+    this.curShoulder += (shoulder - this.curShoulder) * (shoulder < this.curShoulder ? 1 - Math.exp(-dt * 30) : 1 - Math.exp(-dt * 4));
+    const fx = this.smoothFocus.x + rx * this.curShoulder;
+    const fz = this.smoothFocus.z + rz * this.curShoulder;
     // very subtle head-bob/sway while moving (scaled down further with reduce-shake)
     const bobK = this.bob * (this.reduceShake ? 0.3 : 1);
     const fy = this.smoothFocus.y + Math.sin(this.bobPhase * 2) * 0.03 * bobK;
     let want = this.distance + (sprinting ? 0.5 : 0);
+    let lift = 0;
     if (world) {
       // thick ray: center + 4 offsets approximates a sphere so the lens never pokes through walls
-      let hit = 1;
-      const ux = -rz * 0.22, uz = rx * 0.22;
-      const offs = [[0, 0, 0], [rx * 0.25, 0, rz * 0.25], [-rx * 0.25, 0, -rz * 0.25], [0, 0.25, 0], [ux * 0, -0.2, 0]];
-      for (const [ox, oy, oz] of offs) {
-        const tx = fx - dir.x * want + ox, ty = fy - dir.y * want + oy, tz = fz - dir.z * want + oz;
-        hit = Math.min(hit, world.raycast(fx + ox * 0.3, fy + oy * 0.3, fz + oz * 0.3, tx, ty, tz, 'nocam'));
+      const cast = (len: number, up: number): number => {
+        let hit = 1;
+        const offs = [[0, 0, 0], [rx * 0.25, 0, rz * 0.25], [-rx * 0.25, 0, -rz * 0.25], [0, 0.25, 0], [0, -0.2, 0]];
+        for (const [ox, oy, oz] of offs) {
+          const tx = fx - dir.x * len + ox, ty = fy - dir.y * len + oy + up, tz = fz - dir.z * len + oz;
+          hit = Math.min(hit, world.raycast(fx + ox * 0.3, fy + oy * 0.3, fz + oz * 0.3, tx, ty, tz, 'nocam'));
+        }
+        return hit;
+      };
+      const hit = cast(want, 0);
+      if (hit < 1) {
+        // pushed in: come as close as 0.55 m, and crane up over the shoulder as we do so the
+        // player stays in view instead of the lens ending up behind a wall (review finding #5)
+        want = Math.max(0.55, want * hit - 0.25);
+        lift = Math.max(0, 1.8 - want) * 0.5;
+        const h2 = cast(want, lift);
+        if (h2 < 1) lift *= h2;
       }
-      void uz;
-      if (hit < 1) want = Math.max(0.9, want * hit - 0.3);
+    }
+    // never park the lens inside a building the player is not in (doorways and window gaps let
+    // the collision rays through): step in until the lens is outside the footprint
+    if (this.blocker) {
+      for (let k = 0; k < 12 && want > 0.55; k++) {
+        const lx = fx - dir.x * want, ly = fy - dir.y * want + lift, lz = fz - dir.z * want;
+        if (!this.blocker(lx, ly, lz)) break;
+        want = Math.max(0.55, want - 0.4);
+        lift = Math.max(lift, (1.8 - want) * 0.5);
+      }
     }
     // pull in fast, ease out slow
     this.curDist += (want - this.curDist) * (want < this.curDist ? 1 - Math.exp(-dt * 30) : 1 - Math.exp(-dt * 4));
+    this.curLift += (lift - this.curLift) * (1 - Math.exp(-dt * 10));
     const d = this.curDist;
-    this.closeness = THREE.MathUtils.clamp(1 - (d - 0.9) / 1.1, 0, 1);
+    // closeness drives HUD fades; the player mesh is only hidden if the lens is inside the head
+    this.closeness = THREE.MathUtils.clamp(1 - (Math.hypot(d, this.curLift) - 0.5) / 1.4, 0, 1);
     const sway = Math.sin(this.bobPhase) * 0.02 * bobK;
-    this.cam.position.set(fx - dir.x * d + rx * sway, Math.max(0.3, fy - dir.y * d), fz - dir.z * d + rz * sway);
+    this.cam.position.set(fx - dir.x * d + rx * sway, Math.max(0.3, fy - dir.y * d + this.curLift), fz - dir.z * d + rz * sway);
     this.cam.lookAt(fx, fy, fz);
+    this.lensToFocus = Math.hypot(d, this.curLift);
 
     if (this.override) {
       this.override.t = Math.min(1, this.override.t + dt * 0.8);

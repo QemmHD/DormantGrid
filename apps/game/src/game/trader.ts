@@ -50,8 +50,17 @@ export class Trader {
     return this.game.player.pos.distanceTo(this.pos) < 2.6;
   }
 
+  /** prompt only when the trader is in front of the camera (never from behind) */
+  private inReach(): boolean {
+    const g = this.game, dx = this.pos.x - g.player.pos.x, dz = this.pos.z - g.player.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d >= 2.6) return false;
+    // never from behind (> 70° off the look direction)
+    return d < 0.6 || (dx * Math.sin(g.camera.yaw) + dz * Math.cos(g.camera.yaw)) / d >= 0.34;
+  }
+
   private prompt(): ProviderPrompt | null {
-    return this.near() ? { text: 'Odile', verb: 'Trade', kind: 'talk' as const, pos: this.pos.clone().setY(this.pos.y + 2.1), sub: 'Meridian Guild trader' } : null;
+    return this.inReach() ? { text: 'Odile', verb: 'Trade', kind: 'talk' as const, pos: this.pos.clone().setY(this.pos.y + 2.1), sub: 'Meridian Guild trader' } : null;
   }
 
   private handle(tapped: boolean): boolean {

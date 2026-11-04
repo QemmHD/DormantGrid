@@ -136,6 +136,8 @@ export interface GameAPI {
 
   // crafting
   craftInfo(): CraftInfo;
+  /** recipe id the tutorial wants next, pinned first in the craft list */
+  suggestedRecipe(): string | null;
   craft(recipeId: string, times: number): boolean;
 
   // building
