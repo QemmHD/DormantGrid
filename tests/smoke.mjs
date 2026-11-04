@@ -95,6 +95,23 @@ try {
     else fail(`inventory did not grow (${info.count} → ${after.count})`);
   }
 
+  // clock sanity: time must advance at the configured rate, never run away (regression: town catch-up loop)
+  const clk = await page.evaluate(() => {
+    const g = window.__dg;
+    g.settings.dayMinutes = 1; // 24 game hours per real minute
+    g.save.world.hour = 7.9; // cross an hour boundary during the window
+    return { h0: g.save.world.hour, t0: performance.now() };
+  });
+  await page.waitForTimeout(6000);
+  const clk2 = await page.evaluate(() => ({ h1: window.__dg.save.world.hour, t1: performance.now() }));
+  const dh = clk2.h1 - clk.h0;
+  const maxH = ((clk2.t1 - clk.t0) / 1000) * 0.4 * 1.2 + 0.05;
+  if (dh > 0 && dh <= maxH) pass(`clock advances at the configured rate (${dh.toFixed(2)} h in ${((clk2.t1 - clk.t0) / 1000).toFixed(1)} s, max ${maxH.toFixed(2)})`);
+  else fail(`clock ran ${dh.toFixed(2)} h in ${((clk2.t1 - clk.t0) / 1000).toFixed(1)} s (max ${maxH.toFixed(2)})`);
+  await page.evaluate(() => {
+    window.__dg.settings.dayMinutes = 24;
+  });
+
   // open and close inventory via the hotkey
   await page.keyboard.press('KeyI');
   await page.waitForTimeout(500);

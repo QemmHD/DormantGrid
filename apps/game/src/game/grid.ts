@@ -8,7 +8,7 @@ import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
 import { audio } from '../audio/audio';
 import { NODE_LINES, RESTORATION_LINES, DISTRICT_INTROS } from '../content/campaign';
-import type { Game } from './game';
+import type { Game, ProviderPrompt } from './game';
 import type { Enemies } from './enemies';
 
 interface NodeView {
@@ -132,6 +132,7 @@ export class Grid {
   /** Re-apply node colors + district window lighting from the save. */
   refresh(): void {
     const w = this.game.save.world;
+    const before = this.game.view.restore.join(',');
     for (const nv of this.nodes) {
       const on = this.isOnline(nv.def);
       this.ringMats.get(nv.def.id)!.color.copy(on ? ON : OFF);
@@ -144,7 +145,9 @@ export class Grid {
       const st = (w.districts[d.index]?.state ?? 0) as RestorationState;
       const base = d.key === 'haven' ? 0.35 : 0.04;
       this.game.view.windowLit[d.index] = Math.max(base, [0.04, 0.12, 0.45, 0.65, 0.85][st]);
+      this.game.view.restore[d.index] = d.key === 'haven' ? Math.max(2, st) : st;
     }
+    if (this.game.view.restore.join(',') !== before) this.game.view.refreshAll();
   }
 
   private nearNode(r: number): NodeView | null {
@@ -171,18 +174,19 @@ export class Grid {
     return -1;
   }
 
-  private prompt(): { text: string; sub?: string } | null {
+  private prompt(): ProviderPrompt | null {
     const r = this.nearRelay();
-    if (r >= 0) return { text: 'Hold to route power', sub: `relay ${r + 1} of ${RELAYS_PER_NODE}` };
+    if (r >= 0) return { text: 'Relay', verb: 'Route power', kind: 'node' as const, hold: true, pos: this.activeView!.relays[r].clone().setY(this.activeView!.relays[r].y + 1.2), sub: `relay ${r + 1} of ${RELAYS_PER_NODE}` };
     const n = this.nearNode(3.2);
     if (!n) return null;
-    if (this.isOnline(n.def)) return { text: 'Control node — online', sub: 'this district has power' };
+    const pos = n.group.position.clone().setY(n.group.position.y + 2.2);
+    if (this.isOnline(n.def)) return { text: 'Control node', verb: 'Online', kind: 'node' as const, pos, sub: 'this district has power' };
     if (this.active && this.active.node === n.def.id) {
-      if (this.active.phase === 'routing') return { text: 'Route power at the relays', sub: `${this.active.relays.filter(Boolean).length}/${RELAYS_PER_NODE} routed` };
-      if (this.active.phase === 'syncing') return { text: 'Hold to sync the node', sub: `${Math.round(this.active.sync * 100)}%` };
-      if (this.active.phase === 'defend') return { text: 'Hold the line', sub: 'stay close to the node' };
+      if (this.active.phase === 'routing') return { text: 'Control node', verb: 'Find the relays', kind: 'node' as const, pos, sub: `${this.active.relays.filter(Boolean).length}/${RELAYS_PER_NODE} routed` };
+      if (this.active.phase === 'syncing') return { text: 'Control node', verb: 'Sync', kind: 'node' as const, hold: true, pos, sub: `${Math.round(this.active.sync * 100)}% — keep holding` };
+      if (this.active.phase === 'defend') return { text: 'Control node', verb: 'Defend', kind: 'node' as const, pos, sub: 'stay close until the waves stop' };
     }
-    return { text: 'Reboot control node', sub: 'machines will notice' };
+    return { text: 'Control node', verb: 'Reboot', kind: 'node' as const, pos, sub: 'machines will notice' };
   }
 
   private handle(held: boolean, pressed: boolean, tapped: boolean, dt: number): boolean {

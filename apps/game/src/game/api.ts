@@ -16,6 +16,7 @@ export type GameEvent =
   | { type: 'subtitle'; who: string; text: string }
   | { type: 'mode'; mode: GameMode } // play | build | menu | dead | sleeping | cinematic
   | { type: 'pickup'; item: string; n: number }
+  | { type: 'float'; text: string; x: number; y: number; z: number; color?: number }
   | { type: 'saved'; at: number; cloud: boolean }
   | { type: 'settings' }
   | { type: 'damage'; amount: number }
@@ -26,7 +27,7 @@ export type GameEvent =
   | { type: 'open'; screen: ScreenId | null };
 
 export type GameMode = 'menu' | 'play' | 'build' | 'dead' | 'sleeping' | 'cinematic';
-export type ScreenId = 'inventory' | 'craft' | 'map' | 'ledger' | 'journal' | 'settings' | 'pause' | 'storage' | 'account' | 'coop';
+export type ScreenId = 'inventory' | 'craft' | 'map' | 'ledger' | 'journal' | 'settings' | 'pause' | 'storage' | 'account' | 'coop' | 'help';
 export type NetStatus = 'offline' | 'online' | 'syncing' | 'conflict' | 'error' | 'reconnecting';
 
 type Handler<T extends GameEvent['type']> = (ev: Extract<GameEvent, { type: T }>) => void;

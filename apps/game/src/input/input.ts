@@ -58,10 +58,14 @@ export class Input {
   // look delta in "pixels" this frame
   lookX = 0;
   lookY = 0;
+  /** camera zoom delta this frame (+ = further away) */
+  zoom = 0;
   sprintToggle = false;
   usingTouch = false;
   leftHanded = false;
   sensitivity = 1;
+  /** vertical look as a fraction of horizontal */
+  sensitivityY = 0.8;
   /** true while any modal UI is open; game ignores movement */
   uiBlocking = false;
 
@@ -75,10 +79,15 @@ export class Input {
   private stickPos = { x: 0, y: 0 };
   private lookId: number | null = null;
   private lookLast = { x: 0, y: 0 };
+  /** total travel since the look touch began (dead zone so taps never nudge the camera) */
+  private lookTravel = 0;
+  private pinchId: number | null = null;
+  private pinchLast = { x: 0, y: 0 };
+  private pinchDist = 0;
   private pointerLocked = false;
   readonly stickEl: HTMLDivElement;
   readonly stickKnob: HTMLDivElement;
-  private readonly STICK_R = 56;
+  private readonly STICK_R = 60;
   /** buffered presses (input forgiveness): action -> expiry time */
   private buffer = new Map<Action, number>();
 
@@ -99,6 +108,14 @@ export class Input {
     surface.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('mousemove', this.onMouseMove);
+    surface.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        this.zoom += Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY) / 100) * 0.6;
+      },
+      { passive: false },
+    );
     surface.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       this.pointerLocked = document.pointerLockElement === surface;
@@ -115,6 +132,7 @@ export class Input {
     this.keys.clear();
     this.stickId = null;
     this.lookId = null;
+    this.pinchId = null;
     this.moveX = this.moveY = this.moveMag = 0;
     this.stickEl.classList.remove('on');
   }
@@ -188,6 +206,7 @@ export class Input {
     this.released.clear();
     this.lookX = 0;
     this.lookY = 0;
+    this.zoom = 0;
   }
 
   /** Sample keyboard movement each frame. */
@@ -233,6 +252,12 @@ export class Input {
       } else if (this.lookId === null) {
         this.lookId = t.identifier;
         this.lookLast = { x: t.clientX, y: t.clientY };
+        this.lookTravel = 0;
+      } else if (this.pinchId === null) {
+        // second finger on the look side: pinch to zoom
+        this.pinchId = t.identifier;
+        this.pinchLast = { x: t.clientX, y: t.clientY };
+        this.pinchDist = Math.hypot(t.clientX - this.lookLast.x, t.clientY - this.lookLast.y);
       }
     }
   };
@@ -262,15 +287,35 @@ export class Input {
         this.stickKnob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
         const dead = 0.12;
         const m = cd / r;
-        const mm = m < dead ? 0 : (m - dead) / (1 - dead);
+        const lin = m < dead ? 0 : (m - dead) / (1 - dead);
+        // gentle response curve: fine control near the center, full speed at the rim
+        const mm = Math.pow(lin, 1.35);
         this.moveMag = mm;
         this.moveX = Math.cos(a) * mm;
         this.moveY = -Math.sin(a) * mm;
         if (this.uiBlocking) this.moveX = this.moveY = this.moveMag = 0;
-      } else if (t.identifier === this.lookId) {
-        this.lookX += (t.clientX - this.lookLast.x) * 1.15 * this.sensitivity;
-        this.lookY += (t.clientY - this.lookLast.y) * 1.15 * this.sensitivity;
-        this.lookLast = { x: t.clientX, y: t.clientY };
+      } else if (t.identifier === this.lookId || t.identifier === this.pinchId) {
+        if (t.identifier === this.pinchId) this.pinchLast = { x: t.clientX, y: t.clientY };
+        else {
+          const dx = t.clientX - this.lookLast.x;
+          const dy = t.clientY - this.lookLast.y;
+          this.lookLast = { x: t.clientX, y: t.clientY };
+          if (this.pinchId === null) {
+            this.lookTravel += Math.hypot(dx, dy);
+            // 5 px dead zone per touch, then an acceleration curve: slow drags are precise, flicks turn fast
+            if (this.lookTravel > 5) {
+              const speed = Math.hypot(dx, dy);
+              const gain = (0.95 + 0.9 * Math.min(1, speed / 22)) * this.sensitivity;
+              this.lookX += dx * gain;
+              this.lookY += dy * gain * this.sensitivityY;
+            }
+          }
+        }
+        if (this.pinchId !== null) {
+          const d = Math.hypot(this.pinchLast.x - this.lookLast.x, this.pinchLast.y - this.lookLast.y);
+          this.zoom -= (d - this.pinchDist) * 0.012;
+          this.pinchDist = d;
+        }
       }
     }
   };
@@ -283,7 +328,15 @@ export class Input {
         this.moveX = this.moveY = this.moveMag = 0;
         this.stickEl.classList.remove('on');
       } else if (t.identifier === this.lookId) {
-        this.lookId = null;
+        // if pinching, the remaining finger becomes the look finger
+        if (this.pinchId !== null) {
+          this.lookId = this.pinchId;
+          this.lookLast = { ...this.pinchLast };
+          this.lookTravel = 10;
+          this.pinchId = null;
+        } else this.lookId = null;
+      } else if (t.identifier === this.pinchId) {
+        this.pinchId = null;
       }
     }
   };
@@ -319,7 +372,7 @@ export class Input {
   private onMouseMove = (e: MouseEvent) => {
     if (!this.pointerLocked) return;
     this.lookX += e.movementX * 0.9 * this.sensitivity;
-    this.lookY += e.movementY * 0.9 * this.sensitivity;
+    this.lookY += e.movementY * 0.9 * this.sensitivity * this.sensitivityY;
   };
 
   exitPointerLock(): void {

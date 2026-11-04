@@ -87,19 +87,27 @@ export class UI {
 
     // meters
     const mBox = h('div.meters');
-    const meterDefs: [string, string, string][] = [
-      ['health', 'var(--health)', '+'],
-      ['hunger', 'var(--hunger)', 'F'],
-      ['thirst', 'var(--thirst)', 'W'],
-      ['stamina', 'var(--stamina)', 'S'],
-      ['sleep', 'var(--sleep)', 'R'],
+    const MI: Record<string, string> = {
+      health: '<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/>',
+      hunger: '<path d="M7 3v8a2 2 0 002 2v8M11 3v6M3 3v6a4 4 0 004 4M17 21V3c2 0 3 3 3 7h-3"/>',
+      thirst: '<path d="M12 3s6 7 6 11a6 6 0 01-12 0c0-4 6-11 6-11z"/>',
+      stamina: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+      sleep: '<path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/>',
+    };
+    const meterDefs: [string, string][] = [
+      ['health', 'var(--health)'],
+      ['hunger', 'var(--hunger)'],
+      ['thirst', 'var(--thirst)'],
+      ['stamina', 'var(--stamina)'],
+      ['sleep', 'var(--sleep)'],
     ];
-    for (const [k, color, glyph] of meterDefs) {
+    for (const [k, color] of meterDefs) {
       const bar = h('i');
       bar.style.background = color;
-      const b = h('b', { title: S.meters[k as keyof typeof S.meters] }, glyph);
+      const b = h('b', { title: S.meters[k as keyof typeof S.meters], html: `<svg viewBox="0 0 24 24">${MI[k]}</svg>` });
       b.style.background = color;
-      const row = h('div.meter', null, b, h('div.bar', null, bar));
+      const row = h('div.meter', null, b, h('div.bar', null, bar), h('span.mlbl', null, S.meterShort[k as keyof typeof S.meterShort]));
+      tap(row, () => this.api.openScreen('help' as ScreenId));
       mBox.append(row);
       this.meters.set(k, { row, bar });
     }
@@ -140,17 +148,29 @@ export class UI {
 
     // action cluster
     const acts = h('div.actions');
-    const act = (cls: string, a: Action, ic: keyof typeof SVG) => {
+    const act = (cls: string, a: Action, ic: keyof typeof SVG, label?: string) => {
       const el = h('div', { class: `act ${cls}`, role: 'button', 'aria-label': S.acts[cls as keyof typeof S.acts], html: SVG[ic] });
+      if (label) el.append(h('span.act-lbl', null, label));
       api.input.bindButton(el, a);
       acts.append(el);
       return el;
     };
-    act('attack', 'attack', 'attack');
+    act('attack', 'attack', 'attack', S.actLabels.attack);
     this.interactBtn = act('interact', 'interact', 'interact');
-    act('dodge', 'dodge', 'dodge');
-    act('jump', 'jump', 'jump');
-    this.sprintBtn = act('sprint', 'sprint', 'sprint');
+    act('dodge', 'dodge', 'dodge', S.actLabels.dodge);
+    act('jump', 'jump', 'jump', S.actLabels.jump);
+    this.sprintBtn = act('sprint', 'sprint', 'sprint', S.actLabels.sprint);
+    const zoom = h('div', { class: 'act zoom', role: 'button', 'aria-label': S.actLabels.zoom, html: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5M8.5 11h5"/></svg>' });
+    zoom.append(h('span.act-lbl', null, S.actLabels.zoom));
+    tap(zoom, () => {
+      const c = (api as unknown as { camera?: { distance: number; zoomBy: (d: number) => void } }).camera;
+      if (!c) return;
+      // cycle near → mid → far
+      const next = c.distance < 3.6 ? 4.6 - c.distance : c.distance < 5.8 ? 6.8 - c.distance : 3.0 - c.distance;
+      c.zoomBy(next);
+      api.audio.play('click');
+    });
+    acts.append(zoom);
     this.hud.append(acts);
 
     // quick slots
@@ -487,14 +507,35 @@ export class UI {
 
   // ---------------- toasts / hints ----------------
   toast(text: string, kind: 'info' | 'warm' | 'bad' = 'info', icon?: string): HTMLElement {
+    // de-duplicate: the same message already on screen just gets a ×N badge and a longer life
+    for (const c of Array.from(this.toasts.children) as HTMLElement[]) {
+      if (c.dataset.text === text && !c.classList.contains('out')) {
+        const n = Number(c.dataset.n ?? 1) + 1;
+        c.dataset.n = String(n);
+        let badge = c.querySelector('.tn') as HTMLElement | null;
+        if (!badge) {
+          badge = h('span.tn');
+          c.append(badge);
+        }
+        badge.textContent = `×${n}`;
+        window.clearTimeout(Number(c.dataset.timer));
+        c.dataset.timer = String(window.setTimeout(() => {
+          c.classList.add('out');
+          setTimeout(() => c.remove(), 400);
+        }, 3200));
+        return c;
+      }
+    }
     const el = h('div', { class: `toast ${kind === 'info' ? '' : kind}` });
+    el.dataset.text = text;
     if (icon) {
       el.append(h('img.ti', { src: iconURL(icon), alt: '' }));
     }
     const span = h('span', null, text);
     el.append(span);
     this.toasts.prepend(el);
-    while (this.toasts.children.length > 5) this.toasts.lastElementChild?.remove();
+    const max = innerHeight < 500 ? 3 : 4;
+    while (this.toasts.children.length > max) this.toasts.lastElementChild?.remove();
     const kill = () => {
       el.classList.add('out');
       setTimeout(() => el.remove(), 400);

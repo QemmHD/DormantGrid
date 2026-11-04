@@ -33,14 +33,49 @@ export class Town {
   private scanT = 0;
   private boardEvents: TownEvent[] = [];
   private cropSig = '';
+  private lastHungerToast = -999;
   private tmpP = { x: 0, y: 0, z: 0 };
   readonly home: { x: number; z: number };
 
+  /** set by main: opens the talk dialog for a survivor */
+  onTalk: ((s: SurvivorSave) => void) | null = null;
+  readonly stockpile: THREE.Vector3;
+
   constructor(private game: Game) {
     this.home = { x: game.layout.spawn.x, z: game.layout.spawn.z };
+    // the crate stack at the camp doubles as the Town Stockpile
+    this.stockpile = new THREE.Vector3(this.home.x - 9.6, game.view.surface(this.home.x - 9.6, this.home.z - 2) + 0.9, this.home.z - 2);
+    game.stockpilePos = () => this.stockpile.clone();
+    game.interactProviders.push({
+      prompt: () => {
+        if (game.mode !== 'play') return null;
+        const s = this.nearest(2.4);
+        if (s) {
+          const n = this.near.get(s.id);
+          return { text: s.name.split(' ')[0], verb: 'Talk', kind: 'talk', pos: n ? n.pos.clone().setY(n.pos.y + 1.9) : undefined, sub: jobLabel(s.job) };
+        }
+        if (game.player.pos.distanceTo(this.stockpile) < 2.8) return { text: 'Town Stockpile', verb: 'Open', kind: 'loot', pos: this.stockpile.clone().setY(this.stockpile.y + 0.6), sub: 'survivors eat & build from this' };
+        return null;
+      },
+      handle: (_held, _pressed, tapped) => {
+        if (!tapped) return true;
+        const s = this.nearest(2.4);
+        if (s) {
+          const n = this.near.get(s.id);
+          if (n) n.yaw = Math.atan2(game.player.pos.x - n.pos.x, game.player.pos.z - n.pos.z);
+          const line = barkFor(s, s.hunger < 30 ? 'hungry' : s.mood > 70 ? 'happy' : 'greeting', this.rng);
+          if (line) game.bus.emit({ type: 'subtitle', who: s.name.split(' ')[0], text: line });
+          this.onTalk?.(s);
+        } else {
+          game.openStockpile();
+          game.save.world.flags['stockpileOpened'] = true;
+        }
+        return true;
+      },
+    });
     game.tickers.push((dt, simDt) => this.tick(dt, simDt));
     game.onSleepHook = (hours) => {
-      this.advance(hours);
+      this.advance(hours, false);
       this.lastHour = Math.floor(game.save.world.hour + hours);
     };
   }
@@ -55,8 +90,12 @@ export class Town {
       w.survivors.push(generateSurvivor(r, i + 1, this.home.x + Math.cos(a) * 6, this.home.z + Math.sin(a) * 6));
     }
     // a little food in the town stock so day one is not a famine
-    w.townStock[0] = { id: 'food.canned_beans', n: 6 };
-    w.townStock[1] = { id: 'drink.clean_water', n: 6 };
+    // enough for the first two days; after that the town needs farms, scavengers or your donations
+    w.townStock[0] = { id: 'food.canned_beans', n: 14 };
+    w.townStock[1] = { id: 'food.crackers', n: 8 };
+    w.townStock[2] = { id: 'drink.clean_water', n: 12 };
+    w.townStock[3] = { id: 'seed.potato', n: 6 };
+    w.townStock[4] = { id: 'mat.timber', n: 20 };
   }
 
   private nav: Uint8Array | null = null;
@@ -82,22 +121,40 @@ export class Town {
     return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: restored * 2 };
   }
 
-  /** Advance the town sim by whole hours (also used for sleep / catch-up). */
-  advance(hours: number): void {
+  /**
+   * Run the town sim over `hours`.
+   * - live catch-up (rewind=true): those hours have ALREADY passed on the world clock, so step over
+   *   [now-hours, now] without moving the clock (tickTown itself advances world.hour).
+   * - sleep (rewind=false): step forward from now; the caller then sets the final hour.
+   */
+  advance(hours: number, rewind = true): void {
     const w = this.game.save.world;
     if (hours <= 0) return;
+    const now = w.hour;
+    if (rewind) w.hour = now - hours;
     const ev = tickTown(w, hours, this.ctx());
+    if (rewind) w.hour = now;
     this.react(ev);
   }
 
   private react(ev: TownEvent[]): void {
+    let starving = 0;
     for (const e of ev) {
       this.boardEvents.push(e);
       if (this.boardEvents.length > 60) this.boardEvents.shift();
-      if (e.type === 'arrival' || e.type === 'death' || e.type === 'injury' || e.type === 'blueprint' || e.type === 'starving') {
+      if (e.type === 'starving') {
+        starving++;
+        continue;
+      }
+      if (e.type === 'arrival' || e.type === 'death' || e.type === 'injury' || e.type === 'blueprint') {
         this.game.toast(e.text, e.type === 'arrival' || e.type === 'blueprint' ? 'warm' : 'bad');
         if (e.type === 'arrival') audio.play('levelUp', { vol: 0.4 });
       }
+    }
+    // one clear message instead of one per survivor
+    if (starving && this.game.time - this.lastHungerToast > 90) {
+      this.lastHungerToast = this.game.time;
+      this.game.toast(`${starving === 1 ? 'A survivor is' : `${starving} survivors are`} going hungry. Put food in the Town Stockpile or build farm plots.`, 'bad');
     }
     if (ev.length) this.game.bus.emit({ type: 'town' });
     const w = this.game.save.world;
@@ -285,6 +342,11 @@ export function rankOf(w: WorldSave): { rank: number; points: number; next: numb
   let infrastructure = 0;
   for (const p of w.pieces) if (getPiece(p.piece)?.station) infrastructure++;
   return townRank({ population, restoredDistricts, infrastructure, defense: defenseScore(w) });
+}
+
+export function jobLabel(job: string): string {
+  const m: Record<string, string> = { auto: 'Decides for themselves', farm: 'Farming', gather: 'Gathering', guard: 'On guard', build: 'Building', haul: 'Hauling', cook: 'Cooking', heal: 'Healing', scavenge: 'Scavenging', companion: 'With you', idle: 'Resting' };
+  return m[job] ?? job;
 }
 
 function jobVerb(job: string): string {

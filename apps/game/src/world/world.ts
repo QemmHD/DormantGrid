@@ -19,6 +19,7 @@ interface Chunk {
   props: number[];
   buildings: number[];
   dirty: boolean;
+  dirtyGround?: boolean;
   gen: number;
   meshed: boolean;
 }
@@ -58,6 +59,8 @@ export class WorldView {
   lastBuildMs = 0;
   /** extra lit factor for windows (habitation) per district index */
   windowLit: number[] = [];
+  /** restoration state per district (0 ruin .. 4 thriving) — drives cleanliness/warmth in the mesher */
+  restore: number[] = [];
   onChunkLoaded: ((cx: number, cz: number) => void) | null = null;
   /** off-thread mesher (null = build on the main thread) */
   private worker: Worker | null = null;
@@ -185,7 +188,9 @@ export class WorldView {
     for (const c of this.chunks.values()) {
       if (c.dirty) {
         const t0 = performance.now();
-        this.rebuildBuildings(c);
+        const g = !!c.dirtyGround;
+        c.dirtyGround = false;
+        this.rebuildBuildings(c, g);
         this.lastBuildMs = performance.now() - t0;
         return;
       }
@@ -269,7 +274,7 @@ export class WorldView {
     const removed: Record<number, number[]> = {};
     for (const bid of c.buildings) removed[bid] = [...this.removed(bid)];
     this.inflight++;
-    this.worker!.postMessage({ t: 'chunk', key: cellKey(c.cx, c.cz), gen: c.gen, cx: c.cx, cz: c.cz, ground, bids: c.buildings, removed, windowLit: this.windowLit });
+    this.worker!.postMessage({ t: 'chunk', key: cellKey(c.cx, c.cz), gen: c.gen, cx: c.cx, cz: c.cz, ground, bids: c.buildings, removed, windowLit: this.windowLit, restore: this.restore });
   }
 
   isLoaded(x: number, z: number): boolean {
@@ -280,7 +285,7 @@ export class WorldView {
     const key = cellKey(cx, cz);
     const idx = this.cells[key];
     const async = this.useWorker;
-    const ground = new THREE.Mesh(async ? new THREE.BufferGeometry() : buildGround(this.layout, cx, cz, (x, z) => heightAt(this.layout, x, z)).toGeometry(true), this.groundMat);
+    const ground = new THREE.Mesh(async ? new THREE.BufferGeometry() : buildGround(this.layout, cx, cz, (x, z) => heightAt(this.layout, x, z), this.restore).toGeometry(true), this.groundMat);
     ground.receiveShadow = true;
     ground.matrixAutoUpdate = false;
     ground.visible = !async;
@@ -303,7 +308,8 @@ export class WorldView {
         // trees: trunk only
         const trunk = p.kind === 'tree' || p.kind === 'pine';
         const ax = trunk ? 0.3 : ex, az = trunk ? 0.3 : ez;
-        c.colliders.push(this.collision.add({ minX: p.x - ax, maxX: p.x + ax, minY: p.y, maxY: p.y + hy * 2 * p.scale, minZ: p.z - az, maxZ: p.z + az, tag: 'prop', ref: pid }));
+        const obb = !trunk && Math.abs(Math.sin(p.rotY * 2)) > 0.05 ? { cx: p.x, cz: p.z, hx: hx * p.scale, hz: hz * p.scale, c: Math.cos(p.rotY), s: -Math.sin(p.rotY) } : undefined;
+        c.colliders.push(this.collision.add({ minX: p.x - ax, maxX: p.x + ax, minY: p.y, maxY: p.y + hy * 2 * p.scale, minZ: p.z - az, maxZ: p.z + az, tag: 'prop', ref: pid, obb }));
       }
     }
     if (!async) {
@@ -330,6 +336,10 @@ export class WorldView {
   private rebuildBuildings(c: Chunk, groundToo = false): void {
     c.dirty = false;
     const async = this.useWorker;
+    if (!async && groundToo) {
+      c.ground.geometry.dispose();
+      c.ground.geometry = buildGround(this.layout, c.cx, c.cz, (x, z) => heightAt(this.layout, x, z), this.restore).toGeometry(true);
+    }
     // drop old building colliders (keep prop colliders)
     c.colliders = c.colliders.filter((cl) => {
       if (cl.tag === 'piece') {
@@ -350,7 +360,7 @@ export class WorldView {
       const b = this.layout.buildings[bid];
       const pieces = this.pieces(bid);
       const removed = this.removed(bid);
-      if (mb) meshBuilding(mb, b, pieces, removed, paletteOf(this.layout, b.district), this.windowLit[b.district] ?? 0.05);
+      if (mb) meshBuilding(mb, b, pieces, removed, paletteOf(this.layout, b.district), this.windowLit[b.district] ?? 0.05, this.restore[b.district] ?? 0);
       // colliders per remaining piece
       const ang = (b.rot * Math.PI) / 2;
       const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
@@ -370,6 +380,14 @@ export class WorldView {
       }
     }
     if (mb) this.attachBld(c, mb.toGeometry(true));
+  }
+
+  /** Restoration changed: re-mesh every loaded chunk (ground + buildings) off-thread. */
+  refreshAll(): void {
+    for (const c of this.chunks.values()) {
+      c.dirty = true;
+      c.dirtyGround = true;
+    }
   }
 
   markBuildingDirty(bid: number): void {
