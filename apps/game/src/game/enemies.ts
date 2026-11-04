@@ -119,6 +119,7 @@ export class Enemies {
   /** seconds since last hostile contact (drives combat music) */
   private sinceCombat = 99;
   enabled = true;
+  private tmpP = { x: 0, y: 0, z: 0 };
 
   constructor(private game: Game) {
     game.tickers.push((dt, simDt) => this.update(simDt));
@@ -126,7 +127,9 @@ export class Enemies {
   }
 
   get alive(): number {
-    return this.list.filter((e) => e.state !== 'dead').length;
+    let n = 0;
+    for (const e of this.list) if (e.state !== 'dead') n++;
+    return n;
   }
 
   spawn(kind: EnemyKind, x: number, z: number, wave = false): void {
@@ -219,7 +222,7 @@ export class Enemies {
         continue;
       }
       // despawn far ambient enemies
-      if (dist > 80 && !e.wave) {
+      if (dist > 80) {
         e.state = 'dead';
         e.t = 0;
         continue;
@@ -245,6 +248,7 @@ export class Enemies {
         case 'chase':
           engaged++;
           if (!playerAlive || dist > sense * 2.2) {
+            e.wave = false;
             e.state = 'wander';
             e.home.copy(e.pos);
             break;
@@ -290,7 +294,10 @@ export class Enemies {
           break;
       }
       // collide with world + separate
-      const tmp = { x: e.pos.x, y: e.pos.y - e.def.fly, z: e.pos.z };
+      const tmp = this.tmpP;
+      tmp.x = e.pos.x;
+      tmp.y = e.pos.y - e.def.fly;
+      tmp.z = e.pos.z;
       if (!e.def.fly) g.collision.resolve(tmp, e.def.size * 0.6, 1.6, 0.45);
       e.pos.x = tmp.x;
       e.pos.z = tmp.z;

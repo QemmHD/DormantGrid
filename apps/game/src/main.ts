@@ -77,6 +77,12 @@ async function start() {
   const enemies = new Enemies(game);
   const grid = new Grid(game, enemies);
   (window as unknown as { __grid: unknown; __enemies: unknown }).__grid = grid;
+  game.resetHooks.push(() => {
+    town.reset();
+    enemies.clear();
+    grid.reset();
+  });
+  game.onRemoteNode = (node, district) => grid.remoteOnline(node, district);
   (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
   const ui = new UI(game);

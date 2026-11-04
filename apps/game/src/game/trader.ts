@@ -91,7 +91,14 @@ export class Trader {
       const k = Math.min(n, countItem(inv, row.item));
       if (k <= 0) return false;
       removeItem(inv, row.item, k);
-      addItem(inv, CHIT, row.price * k);
+      const left = addItem(inv, CHIT, row.price * k);
+      if (left > 0) {
+        removeItem(inv, CHIT, row.price * k - left);
+        addItem(inv, row.item, k);
+        audio.play('deny');
+        this.game.toast('No room for the chits. Free a slot first.', 'bad');
+        return false;
+      }
     } else {
       const cost = row.price * n;
       if (this.chits() < cost) {

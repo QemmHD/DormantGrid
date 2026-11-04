@@ -413,8 +413,9 @@ export function buildFarMesh(layout: WorldLayout, height: (x: number, z: number)
     const p = paletteOf(layout, pr.district);
     mb.setColor(c1.setHex(p.foliage).multiplyScalar(pr.kind === 'pine' ? 0.75 : 0.95));
     const s = pr.scale;
-    if (pr.kind === 'pine') mb.cylinder(pr.x, pr.y + 0.8 * s, pr.z, 1.5 * s, 0, 4.6 * s, 5, false);
-    else mb.cylinder(pr.x, pr.y + 1.6 * s, pr.z, 1.6 * s, 0.9 * s, 2.6 * s, 5, true);
+    const hy = pr.y + height(pr.x, pr.z);
+    if (pr.kind === 'pine') mb.cylinder(pr.x, hy + 0.8 * s, pr.z, 1.5 * s, 0, 4.6 * s, 5, false);
+    else mb.cylinder(pr.x, hy + 1.6 * s, pr.z, 1.6 * s, 0.9 * s, 2.6 * s, 5, true);
     pushCenter(from, pr.x, pr.z);
   }
   const geo = mb.toGeometry(true);

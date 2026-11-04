@@ -27,6 +27,7 @@ export class CoopView {
     coop.onPing = (from, kind, x, z) => this.showPing(from, kind, x, z);
     coop.onEmote = (from, emote) => game.bus.emit({ type: 'subtitle', who: from, text: emote });
     coop.onWelcome = (info) => {
+      game.pieceIdBase = (fnv1a(info.you) % 1000) * 1_000_000;
       if (!coop.isHost) game.save.world.hour = info.hour;
       game.toast(`Joined ${coop.code}. ${info.players.length} in the run.`, 'warm');
     };
@@ -85,7 +86,13 @@ export class CoopView {
         this.pings.splice(i, 1);
       }
     }
-    if (!this.coop.active || g.mode === 'menu') return;
+    if (!this.coop.active || g.mode === 'menu') {
+      if (this.rigs.size) {
+        for (const r of this.rigs.values()) r.dispose();
+        this.rigs.clear();
+      }
+      return;
+    }
     const rig = g.player.rig;
     const anim = rig.state === 'attack' ? 3 : rig.state === 'interact' ? 4 : rig.state === 'dodge' ? 5 : rig.speed > 4 ? 2 : rig.speed > 0.3 ? 1 : 0;
     this.coop.sendState({ x: g.player.pos.x, y: g.player.pos.y, z: g.player.pos.z, yaw: g.player.yaw, anim }, rig.speed > 0.2);
@@ -97,14 +104,14 @@ export class CoopView {
         this.coop.sendAction({ type: 'time', hour: g.save.world.hour, weather: String(g.save.world.weather) });
       }
     }
-    if (this.rigs.size !== this.coop.playerIds.length - 1) this.syncRigs();
+    if (this.rigs.size !== Math.max(0, this.coop.playerIds.length - 1)) this.syncRigs();
     for (const [id, r] of this.rigs) {
       const s = this.coop.sample(id);
       if (!s) continue;
-      const prev = r.root.position.clone();
+      const ox = r.root.position.x, oz = r.root.position.z;
       r.root.position.set(s.x, s.y, s.z);
       r.root.rotation.y = s.yaw;
-      const sp = dt > 0 ? prev.distanceTo(r.root.position) / dt : 0;
+      const sp = dt > 0 ? Math.hypot(s.x - ox, s.z - oz) / dt : 0;
       r.speed = sp < 20 ? sp : 0;
       r.setState(s.anim === 3 ? 'attack' : s.anim === 4 ? 'interact' : s.anim === 5 ? 'dodge' : 'idle');
       r.update(dt);

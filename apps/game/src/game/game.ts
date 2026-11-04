@@ -156,6 +156,10 @@ export class Game implements GameAPI {
   openScreenHook: ((id: ScreenId | null) => void) | null = null;
   /** reads a lore terminal prop (set by Trader module) */
   terminalHook: ((pid: number) => void) | null = null;
+  /** co-op: piece ids are offset per player so peers never collide */
+  pieceIdBase = 0;
+  /** called after a teammate's nodeOnline so the grid view refreshes */
+  onRemoteNode: ((node: number, district: number) => void) | null = null;
   /** co-op: local world actions to broadcast */
   onWorldAction: ((ev: WorldEvent) => void) | null = null;
   /** returns the UI's currently open screen */
@@ -308,12 +312,25 @@ export class Game implements GameAPI {
     this.player.pos.y = Math.max(save.player.y, this.view.surface(save.player.x, save.player.z));
     this.player.yaw = save.player.yaw;
     this.camera.yaw = save.player.yaw;
+    this.onbStep = Number(save.world.flags['onb'] ?? ONBOARDING.length);
     this.view.loadAround(this.player.pos.x, this.player.pos.z);
     this.bus.emit({ type: 'inventory' });
     this.bus.emit({ type: 'meters' });
   }
 
+  /** hooks run whenever the world is swapped (new game / load / import) */
+  readonly resetHooks: (() => void)[] = [];
+
   private resetWorldView(): void {
+    this.session++;
+    this.build = null;
+    this.target = null;
+    this.storageTarget = null;
+    this.recentFoods = [];
+    this.holdT = 0;
+    this.introT = -1;
+    document.getElementById('app')?.classList.remove('letterbox');
+    for (const h of this.resetHooks) h();
     this.scene.remove(this.view.group);
     this.view.dispose();
     this.view = this.makeView();
@@ -323,6 +340,8 @@ export class Game implements GameAPI {
     this.view.loadAround(this.save.player.x, this.save.player.z);
   }
 
+  private moveIntent = { x: 0, y: 0, mag: 0, sprint: false, jump: false, dodge: false, camYaw: 0 };
+  private audioState = { danger: 0, warmth: 0, night: 0, rain: 0, machine: 0, combat: 0, indoors: false };
   private introT = -1;
   private introCard: HTMLElement | null = null;
 
@@ -471,7 +490,10 @@ export class Game implements GameAPI {
     try {
       const s = migrateSave(JSON.parse(json));
       this.loadSave(s);
+      const m = this.mode;
+      this.mode = 'play';
       this.persist('import');
+      this.mode = m;
       return true;
     } catch (e) {
       this.toast(`That save couldn't be read: ${(e as Error).message}`, 'bad');
@@ -533,7 +555,7 @@ export class Game implements GameAPI {
     const st = this.inv[i];
     if (!st) return;
     this.inv[i] = null;
-    this.save.world.drops.push({ x: this.player.pos.x + Math.sin(this.player.yaw) * 0.8, z: this.player.pos.z + Math.cos(this.player.yaw) * 0.8, items: [st], t: this.save.world.hour });
+    this.addDrop(this.player.pos.x + Math.sin(this.player.yaw) * 0.8, this.player.pos.z + Math.cos(this.player.yaw) * 0.8, [st]);
     if (this.save.player.equipped === st.id && !this.inv.some((s) => s?.id === st.id)) this.save.player.equipped = null;
     this.rebuildDrops();
     audio.play('place', { vol: 0.5 });
@@ -719,7 +741,7 @@ export class Game implements GameAPI {
         return;
       }
       takeItems(this.inv, cost);
-      const id = this.save.world.nextPieceId++;
+      const id = this.pieceIdBase ? this.pieceIdBase + (this.save.world.nextPieceId++ % 1_000_000) : this.save.world.nextPieceId++;
       const placed: PlacedPiece = { id, piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot, hp: def.hp };
       if (def.storageSlots) placed.store = new Array(def.storageSlots).fill(null);
       this.save.world.pieces.push(placed);
@@ -982,7 +1004,7 @@ export class Game implements GameAPI {
       const got = n - left;
       if (left > 0) {
         overflow = true;
-        this.save.world.drops.push({ x: from.x, z: from.z, items: [{ id: item, n: left }], t: this.save.world.hour });
+        this.addDrop(from.x, from.z, [{ id: item, n: left }]);
       }
       if (got <= 0) continue;
       const chips = Math.min(5, got);
@@ -1120,22 +1142,21 @@ export class Game implements GameAPI {
         return;
       }
       case 'piecePlaced':
-        if (w.pieces.some((p) => p.id === ev.piece.id && p.x === ev.piece.x && p.z === ev.piece.z)) return;
-        if (w.pieces.some((p) => p.id === ev.piece.id)) ev.piece.id = w.nextPieceId++;
-        w.nextPieceId = Math.max(w.nextPieceId, ev.piece.id + 1);
+        if (w.pieces.some((p) => p.id === ev.piece.id)) return;
         w.pieces.push(ev.piece);
         this.base.rebuild(w.pieces, w.crops, w.hour);
         return;
       case 'pieceRemoved':
         if (!w.pieces.some((p) => p.id === ev.id)) return;
         w.pieces = w.pieces.filter((p) => p.id !== ev.id);
+        w.crops = w.crops.filter((c) => c.plot !== ev.id);
         this.base.rebuild(w.pieces, w.crops, w.hour);
         return;
       case 'nodeOnline': {
         const d = w.districts[ev.district];
         if (d && !d.nodesOnline.includes(ev.node)) {
           d.nodesOnline.push(ev.node);
-          d.state = Math.max(d.state, 1) as typeof d.state;
+          this.onRemoteNode?.(ev.node, ev.district);
           this.toast('A teammate brought a node online.', 'warm');
         }
         return;
@@ -1206,6 +1227,11 @@ export class Game implements GameAPI {
     }
     const pos = (this.base.pos.get(p.id) ?? this.player.pos).clone();
     this.onWorldAction?.({ type: 'pieceRemoved', id: p.id });
+    for (const id of all) {
+      const pc = w.pieces.find((x) => x.id === id);
+      if (pc?.piece === 'bed' && this.save.player.bed && Math.hypot(this.save.player.bed.x - pc.x, this.save.player.bed.z - pc.z) < 0.5) this.save.player.bed = null;
+    }
+    for (const id of all) this.onWorldAction?.({ type: 'pieceRemoved', id });
     w.pieces = w.pieces.filter((x) => !all.includes(x.id));
     w.crops = w.crops.filter((c) => !all.includes(c.plot));
     this.base.rebuild(w.pieces, w.crops, w.hour);
@@ -1242,6 +1268,23 @@ export class Game implements GameAPI {
     this.rebuildDrops();
     this.target = null;
     this.bus.emit({ type: 'inventory' });
+  }
+
+  /** Add items to the nearest pack within 2.5 m (or a new one); caps total packs. */
+  addDrop(x: number, z: number, items: ItemStack[]): void {
+    const w = this.save.world;
+    let pack = w.drops.find((d) => Math.hypot(d.x - x, d.z - z) < 2.5);
+    if (!pack) {
+      if (w.drops.length >= 120) w.drops.shift();
+      pack = { x, z, items: [], t: w.hour };
+      w.drops.push(pack);
+    }
+    for (const st of items) {
+      const same = pack.items.find((s) => s.id === st.id && s.d === undefined && st.d === undefined);
+      if (same) same.n += st.n;
+      else pack.items.push(st);
+    }
+    if (pack.items.length > 60) pack.items.length = 60;
   }
 
   private rebuildDrops(): void {
@@ -1331,20 +1374,26 @@ export class Game implements GameAPI {
     if (this.save.player.health <= 0) this.die(cause);
   }
 
+  /** bumped whenever a different save/session takes over, so stale timers bail */
+  session = 0;
+
   private die(cause: string): void {
     if (this.mode === 'dead') return;
+    this.stopBuild();
+    const sess = this.session;
     const p = this.save.player;
     const pos = this.player.pos.clone();
     const bed = p.bed ?? this.layout.spawn;
     const dropped = respawnPlayer(p, bed);
     const items = dropped.filter((s): s is ItemStack => !!s);
-    if (items.length) this.save.world.drops.push({ x: pos.x, z: pos.z, items, t: this.save.world.hour });
+    if (items.length) this.addDrop(pos.x, pos.z, items);
     this.save.player.equipped = null;
     this.rebuildDrops();
     this.player.rig.setState('dead');
     this.setMode('dead');
     this.toast(cause === 'fall' ? 'That was a long way down.' : 'You went down.', 'bad');
     setTimeout(() => {
+      if (sess !== this.session || this.mode !== 'dead') return;
       this.placePlayer(bed.x, bed.z);
       this.view.loadAround(bed.x, bed.z);
       this.player.rig.setState('idle');
@@ -1364,12 +1413,17 @@ export class Game implements GameAPI {
       return;
     }
     this.setMode('sleeping');
+    const sess = this.session;
     this.player.rig.setState('sleep');
     const fade = document.createElement('div');
     fade.className = 'fade';
     document.getElementById('app')!.appendChild(fade);
     requestAnimationFrame(() => fade.classList.add('on'));
     setTimeout(() => {
+      if (sess !== this.session || this.mode !== 'sleeping') {
+        fade.remove();
+        return;
+      }
       const w = this.save.world;
       let target = Math.floor(w.hour / 24) * 24 + 6.5;
       while (target <= w.hour + 1) target += 24;
@@ -1560,11 +1614,14 @@ export class Game implements GameAPI {
       }
       const jump = !blocked && this.input.wasPressed('jump') && this.save.player.stamina > 5;
       if (jump && this.player.grounded) audio.play('jump', { vol: 0.4 });
-      this.player.update(
-        simDt,
-        { x: this.input.moveX, y: this.input.moveY, mag: this.input.moveMag, sprint: this.input.sprinting, jump, dodge: false, camYaw: this.camera.yaw },
-        this.collision,
-      );
+      const mi = this.moveIntent;
+      mi.x = this.input.moveX;
+      mi.y = this.input.moveY;
+      mi.mag = this.input.moveMag;
+      mi.sprint = this.input.sprinting;
+      mi.jump = jump;
+      mi.camYaw = this.camera.yaw;
+      this.player.update(simDt, mi, this.collision);
       const rig = this.player.rig;
       if (!this.player.dodging && rig.state === 'dodge' && rig.stateT > 0.42) rig.setState('idle');
       if (rig.state === 'attack' && rig.stateT > rig.attackDur) rig.setState('idle');
@@ -1620,7 +1677,14 @@ export class Game implements GameAPI {
     audio.listener.z = this.player.pos.z;
     audio.listener.yaw = this.camera.yaw;
     const d = districtAt(this.layout, this.player.pos.x, this.player.pos.z);
-    audio.update({ danger: Math.min(1, d.danger / 4) * (1 - warmth * 0.5), warmth, night, rain: this.atm.wetness, machine: this.machineProximity, combat: this.combatLevel, indoors: false });
+    const as = this.audioState;
+    as.danger = Math.min(1, d.danger / 4) * (1 - warmth * 0.5);
+    as.warmth = warmth;
+    as.night = night;
+    as.rain = this.atm.wetness;
+    as.machine = this.machineProximity;
+    as.combat = this.combatLevel;
+    audio.update(as);
     this.renderer.syncSize(this.camera.cam);
     this.renderer.render(this.scene, this.camera.cam);
     const ms = performance.now() - now;

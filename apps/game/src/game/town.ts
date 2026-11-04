@@ -3,7 +3,7 @@
 // One model drives near and far, so walking up to someone never pops.
 import * as THREE from 'three';
 import { Rng, hash2, type SurvivorSave } from '@dg/shared';
-import { barkFor, computeNeeds, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
+import { barkFor, computeNeeds, cropStage, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
 import type { WorldSave } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import type { Game } from './game';
@@ -26,12 +26,17 @@ export class Town {
   private rng = new Rng(0x70a1);
   private scanT = 0;
   private boardEvents: TownEvent[] = [];
+  private cropSig = '';
+  private tmpP = { x: 0, y: 0, z: 0 };
   readonly home: { x: number; z: number };
 
   constructor(private game: Game) {
     this.home = { x: game.layout.spawn.x, z: game.layout.spawn.z };
     game.tickers.push((dt, simDt) => this.tick(dt, simDt));
-    game.onSleepHook = (hours) => this.advance(hours);
+    game.onSleepHook = (hours) => {
+      this.advance(hours);
+      this.lastHour = Math.floor(game.save.world.hour + hours);
+    };
   }
 
   /** Seed the first survivors on a new game. */
@@ -78,7 +83,12 @@ export class Town {
     }
     if (ev.length) this.game.bus.emit({ type: 'town' });
     const w = this.game.save.world;
-    if (w.crops.length) this.game.base.rebuild(w.pieces, w.crops, w.hour);
+    let sig = '';
+    for (const c of w.crops) sig += `${c.plot}:${c.crop}:${cropStage(c.growth)};`;
+    if (sig !== this.cropSig) {
+      this.cropSig = sig;
+      this.game.base.rebuild(w.pieces, w.crops, w.hour);
+    }
     this.game.save.world.flags['rank'] = rankOf(this.game.save.world).rank;
   }
 
@@ -138,7 +148,10 @@ export class Town {
         moving = true;
       }
       // keep out of walls
-      const tmp = { x: n.pos.x, y: n.pos.y, z: n.pos.z };
+      const tmp = this.tmpP;
+      tmp.x = n.pos.x;
+      tmp.y = n.pos.y;
+      tmp.z = n.pos.z;
       g.collision.resolve(tmp, 0.34, 1.7, 0.45);
       n.pos.x = tmp.x;
       n.pos.z = tmp.z;
