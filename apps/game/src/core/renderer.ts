@@ -18,7 +18,7 @@ export interface QualitySettings {
 
 export const QUALITY: Record<QualityTier, QualitySettings> = {
   low: { tier: 'low', shadows: false, shadowSize: 512, maxDpr: 1.0, detailRadius: 1, lodRadius: 2, fogFar: 190, propDensity: 0.55 },
-  medium: { tier: 'medium', shadows: true, shadowSize: 1024, maxDpr: 1.25, detailRadius: 2, lodRadius: 3, fogFar: 250, propDensity: 0.8 },
+  medium: { tier: 'medium', shadows: true, shadowSize: 1024, maxDpr: 1.25, detailRadius: 1, lodRadius: 3, fogFar: 250, propDensity: 0.8 },
   high: { tier: 'high', shadows: true, shadowSize: 2048, maxDpr: 1.5, detailRadius: 2, lodRadius: 3, fogFar: 320, propDensity: 1 },
 };
 

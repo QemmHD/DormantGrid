@@ -11,6 +11,8 @@ import { CharacterRig, randomLook } from '../render/character';
 import { audio } from '../audio/audio';
 import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
+import { generateWorld } from '@dg/sim';
+import { WorldView } from '../world/world';
 
 export class Game {
   renderer!: Renderer;
@@ -21,6 +23,7 @@ export class Game {
   player!: PlayerController;
   world = new CollisionWorld();
   perf!: PerfOverlay;
+  view!: WorldView;
   hour = 9;
   time = 0;
   private last = performance.now();
@@ -36,8 +39,20 @@ export class Game {
     const rig = new CharacterRig(randomLook(7, { backpack: true, hairStyle: 1 }));
     this.scene.add(rig.root);
     this.player = new PlayerController(rig);
-    this.player.pos.set(600, 0, 600);
-    this.buildTestLot();
+    const layout = generateWorld(1337);
+    this.view = new WorldView(layout, this.world, this.renderer.quality.shadows);
+    this.view.radius = this.renderer.quality.detailRadius;
+    this.scene.add(this.view.group);
+    const sp = new URLSearchParams(location.search);
+    const px = Number(sp.get('x') ?? layout.spawn.x), pz = Number(sp.get('z') ?? layout.spawn.z);
+    this.player.pos.set(px, this.view.surface(px, pz), pz);
+    this.player.terrain = (x, z) => this.view.surface(x, z);
+    if (sp.has('h')) this.hour = Number(sp.get('h'));
+    if (sp.has('yaw')) this.camera.yaw = Number(sp.get('yaw'));
+    if (sp.has('dist')) this.camera.distance = Number(sp.get('dist'));
+    if (sp.has('pitch')) this.camera.pitch = Number(sp.get('pitch'));
+    this.view.loadAround(px, pz);
+    void this.buildTestLot;
     progress(1);
     const unlock = () => audio.unlock();
     window.addEventListener('touchend', unlock, { once: false });
@@ -84,13 +99,14 @@ export class Game {
     );
     if (this.input.wasPressed('dodge')) this.player.startDodge({ x: this.input.moveX, y: this.input.moveY, mag: 1, sprint: false, jump: false, dodge: true, camYaw: this.camera.yaw });
     this.player.rig.update(dt);
+    this.view.update(this.player.pos.x, this.player.pos.z);
     this.camera.update(dt, this.player.pos, this.input.sprinting && this.input.moveMag > 0.5, this.world);
     this.atm.update(dt, this.hour, 'clear', 0.4, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar, this.time);
     this.renderer.syncSize(this.camera.cam);
     this.renderer.render(this.scene, this.camera.cam);
     const ms = performance.now() - now;
     this.renderer.adapt(ms, now);
-    this.perf.frame(ms, now, { chunks: 0, chunkBuildMs: 0, entities: 1, colliders: this.world.count });
+    this.perf.frame(ms, now, { chunks: this.view.chunkCount, chunkBuildMs: this.view.lastBuildMs, entities: 1, colliders: this.world.count });
     this.input.endFrame();
     requestAnimationFrame(this.frame);
   };

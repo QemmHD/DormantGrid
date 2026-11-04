@@ -2,9 +2,9 @@
 
 import type { CropSave } from '@dg/shared';
 import { Rng } from '@dg/shared';
-import { CROP_MAP, cropForSeed, type CropDef, type Season } from '../data/crops';
+import { CROP_MAP, SEASONS, SEASON_DAYS, cropForSeed, type CropDef, type Season } from '../data/crops';
 import { LIVESTOCK, type LivestockDef } from '../data/livestock';
-import { WEATHER_FX, isFrost, seasonOf, type Weather } from './time';
+import { WEATHER_FX, dayOfSeason, hourOfDay, isFrost, seasonOf, type Weather } from './time';
 
 export interface CropEnv {
   hour: number;
@@ -46,6 +46,16 @@ export function canPlant(seedItem: string, hour: number): boolean {
   return !!def && inSeason(def, seasonOf(hour));
 }
 
+/** Would a crop planted now ripen before its growing window closes? (UI warning + survivor planning) */
+export function willRipenInTime(def: CropDef, hour: number): boolean {
+  const season = seasonOf(hour);
+  if (!inSeason(def, season)) return false;
+  const next = SEASONS[(SEASONS.indexOf(season) + 1) % 4];
+  if (inSeason(def, next)) return true;
+  const daysLeft = SEASON_DAYS - dayOfSeason(hour) - hourOfDay(hour) / 24;
+  return def.growDays * 1.15 <= daysLeft;
+}
+
 /** Plant into a plot. `prev` is the plot's previous CropSave (for rotation + soil carry-over). */
 export function plant(plot: number, seedItem: string, hour: number, prev?: CropSave): CropSave | null {
   const def = cropForSeed(seedItem);
@@ -74,7 +84,7 @@ export function growthFactor(c: CropSave, env: CropEnv): number {
   const def = cropDef(c);
   if (!def) return 0;
   const season = seasonOf(env.hour);
-  if (!inSeason(def, season)) return 0.1; // lingering out of season: barely grows
+  if (!inSeason(def, season)) return 0.4; // lingering into the next season: slowed
   const waterF = c.water > 0.15 ? 1 : 0.2 + c.water * 4;
   const soilF = 0.5 + 0.5 * c.nutrients;
   const tendF = 0.75 + 0.35 * clamp01(env.tended ?? 0);

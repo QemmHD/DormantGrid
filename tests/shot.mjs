@@ -24,3 +24,4 @@ await page.screenshot({ path: out });
 console.log(logs.filter((l) => !l.includes('GPU stall')).slice(0, 30).join('\n'));
 await browser.close();
 srv.kill();
+process.exit(0);

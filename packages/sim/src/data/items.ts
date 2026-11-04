@@ -119,7 +119,7 @@ item('seed.tomato', 'Tomato Seeds', 'Summer crop. Needs lots of water.', 'seed',
 item('seed.corn', 'Corn Seeds', 'Spring into summer. Tall, thirsty, generous.', 'seed', 0.03, 50);
 item('seed.cabbage', 'Cabbage Seeds', 'Autumn and winter. Shrugs off frost.', 'seed', 0.02, 50);
 item('seed.pumpkin', 'Pumpkin Seeds', 'Summer into autumn. Slow, heavy, worth it.', 'seed', 0.03, 50);
-item('seed.wheat', 'Wheat Seeds', 'Spring and autumn. The base of bread and patience.', 'seed', 0.02, 50);
+item('seed.wheat', 'Wheat Seeds', 'Autumn through spring; shrugs off frost. The base of bread and patience.', 'seed', 0.02, 50);
 
 // ---- Traps ----
 item('trap.snare', 'Rope Snare', 'Catches rabbits and the occasional careless raider’s ankle.', 'trap', 0.5, 5);

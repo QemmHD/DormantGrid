@@ -239,7 +239,7 @@ export function validatePlacement(pieces: readonly PlacedPiece[], cand: Candidat
 }
 
 /** After removing piece `removedId`, which other pieces lose support and collapse? */
-export function collapseAfterRemoval(pieces: readonly PlacedPiece[], removedId: number, bonus = 0): number[] {
+export function collapsePlacedAfterRemoval(pieces: readonly PlacedPiece[], removedId: number, bonus = 0): number[] {
   const rest = pieces.filter((p) => p.id !== removedId);
   const stab = computeStability(rest, bonus);
   const out: number[] = [];
@@ -249,7 +249,7 @@ export function collapseAfterRemoval(pieces: readonly PlacedPiece[], removedId: 
 
 /** Remove a piece and everything that collapses; returns removed pieces (for debris drops). */
 export function removePiece(pieces: PlacedPiece[], id: number, bonus = 0): PlacedPiece[] {
-  const collapse = new Set([id, ...collapseAfterRemoval(pieces, id, bonus)]);
+  const collapse = new Set([id, ...collapsePlacedAfterRemoval(pieces, id, bonus)]);
   const removed: PlacedPiece[] = [];
   for (let i = pieces.length - 1; i >= 0; i--) {
     if (collapse.has(pieces[i].id)) removed.push(...pieces.splice(i, 1));

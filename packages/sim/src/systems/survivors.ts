@@ -9,7 +9,7 @@ import { BARKS, FIRST_NAMES, LAST_NAMES, SKILLS, TRAITS, TRAIT_MAP, type SkillId
 import { CROP_MAP, CROPS } from '../data/crops';
 import { getPiece, pieceHp } from '../data/pieces';
 import { addItem, countItem, createInventory, removeItem, type Inventory } from './inventory';
-import { harvest, plant, tickCrop, fertilize } from './farming';
+import { harvest, plant, tickCrop, fertilize, willRipenInTime } from './farming';
 import { hourOfDay, seasonOf, weatherAt, dayOf, type Weather } from './time';
 import { freshness, DIFFICULTY } from './survival';
 import { itemValue } from './factions';
@@ -384,10 +384,18 @@ const COOK_MAP: [string[], string, number][] = [
   [['food.raw_meat'], 'food.cooked_meat', 1],
   [['food.potato'], 'food.baked_potato', 1],
   [['food.carrot', 'food.tomato', 'food.cabbage'], 'food.veg_soup', 2],
+  // survivor cooks stretch any three vegetables into a pot of soup
+  [['food.carrot', 'food.carrot', 'food.corn'], 'food.veg_soup', 2],
+  [['food.carrot', 'food.carrot', 'food.carrot'], 'food.veg_soup', 2],
+  [['food.tomato', 'food.tomato', 'food.corn'], 'food.veg_soup', 2],
+  [['food.cabbage', 'food.cabbage', 'food.carrot'], 'food.veg_soup', 2],
+  [['food.corn', 'food.corn', 'food.tomato'], 'food.veg_soup', 2],
   [['food.wheat', 'food.wheat', 'food.wheat'], 'food.flour', 1],
   [['food.flour'], 'food.flatbread', 2],
   [['drink.dirty_water'], 'drink.clean_water', 1],
 ];
+
+const COOK_INGREDIENTS = new Set(['food.potato', 'food.raw_meat', 'food.wheat', 'food.flour']);
 
 function seedRng(world: WorldSave, hour: number, salt: number): Rng {
   return new Rng(hash2(hash2(world.seed, Math.floor(hour)), salt));
@@ -400,7 +408,8 @@ function stampStock(stock: Inventory, hour: number): void {
 
 function eatFromStock(stock: Inventory, s: SurvivorSave, hour: number): boolean {
   let ate = false;
-  for (let k = 0; k < 3 && s.hunger < 85; k++) {
+  for (let k = 0; k < 3 && s.hunger < 72; k++) {
+    const room = 100 - s.hunger;
     let best = -1;
     let bestScore = -Infinity;
     for (let i = 0; i < stock.length; i++) {
@@ -409,6 +418,8 @@ function eatFromStock(stock: Inventory, s: SurvivorSave, hour: number): boolean 
       const f = getItem(st.id)?.food;
       if (!f || f.hunger < 5) continue;
       if ((f.sickness ?? 0) > 0.3 && s.hunger > 20) continue;
+      if (f.hunger > room + 8 && s.hunger > 25) continue; // don't waste a big meal on a small appetite
+      if (COOK_INGREDIENTS.has(st.id) && s.hunger > 30) continue; // leave ingredients for the cook
       // prefer cooked/high value, and food closest to spoiling
       const fresh = freshness(st, hour);
       const score = f.hunger + (f.spoilHours ? (1 - fresh) * 30 : -5);
@@ -486,16 +497,17 @@ function hourStep(world: WorldSave, hour: number, ctx: TownContext, ev: TownEven
     const job: JobId = companions.has(s.id) ? 'companion' : (jobs.get(s.id) ?? 'idle');
     // needs
     const hungerRate = traitNum(s, 'hungerRate', 1) * drain;
-    s.hunger = Math.max(0, s.hunger - (act === 'sleep' ? 1 : 2.4) * hungerRate);
+    s.hunger = Math.max(0, s.hunger - (act === 'sleep' ? 0.7 : 1.7) * hungerRate);
     if (act === 'sleep' || act === 'recover') s.rest = Math.min(100, s.rest + 12);
     else s.rest = Math.max(0, s.rest - 3.2 * traitNum(s, 'restRate', 1));
-    if (act === 'eat' || s.hunger < 25) {
+    if (act === 'eat' || s.hunger < 30) {
       const before = s.hunger;
       eatFromStock(stock, s, hour);
       if (s.hunger <= 0 && before <= 0 && hOfDay === 12) ev.push({ type: 'starving', hour, text: `${s.name} has gone hungry all day.`, ids: [s.id] });
     }
     if (s.hunger <= 0) {
-      s.health = Math.max(0, s.health - 3);
+      // hunger weakens but does not bed-ride people (that would starve the farms too)
+      s.health = Math.max(ctx.permadeath ? 0 : 10, s.health - 3);
       s.mood = Math.max(0, s.mood - 2);
     } else if (!s.injured) s.health = Math.min(100, s.health + 1);
 
@@ -511,7 +523,7 @@ function hourStep(world: WorldSave, hour: number, ctx: TownContext, ev: TownEven
         s.injured = false;
         ev.push({ type: 'recovered', hour, text: `${s.name} is back on their feet.`, ids: [s.id] });
       }
-    } else if (s.health <= 0) {
+    } else if (s.health <= 0 && s.hunger > 0) {
       s.injured = true;
       s.health = 5;
       ev.push({ type: 'injury', hour, text: `${s.name} collapsed and needs care.`, ids: [s.id] });
@@ -589,7 +601,17 @@ function hourStep(world: WorldSave, hour: number, ctx: TownContext, ev: TownEven
   townFarming(world, stock, hour, weather, farmerPower, ctx, ev, rng);
   // Cooking
   if (hasFire && cookPower > 0) {
-    let budget = Math.floor(cookPower * 2.5 + rng.next());
+    let ready = 0;
+    for (const st of stock) {
+      const f = st ? getItem(st.id)?.food : undefined;
+      if (st && f?.spoilHours !== undefined && f.spoilHours <= 120 && f.hunger >= 20) ready += f.hunger * st.n;
+    }
+    const enough = ready > alive.length * SURVIVOR_DAILY_FOOD * 1.5;
+    let budget = enough ? 0 : Math.floor(cookPower * 2.5 + rng.next());
+    if (enough && countItem(stock, 'drink.dirty_water') > 0) {
+      removeItem(stock, 'drink.dirty_water', 1);
+      addStock(stock, 'drink.clean_water', 1, hour);
+    }
     let made = 0;
     for (const [ins, out, n] of COOK_MAP) {
       while (budget > 0) {
@@ -658,7 +680,15 @@ function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: 
   for (const plot of plots) {
     let c = world.crops.find((x) => x.plot === plot.id);
     if (c && c.crop && CROP_MAP.has(c.crop)) {
-      tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation });
+      const def = CROP_MAP.get(c.crop)!;
+      if (!def.frostHardy && season === 'winter' && c.growth < 1) {
+        // frost takes tender crops left in the ground
+        c.lastCrop = c.crop;
+        c.crop = '';
+        c.growth = 0;
+        addStock(stock, 'mat.organic', 2, hour);
+        ev.push({ type: 'spoiled', hour, text: `Frost took the ${def.name.toLowerCase()} bed.`, count: 0 });
+      } else tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation });
       if (actions > 0 && c.growth >= 1) {
         for (const y of harvest(c, rng)) {
           addStock(stock, y.item, y.count, hour);
@@ -673,11 +703,15 @@ function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: 
     // plant fallow plots with an in-season seed from stock
     c = world.crops.find((x) => x.plot === plot.id);
     if (actions > 0 && (!c || !c.crop)) {
-      const options = CROPS.filter((d) => d.seasons.includes(season) && countItem(stock, d.seed) > 0);
+      const options = CROPS.filter((d) => d.seasons.includes(season) && countItem(stock, d.seed) > 0 && willRipenInTime(d, hour));
       if (options.length) {
         // rotate: prefer a different family than last time
         const last = c?.lastCrop ? CROP_MAP.get(c.lastCrop)?.family : undefined;
-        options.sort((a, b) => (a.family === last ? 1 : 0) - (b.family === last ? 1 : 0) || a.growDays - b.growDays);
+        const score = (d: (typeof CROPS)[number]) => {
+          const planted = world.crops.filter((x) => x.crop === d.id).length;
+          return cropFoodScore(d.id) * (d.family === last ? 0.92 : last ? 1.15 : 1) * (1 - Math.min(0.5, planted * 0.06));
+        };
+        options.sort((a, b) => score(b) - score(a) || (a.id < b.id ? -1 : 1));
         const def = options[0];
         const planted = plant(plot.id, def.seed, hour, c);
         if (planted) {
@@ -702,6 +736,14 @@ function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: 
     world.crops = world.crops.filter((c) => ids.has(c.plot));
   }
   if (harvested > 0) ev.push({ type: 'harvest', hour, text: `Harvested ${harvested} produce.`, count: harvested });
+}
+
+/** Hunger points per plot per day for the best way the town can eat this crop. */
+const COOKED_HUNGER: Record<string, number> = { potato: 25, wheat: 14.6, carrot: 12, tomato: 12, corn: 14, cabbage: 14, pumpkin: 30 };
+export function cropFoodScore(cropId: string): number {
+  const d = CROP_MAP.get(cropId);
+  if (!d) return 0;
+  return (((d.yield[0] + d.yield[1]) / 2) * (COOKED_HUNGER[cropId] ?? 10)) / d.growDays;
 }
 
 function dailySpoilage(stock: Inventory, hour: number, ev: TownEvent[]): void {
@@ -752,7 +794,8 @@ function arrivals(world: WorldSave, hour: number, ctx: TownContext, rng: Rng, ev
   const bed = freeBed(world);
   if (!bed) return;
   const avgMood = alive.length ? alive.reduce((a, s) => a + s.mood, 0) / alive.length : 60;
-  if (avgMood < 35 || !rng.chance(0.4)) return;
+  // people don't move into a hungry town
+  if (avgMood < 35 || computeNeeds(world).foodDays < 2 || !rng.chance(0.4)) return;
   const id = world.survivors.reduce((m, s) => Math.max(m, s.id), 0) + 1;
   const s = generateSurvivor(rng, id, ctx.home.x + rng.range(-8, 8), ctx.home.z + rng.range(-8, 8));
   s.bed = bed.id;
