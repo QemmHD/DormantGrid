@@ -2,15 +2,22 @@
 
 ## ☀️ Morning report
 
-### Live URL
-**None yet. Deploy is blocked on two settings only the owner can change.**
-- `main` is green in CI: every push runs `npm run check` (typecheck, lint with 0 warnings, 159 unit tests, build, bundle budget, secret scan) and it passes.
-- The Cloudflare deploy step is **skipped** because `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` are not set as repo secrets.
-- The GitHub Pages fallback **fails with 404** because Pages is not enabled for the repo.
+### Live URLs
+- **Full game (accounts, cloud saves, co-op): https://dormant-grid.dg-server.workers.dev**
+  - The Worker serves the game and `/api` + `/ws`, with the AccountRegistry, PlayerVault and WorldRoom Durable Objects.
+  - Deployed 2026-11-04 with `wrangler deploy` from a session. Version `0653506e`.
+  - `node tests/live-smoke.mjs https://dormant-grid.dg-server.workers.dev` passed **14/14**: shell, manifest, sw.js, all 39 referenced assets 200; username claim, whoami and cloud save PUT→GET round trip; duplicate (case-insensitive) claim rejected 409; `/api/version`; service worker registered; game boots; local save survives reload; zero console errors.
+- **Offline build (local saves only): https://qemmhd.github.io/DormantGrid/**
+  - Published by `pages-fallback.yml` on every push to `main`.
+  - See BLOCKERS for its status.
 
-To get a URL, do either one (details in `docs/TEST_PLAN_IPHONE.md` §0):
-1. **Full game.** Add both Cloudflare secrets (the token needs *Workers Scripts: Edit*; the account needs a workers.dev subdomain), then re-run **Deploy (Cloudflare)**. The URL will be `https://dormant-grid.<your-subdomain>.workers.dev`.
-2. **Offline-only quick look.** Settings → Pages → Source: **GitHub Actions**, then re-run **Deploy fallback (GitHub Pages)**. The URL will be `https://qemmhd.github.io/DormantGrid/`.
+### BLOCKERS (owner)
+1. **The `CLOUDFLARE_API_TOKEN` repo secret holds the wrong value.** The workflow's non-revealing check reports a 32-character value without the `cfut_` prefix, which matches the length of the account ID. Re-save the secret with the API token itself.
+   - Until then, the "Deploy (Cloudflare)" workflow fails at authentication.
+   - The live Worker above keeps running; it was deployed directly.
+2. **GitHub Pages deploys wait on the `github-pages` environment.** The job sits in "waiting" with no reviewers and no wait timer, and this session can't approve it.
+   - Check Settings → Environments → github-pages → deployment protection rules / branch policy (allow `main`).
+3. **Rotate the Cloudflare API token** once the secret is fixed. It was shared in chat.
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 
