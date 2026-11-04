@@ -9,15 +9,13 @@
   - `node tests/live-smoke.mjs https://dormant-grid.dg-server.workers.dev` passed **14/14**: shell, manifest, sw.js, all 39 referenced assets 200; username claim, whoami and cloud save PUT→GET round trip; duplicate (case-insensitive) claim rejected 409; `/api/version`; service worker registered; game boots; local save survives reload; zero console errors.
 - **Offline build (local saves only): https://qemmhd.github.io/DormantGrid/**
   - Published by `pages-fallback.yml` on every push to `main`.
-  - See BLOCKERS for its status.
+  - `node tests/live-smoke.mjs https://qemmhd.github.io/DormantGrid --offline` passed **8/8**: shell, manifest, sw.js, all 39 assets 200 under `/DormantGrid/`; service worker registered; game boots; local save survives reload; zero console errors.
 
 ### BLOCKERS (owner)
 1. **The `CLOUDFLARE_API_TOKEN` repo secret holds the wrong value.** The workflow's non-revealing check reports a 32-character value without the `cfut_` prefix, which matches the length of the account ID. Re-save the secret with the API token itself.
    - Until then, the "Deploy (Cloudflare)" workflow fails at authentication.
    - The live Worker above keeps running; it was deployed directly.
-2. **GitHub Pages deploys wait on the `github-pages` environment.** The job sits in "waiting" with no reviewers and no wait timer, and this session can't approve it.
-   - Check Settings → Environments → github-pages → deployment protection rules / branch policy (allow `main`).
-3. **Rotate the Cloudflare API token** once the secret is fixed. It was shared in chat.
+2. **Rotate the Cloudflare API token** once the secret is fixed. It was shared in chat.
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 
