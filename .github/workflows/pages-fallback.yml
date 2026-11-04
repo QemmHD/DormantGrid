@@ -1,0 +1,67 @@
+name: Deploy fallback (GitHub Pages)
+
+# Runs only when Cloudflare secrets are missing: ships an offline-only build
+# (local saves, no accounts/co-op) so the game is still playable from a URL.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-fallback
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      has_cf: ${{ steps.cf.outputs.has_cf }}
+    steps:
+      - id: cf
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then echo "has_cf=true" >> "$GITHUB_OUTPUT"; else echo "has_cf=false" >> "$GITHUB_OUTPUT"; fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.has_cf != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build offline-only game
+        env:
+          VITE_OFFLINE_ONLY: '1'
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+      - name: Enable Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+        continue-on-error: true
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/game/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
