@@ -17,7 +17,7 @@ document.addEventListener(
   },
   { passive: false },
 );
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.documentElement.classList.add('touch');
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || location.search.includes('touch=1')) document.documentElement.classList.add('touch');
 
 const fill = document.getElementById('boot-fill') as HTMLElement;
 const tip = document.getElementById('boot-tip') as HTMLElement;
@@ -66,6 +66,7 @@ async function start() {
   ]);
   const { Enemies } = await import('./game/enemies');
   const { Grid } = await import('./game/grid');
+  const { CoopView } = await import('./game/coopview');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
@@ -90,6 +91,7 @@ async function start() {
   ui.setMinimap((ctx, w, h) => drawMinimap(game, ctx, w, h, 0.9));
   ui.setMapDraw((ctx, w, h) => drawMap(game, ctx, w, h));
   ui.setJournalSource(() => journal(game));
+  new CoopView(game, svc.coop);
   mountNetUI(game.bus, svc, { getSaveJSON: () => game.exportSave(), playerPos: () => ({ x: game.player.pos.x, z: game.player.pos.z }) });
   let hasSave = false;
   game.hasSaveHook = () => hasSave;
@@ -148,6 +150,13 @@ async function start() {
   const params = new URLSearchParams(location.search);
   if (params.has('autostart')) {
     await (hasSave && !params.has('fresh') ? game.continueGame() : game.newGame());
+    if (params.has('h')) game.save.world.hour = Number(params.get('h'));
+    if (params.has('x') && params.has('z')) {
+      const x = Number(params.get('x')), z = Number(params.get('z'));
+      game.player.pos.set(x, game.view.surface(x, z), z);
+      game.view.loadAround(x, z);
+    }
+    if (params.has('yaw')) game.camera.yaw = Number(params.get('yaw'));
   } else {
     ui.showMenu({ hasSave, username: res.username });
     svc.safeMoment();

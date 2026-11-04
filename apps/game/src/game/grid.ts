@@ -290,6 +290,7 @@ export class Grid {
     g.bus.emit({ type: 'subtitle', who: 'NODE', text: pickLine(NODE_LINES.online) });
     g.toast(`${d.name}: node online. District is now ${stName}.`, 'warm');
     this.refresh();
+    g.onWorldAction?.({ type: 'nodeOnline', node: a.node, district: a.district });
     g.persist('node');
   }
 

@@ -17,15 +17,15 @@ interface Key {
 
 // Hour keyframes (muted, desaturated).
 const KEYS: Key[] = [
-  { h: 0, top: 0x05080d, horizon: 0x111a24, sun: 0x6f86b0, sunI: 0.22, hemiSky: 0x24324a, hemiGround: 0x0b0d10, hemiI: 0.55 },
-  { h: 4.5, top: 0x070b12, horizon: 0x16202c, sun: 0x6f86b0, sunI: 0.2, hemiSky: 0x24324a, hemiGround: 0x0b0d10, hemiI: 0.5 },
+  { h: 0, top: 0x060a12, horizon: 0x142030, sun: 0x7f96c0, sunI: 0.42, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.95 },
+  { h: 4.5, top: 0x080c14, horizon: 0x18242e, sun: 0x7f96c0, sunI: 0.38, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.9 },
   { h: 6, top: 0x2c3a52, horizon: 0xc58a62, sun: 0xffb27a, sunI: 0.9, hemiSky: 0x6a7a92, hemiGround: 0x2a2420, hemiI: 0.7 },
   { h: 8, top: 0x4f6e8e, horizon: 0xa9b4b8, sun: 0xfff0d8, sunI: 1.9, hemiSky: 0x9fb0c4, hemiGround: 0x3d3a34, hemiI: 0.85 },
   { h: 13, top: 0x4d6f92, horizon: 0xb7c2c6, sun: 0xfff6e8, sunI: 2.25, hemiSky: 0xaab9cc, hemiGround: 0x46423a, hemiI: 0.9 },
   { h: 17, top: 0x4a6382, horizon: 0xc9a27e, sun: 0xffd1a0, sunI: 1.8, hemiSky: 0x9ca8b8, hemiGround: 0x403830, hemiI: 0.85 },
   { h: 19, top: 0x26304a, horizon: 0xd0784e, sun: 0xff9a5a, sunI: 0.95, hemiSky: 0x6a6a86, hemiGround: 0x2a2220, hemiI: 0.7 },
-  { h: 20.5, top: 0x0b111c, horizon: 0x2a2a3a, sun: 0x8a96c0, sunI: 0.3, hemiSky: 0x2c3650, hemiGround: 0x0e0e12, hemiI: 0.55 },
-  { h: 24, top: 0x05080d, horizon: 0x111a24, sun: 0x6f86b0, sunI: 0.22, hemiSky: 0x24324a, hemiGround: 0x0b0d10, hemiI: 0.55 },
+  { h: 20.5, top: 0x0b111c, horizon: 0x2a2a3a, sun: 0x8a96c0, sunI: 0.4, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.9 },
+  { h: 24, top: 0x060a12, horizon: 0x142030, sun: 0x7f96c0, sunI: 0.42, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.95 },
 ];
 
 const cA = new THREE.Color();
@@ -127,9 +127,9 @@ export class Atmosphere {
           col += vec3(0.75,0.82,0.95) * pow(md, 1600.0) * 3.0 * uNight;
           // stars
           if (h > 0.0) {
-            vec3 sp = floor(d * 260.0);
+            vec3 sp = floor(d * 420.0);
             float s = hash(sp);
-            col += vec3(0.9,0.92,1.0) * step(0.9965, s) * uNight * (1.0-uCloud) * smoothstep(0.0,0.25,h) * (0.6+0.4*sin(uTime*2.0+s*50.0));
+            col += vec3(0.9,0.92,1.0) * step(0.9975, s) * uNight * (1.0-uCloud) * smoothstep(0.0,0.25,h) * (0.6+0.4*sin(uTime*2.0+s*50.0));
           }
           // cheap cloud banding
           float band = sin(d.x*7.0 + uTime*0.01) * sin(d.z*5.0 - uTime*0.013) * 0.5 + 0.5;

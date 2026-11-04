@@ -77,6 +77,8 @@ export class Town {
       }
     }
     if (ev.length) this.game.bus.emit({ type: 'town' });
+    const w = this.game.save.world;
+    if (w.crops.length) this.game.base.rebuild(w.pieces, w.crops, w.hour);
     this.game.save.world.flags['rank'] = rankOf(this.game.save.world).rank;
   }
 
