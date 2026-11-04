@@ -9,12 +9,17 @@ only with a dedicated 3D or rigging tool
 text-to-3D tool plus auto-rigging).
 
 Format: GLB, ≤ 3,000 triangles, ≤ 40 bones,
-1 unit = 1 m, Y up, facing −Z, pivot between
+1 unit = 1 m, Y up, facing +Z, pivot between
 the feet. Height about 1.75 m.
 Clips: idle, walk, run, attack_light,
 attack_heavy, dodge, interact, hit, die, sit,
 sleep.
 Drop into: `assets/incoming/characters/`
+
+In game today: ingest validates rigged characters, but the game
+still draws its procedural characters (an imported skeleton isn't
+driven yet). The rigid robot enemy is used in game. See
+`models-top30.md` for exact IDs, sizes and prompts.
 
 | # | ID | Who |
 |---|---|---|

@@ -13,9 +13,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings=0",
     "test": "npm run test --workspaces --if-present",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build && node tools/check-bundle.mjs && node tools/check-secrets.mjs",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && node tools/check-bundle.mjs && node tests/ingest-glb.mjs && node tools/check-secrets.mjs",
     "smoke": "node tests/smoke.mjs",
-    "assets:ingest": "node tools/ingest.mjs"
+    "assets:ingest": "node tools/ingest.mjs",
+    "assets:docs": "node tools/gen-model-requests.mjs",
+    "test:ingest": "node tests/ingest-glb.mjs"
   },
   "engines": {
     "node": ">=22.12"

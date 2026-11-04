@@ -8,9 +8,13 @@ import { gzipSync } from 'node:zlib';
 const dist = 'apps/game/dist';
 const LIMIT = 12 * 1024 * 1024;
 let total = 0;
+// On-demand only (not precached, see vite.config.ts globIgnores): Tier B model files
+// and the GLB loader chunks, fetched only when assets/manifest.json lists live models.
+const ON_DEMAND = [/^models$/, /^GLTFLoader-.*\.js$/, /^meshopt_decoder.*\.js$/];
 const walk = (d) => {
   for (const f of readdirSync(d)) {
     const p = join(d, f);
+    if (ON_DEMAND.some((r) => r.test(f))) continue;
     if (statSync(p).isDirectory()) walk(p);
     else if (/\.(js|css|html|json|webp|png|wasm|m4a|mp3|svg|webmanifest)$/.test(f)) total += /\.(png|webp|m4a|mp3)$/.test(f) ? statSync(p).size : gzipSync(readFileSync(p)).length;
   }

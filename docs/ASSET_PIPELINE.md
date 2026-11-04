@@ -19,7 +19,9 @@ The game ships entirely on **Tier A** assets: procedural meshes, textures and au
 4. Run `npm run assets:ingest`. Add `-- --dry` to validate without writing anything.
 5. Check `assets/REPORT.md`. Results go to `assets/processed/<category>/` and `assets/manifest.json`.
 
-At runtime the client loads `manifest.json`. If an ID is present it uses the processed file. Otherwise, or if the file fails to load, it uses the Tier A asset with that ID. **A failure never crashes the game.**
+At runtime the client fetches `models/manifest.json` (copied from `assets/` at build time; served from `assets/` by the dev server). For every model whose registry entry is `"runtime": "live"` it loads the GLB and replaces the procedural mesh: **props** (all instances of that kind) and **rigid enemies** (the robot). If the manifest lists nothing live, no loader code is downloaded at all. A missing or broken file is reported in `window.__models` and the procedural version stays. **A failure never crashes the game.**
+
+**Not wired yet (honest):** building GLBs and rigged character GLBs are validated by ingest (`"runtime": "pending"`) but the game still draws its procedural buildings and characters. Images and audio from the manifest are not loaded by the game yet either.
 
 ## 3. Categories, prefixes and caps
 
@@ -27,6 +29,7 @@ At runtime the client loads `manifest.json`. If an ID is present it uses the pro
 |---|---|---|---|
 | `props/` | `prop` | GLB | ≤ 800 triangles, ≤ 5 materials, textures ≤ 1024 |
 | `building-pieces/` | `piece` | GLB | ≤ 400 triangles, ≤ 5 materials |
+| `buildings/` | `bldg` | GLB | ≤ 6,000 triangles, ≤ 5 materials, textures ≤ 1024 |
 | `characters/` | `char` | GLB | ≤ 3,000 triangles, ≤ 40 bones |
 | `textures/` | `tex`, `atlas` | Image | 256–1024 px, power of two, tileable |
 | `decals/` | `decal` | Image | 64–1024 px, power of two, alpha required |
@@ -37,11 +40,12 @@ At runtime the client loads `manifest.json`. If an ID is present it uses the pro
 
 ## 4. Model specs
 
-- 1 unit = 1 meter. **Y is up. Forward is −Z.** The pivot sits at the **center of the base**.
+- 1 unit = 1 meter. **Y is up. The front faces +Z** (the glTF convention; the game uses it too). The pivot sits at the **center of the base**.
+- **Stable IDs and per-asset budgets live in `assets/registry.json`** (size in meters, triangles, texture size and MB, bones, clips, what it replaces, live/pending). Ingest checks every model against its entry: size ±35% is fine, 3× off is rejected as wrong units (with a "looks like centimeters" hint), plus pivot, a 90° rotation of long props, bones, missing clips, and resident texture MB. A model not in the registry is processed but the game won't use it. `docs/asset-requests/models-top30.md` is generated from the registry (`npm run assets:docs`).
 - Apply all transforms before export. Use no cameras or lights. Names are optional.
 - Triangle budgets: characters ≤ 3,000 tris and ≤ 40 bones, props ≤ 800, building pieces ≤ 400.
 - Use a shared atlas per district, with ≤ 5 materials per chunk. Prefer vertex colors.
-- Building pieces snap on a **2 m grid**. Walls are 2 m wide, 3 m tall and 0.2 m thick. Foundations are 2 × 2 × 0.4 m.
+- Building pieces snap on a **4 m grid** with 3 m storeys. Walls are 4 m wide, 3 m tall and 0.3 m thick. Foundations are 4 × 4 × 0.4 m.
 - Animated characters use a humanoid skeleton. Clip names: `idle`, `walk`, `run`, `attack_light`, `attack_heavy`, `dodge`, `interact`, `hit`, `die`, `sit`, `sleep`.
 
 ## 5. Texture specs
@@ -64,12 +68,12 @@ At runtime the client loads `manifest.json`. If an ID is present it uses the pro
    - the file extension and size limit
    - the license note (CC0, owner-created or permissive only; NC, ND and unknown are rejected)
    - image dimensions, square shape and alpha
-   - model triangles, bones and materials
+   - model triangles, bones and materials, and (for registry IDs) real size from the bounds, pivot, orientation, rig/clips and texture memory
 2. **Optimizes:**
    - **Images:** sharp resizes them within the caps (power of two where required) and writes WebP.
    - **Models:** `gltf-transform optimize --compress meshopt --texture-compress webp --texture-size <cap>`. A model up to 1.5× over its triangle budget is simplified automatically. Beyond that it is rejected. The texture format is set explicitly because the default auto mode can make PNGs larger. Meshopt is used instead of Draco so animated models work.
    - **Audio:** if ffmpeg exists, files are converted to AAC .m4a. Otherwise MP3 and M4A files are copied and other formats are rejected.
-3. **Records:** writes `assets/manifest.json` (`{ version, assets: { id: { path, kind, bytes, w?, h?, tris?, bones?, loop?, license, source } } }`) and `assets/REPORT.md`.
+3. **Records:** writes `assets/manifest.json` (`{ version, assets: { id: { path, kind, bytes, w?, h?, tris?, bones?, clips?, size?, texMB?, stable?, replaces?, runtime?, loop?, license, source } } }`) and `assets/REPORT.md`.
 4. **Never aborts** on one bad file. It logs the file and moves on. Half-written output is deleted.
 
 ## 8. Licensing
@@ -78,4 +82,6 @@ Every non-generated file is logged in `ASSETS.md` with its source, author and li
 
 ## 9. Request sheets
 
-`docs/asset-requests/` contains prompts you can paste into ChatGPT, one sheet per category. ChatGPT can make images (textures, decals, icons, key art, skies). It **cannot** reliably make rigged 3D models or audio. Use other tools for those, or keep the Tier A versions, which are complete.
+`docs/asset-requests/` contains prompts you can paste into ChatGPT, one sheet per category. ChatGPT can make images (textures, decals, icons, key art, skies). It **cannot** output finished or rigged 3D models or audio. For models, `models-top30.md` gives each entry a reference-sheet image prompt (for an image-to-3D tool or a modeler) and, for simple rigid shapes, a prompt that makes ChatGPT write a Blender script which builds and exports the GLB. Keep the Tier A versions otherwise; they are complete.
+
+Tests: `node tests/ingest-glb.mjs` (validation on generated GLBs) and `node tests/models-flow.mjs` (ingest → build → the game swaps the crate and robot models in, and a missing file falls back).

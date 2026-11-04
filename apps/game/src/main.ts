@@ -95,6 +95,25 @@ async function start() {
   game.onRemoteNode = (node, district) => grid.remoteOnline(node, district);
   (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
+  // Tier B models (GLB) replace procedural meshes when present; never blocks boot.
+  void (async () => {
+    const [{ loadModelOverrides }, { overridePropShape }, { setEnemyModel }] = await Promise.all([
+      import('./assets/models'),
+      import('./render/props'),
+      import('./game/enemies'),
+    ]);
+    const report = await loadModelOverrides(import.meta.env.BASE_URL, {
+      prop: (kind, geo, mat) => {
+        overridePropShape(kind, geo, mat);
+        game.view.applyPropShape(kind);
+      },
+      enemy: (kind, geo, mat) => setEnemyModel(kind as Parameters<typeof setEnemyModel>[0], geo, mat),
+    });
+    (window as unknown as { __models: unknown }).__models = report;
+    if (report.loaded.length || report.failed.length) {
+      console.info(`[models] loaded ${report.loaded.length}, fell back ${report.failed.length}`, report.failed);
+    }
+  })();
   const ui = new UI(game);
   game.screenProbe = () => ui.openScreen;
   ui.setJobAssign((id, job) => town.assign(id, job));

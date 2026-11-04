@@ -14,6 +14,8 @@ export interface PropShape {
   small: boolean;
   /** casts shadows */
   shadow: boolean;
+  /** set when a Tier B (GLB) model replaced the procedural mesh */
+  material?: THREE.Material | THREE.Material[];
 }
 
 const RZ = (a: number) => new THREE.Matrix4().makeRotationZ(a);
@@ -445,3 +447,15 @@ export function propShape(kind: PropKind): PropShape {
 }
 
 export const PROP_KINDS = Object.keys(builders) as PropKind[];
+
+/**
+ * Replace a kind's procedural mesh with a loaded model (Tier B). Collision boxes,
+ * small/shadow flags stay from the procedural builder so gameplay is unchanged.
+ * Tints become near-white so instance colors don't muddy the model's textures.
+ */
+export function overridePropShape(kind: PropKind, geo: THREE.BufferGeometry, material: THREE.Material | THREE.Material[]): PropShape {
+  const base = propShape(kind);
+  const s: PropShape = { ...base, geo, material, tints: [0xffffff, 0xf0ece6, 0xe4e2de] };
+  cache.set(kind, s);
+  return s;
+}

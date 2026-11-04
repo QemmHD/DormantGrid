@@ -61,6 +61,11 @@ interface Enemy {
 }
 
 const geoCache = new Map<EnemyKind, THREE.BufferGeometry>();
+/** Tier B (GLB) replacements for rigid enemies; procedural geometry is the fallback. */
+const modelOverride = new Map<EnemyKind, { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[] }>();
+export function setEnemyModel(kind: EnemyKind, geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[]): void {
+  modelOverride.set(kind, { geo, mat });
+}
 
 function enemyGeo(kind: EnemyKind): THREE.BufferGeometry {
   let g = geoCache.get(kind);
@@ -217,7 +222,8 @@ export class Enemies {
       rig = new CharacterRig(randomLook(this.nextId * 131 + 7, { mask: true, shirt: 0x5a3a32, accent: 0x8a2f2a, hairStyle: 2 }));
       obj = rig.root;
     } else {
-      const m = new THREE.Mesh(enemyGeo(kind), this.mat);
+      const ov = modelOverride.get(kind);
+      const m = new THREE.Mesh(ov?.geo ?? enemyGeo(kind), ov?.mat ?? this.mat);
       m.castShadow = true;
       obj = new THREE.Group();
       obj.add(m);

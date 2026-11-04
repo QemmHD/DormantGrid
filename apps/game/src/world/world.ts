@@ -100,7 +100,7 @@ export class WorldView {
       const n = counts.get(kind) ?? 0;
       if (n === 0) continue;
       const shape = propShape(kind);
-      const mesh = new THREE.InstancedMesh(shape.geo, this.propMat, n);
+      const mesh = new THREE.InstancedMesh(shape.geo, shape.material ?? this.propMat, n);
       mesh.count = 0;
       mesh.castShadow = shape.shadow && castShadows;
       mesh.receiveShadow = true;
@@ -110,6 +110,22 @@ export class WorldView {
       this.group.add(mesh);
       this.batches.set(kind, { mesh, ids: [] });
     }
+  }
+
+  /** Swap a prop kind's batch to its (possibly overridden) shape, keeping all instances. */
+  applyPropShape(kind: PropKind): void {
+    const b = this.batches.get(kind);
+    if (!b) return;
+    const shape = propShape(kind);
+    b.mesh.geometry = shape.geo;
+    b.mesh.material = shape.material ?? this.propMat;
+    b.mesh.castShadow = shape.shadow && b.mesh.castShadow;
+    // re-tint existing instances for the new palette
+    for (let i = 0; i < b.ids.length; i++) {
+      const p = this.layout.props[b.ids[i]];
+      b.mesh.setColorAt(i, col.setHex(shape.tints[((p.id * 2654435761) >>> 0) % shape.tints.length]));
+    }
+    if (b.mesh.instanceColor) b.mesh.instanceColor.needsUpdate = true;
   }
 
   get chunkCount(): number {
