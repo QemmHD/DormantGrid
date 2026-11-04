@@ -50,7 +50,8 @@ export class Guide {
     next.setAttribute('aria-label', 'What should I do next?');
     this.skipBtn = document.createElement('button');
     this.skipBtn.className = 'obtn';
-    this.skipBtn.textContent = 'Skip tutorial';
+    this.skipBtn.textContent = 'Skip';
+    this.skipBtn.setAttribute('aria-label', 'Skip the tutorial');
     const help = document.createElement('button');
     help.className = 'obtn';
     help.textContent = 'Help';
@@ -287,6 +288,9 @@ export class Guide {
     } else {
       this.arrow.classList.remove('show');
       this.beacon.classList.add('show');
+      // never sit on top of the objective card
+      const r = this.el.getBoundingClientRect();
+      if (sx > r.left - 24 && sx < r.right + 24 && sy > r.top - 40 && sy < r.bottom + 30) sx = r.right + 34;
       this.beacon.style.transform = `translate(${sx}px, ${sy}px)`;
       const lbl = `${Math.round(dist)} m`;
       if (this.beaconLbl.textContent !== lbl) this.beaconLbl.textContent = lbl;

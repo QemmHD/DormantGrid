@@ -75,6 +75,7 @@ import { FX } from '../render/fx';
 import { MeshBuilder } from '../render/geo';
 import { BaseView, levelFromY, STOREY_H } from './base';
 import { HavenCamp } from '../world/haven';
+import { PostFX } from '../render/post';
 import { Bus, loadSettings, storeSettings, type CraftInfo, type GameAPI, type GameMode, type ScreenId, type Settings } from './api';
 import { ONBOARDING, type OnboardingTrigger } from '../content/onboarding';
 import { ACTS, DISTRICT_INTROS } from '../content/campaign';
@@ -252,12 +253,15 @@ export class Game implements GameAPI {
       }
     };
     this.renderer.onQualityChange = (q) => {
+      this.renderer.post?.dispose();
+      this.renderer.post = q.tier === 'low' ? null : new PostFX(this.renderer.gl, this.scene, this.camera.cam, q.tier === 'high');
       this.view.radius = q.detailRadius;
       this.view.propDensity = q.propDensity;
       this.atm.setShadows(q.shadows ? q.shadowSize : 0);
       this.view.setShadows(q.shadows);
     };
     this.renderer.onContextRestored = () => this.toast('Graphics restored.');
+    if (this.renderer.quality.tier !== 'low') this.renderer.post = new PostFX(this.renderer.gl, this.scene, this.camera.cam, this.renderer.quality.tier === 'high');
     // A fresh world behind the main menu so the menu has a live backdrop.
     this.save = simNewGame(SEED, 'standard', this.layout.spawn);
     this.applyWorldState();
@@ -1823,6 +1827,7 @@ export class Game implements GameAPI {
     const warmth = this.warmth();
     this.atm.update(dt, this.save.world.hour, (this.save.world.weather as Weather) ?? 'clear', warmth, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar * (this.introT >= 0 ? 2.6 - Math.min(1, this.introT / 7) * 1.6 : 1), this.time);
     const night = 1 - this.atm.daylight;
+    this.renderer.post?.setWarmth(warmth);
     for (const u of this.view.uniforms) {
       u.uWindow.value = 0.25 + night * 1.1;
       u.uGrid.value = 0.8 + Math.sin(this.time * 2) * 0.1;

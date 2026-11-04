@@ -155,10 +155,15 @@ export class Renderer {
     this.resizePending = true;
   }
 
+  /** post chain (medium/high); set by the game after construction */
+  post: { render(): void; setWarmth(w: number): void; dispose(): void } | null = null;
+  usePost = true;
+
   render(scene: THREE.Scene, camera: THREE.Camera): void {
     if (this.contextLost) return;
     this.gl.info.reset();
-    this.gl.render(scene, camera);
+    if (this.post && this.usePost && this.quality.tier !== 'low') this.post.render();
+    else this.gl.render(scene, camera);
   }
 
   stats(): { calls: number; tris: number; geometries: number; textures: number; programs: number } {
