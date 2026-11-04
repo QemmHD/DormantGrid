@@ -55,7 +55,7 @@ All headless Chromium/SwiftShader. **Nothing has been measured on a real iPhone.
 | Triangles, medium (incl. shadow pass) | ~200k | ≤ 300k |
 | Triangles, high | ~490k (desktop only) | — |
 | Texture memory | ≈ 0 MB (vertex colors only; shadow map + a 19×19 data texture) | ≤ 150 MB |
-| Initial payload | 0.54 MB gzip | ≤ 12 MB |
+| Initial payload | 0.54 MB gzip (baseline raised on purpose for the worker; DECISIONS #17) | ≤ 12 MB |
 | Chunk mesh build | off-thread in a Web Worker; worst main-thread sync build 32 ms (spawn/teleport only) | — |
 | Memory walk (48 waypoints across the town) | geometries ≤ 75, textures 5, colliders ≤ 5.3k; heap returns to ~60 MB; world hash stable `9cf52650` | stable, no leaks |
 
@@ -92,7 +92,7 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 | 6 Accounts, cloud saves, updates | ✅ Tested against local wrangler; not deployed |
 | 7 Survivors | ✅ Autonomous sim + near rendering. The "20 days hands-off" check is a sim soak test, not a client test |
 | 8 Farming | 🟡 Plots and crops work. Livestock, hunting and cooking-quality UI are only in the sim |
-| 9 Combat | 🟡 Melee, dodge, 5 enemy types, drone alerts. Ranged weapons, stealth, traps and **raids** are not hooked up in the client |
+| 9 Combat | 🟡 Melee, dodge, ranged weapons (projectiles, ammo, aim assist), 5 enemy types, drone alerts, **telegraphed raids** on Haven (`node tests/raid-flow.mjs`). Stealth and trap triggers are not done |
 | 10 Grid | ✅ Reboot sequence and restoration ripple. District services UI is minimal |
 | 11 Factions + campaign | 🟡 Quests and journal across 4 acts, Guild trade and lore terminals. Contracts, faction events and the endings flow are not playable yet |
 | 12 Co-op | 🟡 Host/join, remote players, shared world events, pings and reconnect exist. Verified end-to-end only against local wrangler by the net track; not verified in-world with two clients |
@@ -106,8 +106,8 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 4. Optional: the title decision (DECISIONS #15).
 
 ## NEXT ACTIONS
-1. Hook the raid scheduler (`maybeScheduleRaid`/`raidPhase`) into the client: telegraphed warning toast + alarm, raider squad spawn at Haven, survivor guards, base piece damage.
-2. Ranged weapons (bow/crossbow/nail gun) with ammo, plus aim assist.
+1. Raids: survivor guards fight in-world, and raiders damage placed pieces (outcome is currently stock/injury only).
+2. Ranged enemies (raider sniper) shooting back.
 3. Stealth (crouch, noise/light visibility) and traps triggering on enemies.
 4. Livestock pens (coop/pen) and the hunting/butchering loop in the client.
 5. Contracts UI with the Guild and Reavers, faction events, and an endings sequence for Act IV (Core).

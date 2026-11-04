@@ -6,7 +6,7 @@
 - **Small props are hidden at low quality** (density 0.55), so they can't be salvaged on that tier.
 - **Survivors steer in straight lines** with collision push-out, so they can get stuck on corners. Nav-grid pathing is next.
 - **Worldgen runs twice at boot.** It runs on the main thread (~0.4 s on desktop) and again in the mesh worker. The duplication is deliberate but costs boot time.
-- **Not hooked into the client yet:** raids, ranged combat, stealth, trap triggers, livestock, hunting, contracts, endings. The sim logic exists.
+- **Not hooked into the client yet:** stealth, trap triggers, livestock, hunting, contracts, endings. The sim logic exists. Raids don't damage placed pieces, and survivor guards don't fight in-world.
 - **Co-op limitations:**
   - Host migration on the client is a guess.
   - The server's proposed `{t:'host'}` message is not in the contract yet.
