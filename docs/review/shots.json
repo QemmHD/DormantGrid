@@ -1,0 +1,530 @@
+[
+  {
+    "profile": "iphone",
+    "scene": "menu",
+    "file": "docs/review/shots/iphone-01-menu.png",
+    "calls": 89,
+    "tris": 240798,
+    "weather": "clear",
+    "hour": 8,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "spawn-first-frame",
+    "file": "docs/review/shots/iphone-02-spawn-first-frame.png",
+    "calls": 95,
+    "tris": 245458,
+    "weather": "clear",
+    "hour": 8.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "spawn-after-intro",
+    "file": "docs/review/shots/iphone-03-spawn-after-intro.png",
+    "calls": 95,
+    "tris": 245458,
+    "weather": "clear",
+    "hour": 8.09,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "haven-overview",
+    "file": "docs/review/shots/iphone-04-haven-overview.png",
+    "calls": 101,
+    "tris": 252128,
+    "weather": "clear",
+    "hour": 10.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "downtown-street-dormant",
+    "file": "docs/review/shots/iphone-05-downtown-street-dormant.png",
+    "calls": 75,
+    "tris": 477996,
+    "weather": "clear",
+    "hour": 11.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "downtown-street-restored",
+    "file": "docs/review/shots/iphone-06-downtown-street-restored.png",
+    "calls": 75,
+    "tris": 465524,
+    "weather": "clear",
+    "hour": 11.07,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "residential-street",
+    "file": "docs/review/shots/iphone-07-residential-street.png",
+    "calls": 83,
+    "tris": 419736,
+    "weather": "clear",
+    "hour": 14.04,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "building-closeup-apartment",
+    "file": "docs/review/shots/iphone-08-building-closeup-apartment.png",
+    "calls": 101,
+    "tris": 477078,
+    "weather": "clear",
+    "hour": 15.04,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "building-closeup-shop",
+    "file": "docs/review/shots/iphone-09-building-closeup-shop.png",
+    "calls": 87,
+    "tris": 451348,
+    "weather": "clear",
+    "hour": 15.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "interior",
+    "file": "docs/review/shots/iphone-10-interior.png",
+    "calls": 99,
+    "tris": 410941,
+    "weather": "clear",
+    "hour": 12.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "prop-closeup-car",
+    "file": "docs/review/shots/iphone-11-prop-closeup-car.png",
+    "calls": 100,
+    "tris": 516535,
+    "weather": "clear",
+    "hour": 13.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "interact-target-crate",
+    "file": "docs/review/shots/iphone-12-interact-target-crate.png",
+    "calls": 80,
+    "tris": 286194,
+    "weather": "clear",
+    "hour": 10.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "night-haven",
+    "file": "docs/review/shots/iphone-13-night-haven.png",
+    "calls": 103,
+    "tris": 300398,
+    "weather": "clear",
+    "hour": 22.54,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "night-downtown-dormant",
+    "file": "docs/review/shots/iphone-14-night-downtown-dormant.png",
+    "calls": 77,
+    "tris": 427122,
+    "weather": "clear",
+    "hour": 23.04,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "night-downtown-restored",
+    "file": "docs/review/shots/iphone-15-night-downtown-restored.png",
+    "calls": 76,
+    "tris": 492736,
+    "weather": "clear",
+    "hour": 23.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "rain",
+    "file": "docs/review/shots/iphone-16-rain.png",
+    "calls": 93,
+    "tris": 415206,
+    "weather": "rain",
+    "hour": 36.03,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "fog",
+    "file": "docs/review/shots/iphone-17-fog.png",
+    "calls": 93,
+    "tris": 412872,
+    "weather": "fog",
+    "hour": 106.54,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "storm",
+    "file": "docs/review/shots/iphone-18-storm.png",
+    "calls": 93,
+    "tris": 412872,
+    "weather": "storm",
+    "hour": 34.54,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "build-mode",
+    "file": "docs/review/shots/iphone-19-build-mode.png",
+    "calls": 90,
+    "tris": 239620,
+    "weather": "clear",
+    "hour": 130.53,
+    "raiders": 0
+  },
+  {
+    "profile": "iphone",
+    "scene": "raid",
+    "file": "docs/review/shots/iphone-20-raid.png",
+    "calls": 101,
+    "tris": 251712,
+    "weather": "clear",
+    "hour": 131.89,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-inventory",
+    "file": "docs/review/shots/iphone-21-screen-inventory.png",
+    "calls": 101,
+    "tris": 251712,
+    "weather": "clear",
+    "hour": 131.92,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-craft",
+    "file": "docs/review/shots/iphone-22-screen-craft.png",
+    "calls": 100,
+    "tris": 251712,
+    "weather": "clear",
+    "hour": 131.95,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-map",
+    "file": "docs/review/shots/iphone-23-screen-map.png",
+    "calls": 100,
+    "tris": 251712,
+    "weather": "clear",
+    "hour": 131.98,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-ledger",
+    "file": "docs/review/shots/iphone-24-screen-ledger.png",
+    "calls": 104,
+    "tris": 254776,
+    "weather": "clear",
+    "hour": 132,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-journal",
+    "file": "docs/review/shots/iphone-25-screen-journal.png",
+    "calls": 104,
+    "tris": 254776,
+    "weather": "clear",
+    "hour": 132.03,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "scene": "screen-settings",
+    "file": "docs/review/shots/iphone-26-screen-settings.png",
+    "calls": 104,
+    "tris": 254776,
+    "weather": "clear",
+    "hour": 132.03,
+    "raiders": 3
+  },
+  {
+    "profile": "iphone",
+    "pageErrors": []
+  },
+  {
+    "profile": "desktop",
+    "scene": "menu",
+    "file": "docs/review/shots/desktop-01-menu.png",
+    "calls": 125,
+    "tris": 554803,
+    "weather": "clear",
+    "hour": 8,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "spawn-first-frame",
+    "file": "docs/review/shots/desktop-02-spawn-first-frame.png",
+    "calls": 130,
+    "tris": 552067,
+    "weather": "clear",
+    "hour": 8.03,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "spawn-after-intro",
+    "file": "docs/review/shots/desktop-03-spawn-after-intro.png",
+    "calls": 130,
+    "tris": 552067,
+    "weather": "clear",
+    "hour": 8.06,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "haven-overview",
+    "file": "docs/review/shots/desktop-04-haven-overview.png",
+    "calls": 135,
+    "tris": 565653,
+    "weather": "clear",
+    "hour": 10.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "downtown-street-dormant",
+    "file": "docs/review/shots/desktop-05-downtown-street-dormant.png",
+    "calls": 118,
+    "tris": 780455,
+    "weather": "clear",
+    "hour": 11.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "downtown-street-restored",
+    "file": "docs/review/shots/desktop-06-downtown-street-restored.png",
+    "calls": 118,
+    "tris": 761261,
+    "weather": "clear",
+    "hour": 11.05,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "residential-street",
+    "file": "docs/review/shots/desktop-07-residential-street.png",
+    "calls": 118,
+    "tris": 840591,
+    "weather": "clear",
+    "hour": 14.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "building-closeup-apartment",
+    "file": "docs/review/shots/desktop-08-building-closeup-apartment.png",
+    "calls": 136,
+    "tris": 950463,
+    "weather": "clear",
+    "hour": 15.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "building-closeup-shop",
+    "file": "docs/review/shots/desktop-09-building-closeup-shop.png",
+    "calls": 111,
+    "tris": 837183,
+    "weather": "clear",
+    "hour": 15.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "interior",
+    "file": "docs/review/shots/desktop-10-interior.png",
+    "calls": 130,
+    "tris": 852814,
+    "weather": "clear",
+    "hour": 12.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "prop-closeup-car",
+    "file": "docs/review/shots/desktop-11-prop-closeup-car.png",
+    "calls": 138,
+    "tris": 1000184,
+    "weather": "clear",
+    "hour": 13.03,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "interact-target-crate",
+    "file": "docs/review/shots/desktop-12-interact-target-crate.png",
+    "calls": 109,
+    "tris": 694109,
+    "weather": "clear",
+    "hour": 10.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "night-haven",
+    "file": "docs/review/shots/desktop-13-night-haven.png",
+    "calls": 133,
+    "tris": 733455,
+    "weather": "clear",
+    "hour": 22.53,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "night-downtown-dormant",
+    "file": "docs/review/shots/desktop-14-night-downtown-dormant.png",
+    "calls": 110,
+    "tris": 726961,
+    "weather": "clear",
+    "hour": 23.03,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "night-downtown-restored",
+    "file": "docs/review/shots/desktop-15-night-downtown-restored.png",
+    "calls": 134,
+    "tris": 955635,
+    "weather": "clear",
+    "hour": 23.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "rain",
+    "file": "docs/review/shots/desktop-16-rain.png",
+    "calls": 138,
+    "tris": 922303,
+    "weather": "rain",
+    "hour": 36.02,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "fog",
+    "file": "docs/review/shots/desktop-17-fog.png",
+    "calls": 138,
+    "tris": 919969,
+    "weather": "fog",
+    "hour": 106.53,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "storm",
+    "file": "docs/review/shots/desktop-18-storm.png",
+    "calls": 138,
+    "tris": 919969,
+    "weather": "storm",
+    "hour": 34.53,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "build-mode",
+    "file": "docs/review/shots/desktop-19-build-mode.png",
+    "calls": 125,
+    "tris": 657401,
+    "weather": "clear",
+    "hour": 130.53,
+    "raiders": 0
+  },
+  {
+    "profile": "desktop",
+    "scene": "raid",
+    "file": "docs/review/shots/desktop-20-raid.png",
+    "calls": 136,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.52,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-inventory",
+    "file": "docs/review/shots/desktop-21-screen-inventory.png",
+    "calls": 136,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.55,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-craft",
+    "file": "docs/review/shots/desktop-22-screen-craft.png",
+    "calls": 136,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.57,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-map",
+    "file": "docs/review/shots/desktop-23-screen-map.png",
+    "calls": 136,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.6,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-ledger",
+    "file": "docs/review/shots/desktop-24-screen-ledger.png",
+    "calls": 135,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.62,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-journal",
+    "file": "docs/review/shots/desktop-25-screen-journal.png",
+    "calls": 135,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.64,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "scene": "screen-settings",
+    "file": "docs/review/shots/desktop-26-screen-settings.png",
+    "calls": 135,
+    "tris": 670887,
+    "weather": "clear",
+    "hour": 131.64,
+    "raiders": 3
+  },
+  {
+    "profile": "desktop",
+    "pageErrors": []
+  }
+]

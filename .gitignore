@@ -7,3 +7,4 @@ test-results/
 tests/output/
 .dev.vars
 .env*
+docs/review/shots/
