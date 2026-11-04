@@ -67,7 +67,7 @@ function tileColor(layout: WorldLayout, t: number, d: number, x: number, z: numb
 }
 
 /** Ground mesh for one cell: one quad per 4 m tile with curbs, water banks, rails and road paint. */
-export function buildGround(layout: WorldLayout, cx: number, cz: number, height: (x: number, z: number) => number): MeshBuilder {
+export function buildGround(layout: WorldLayout, cx: number, cz: number, height: (x: number, z: number) => number, restore: readonly number[] = []): MeshBuilder {
   const b = new MeshBuilder();
   const per = CELL_SIZE / TILE_SIZE;
   const tileAt = (tx: number, tz: number) => (tx < 0 || tz < 0 || tx >= TILES || tz >= TILES ? Tile.Grass : layout.tiles[tz * TILES + tx]);
@@ -150,6 +150,41 @@ export function buildGround(layout: WorldLayout, cx: number, cz: number, height:
         b.box(x0 + 2, 0.14, z0 + 1.3, 2, 0.04, 0.04);
         b.box(x0 + 2, 0.14, z0 + 2.7, 2, 0.04, 0.04);
       }
+      // surface detail: cracks, slab joints, litter (ruins) or flowerbeds (restored)
+      const st = restore[d] ?? 0;
+      const hh = hash2(tx * 31 + 7, tz * 17 + 3);
+      if (t === Tile.Sidewalk && (tx + tz) % 2 === 0) {
+        b.setColor(c2.setHex(0x55534e));
+        b.box(x0 + 2, l + 0.004, z0 + 0.02, 2, 0.004, 0.025);
+        b.box(x0 + 0.02, l + 0.004, z0 + 2, 0.025, 0.004, 2);
+      }
+      if ((t === Tile.Road || t === Tile.Sidewalk || t === Tile.Plaza) && hh % 7 === 0 && st < 3) {
+        // zig-zag crack
+        b.setColor(c2.setHex(0x26272a));
+        let px = x0 + 0.6 + (hh % 5) * 0.5, pz = z0 + 0.5;
+        for (let k = 0; k < 4; k++) {
+          const nx2 = px + (((hh >> (k * 3)) & 7) - 3.5) * 0.18, nz2 = pz + 0.75;
+          b.quad([px - 0.02, l + 0.006, pz], [px + 0.02, l + 0.006, pz], [nx2 + 0.02, l + 0.006, nz2], [nx2 - 0.02, l + 0.006, nz2]);
+          px = nx2;
+          pz = nz2;
+        }
+      }
+      if ((t === Tile.Sidewalk || t === Tile.Lot || t === Tile.Plaza) && st < 2 && hh % 5 === 0) {
+        // litter: scraps of paper and grit
+        for (let k = 0; k < 3; k++) {
+          const lx = x0 + 0.4 + (((hh >> (k * 4)) & 15) / 15) * 3.2, lz = z0 + 0.4 + (((hh >> (k * 4 + 2)) & 15) / 15) * 3.2;
+          b.setColor(k === 0 ? 0xb8b0a0 : k === 1 ? 0x6a5a48 : 0x8a8478);
+          b.box(lx, l + 0.01, lz, 0.12 + k * 0.04, 0.008, 0.08);
+        }
+      }
+      if (t === Tile.Grass && st >= 3 && hh % 6 === 0) {
+        // restored: flowerbeds
+        for (let k = 0; k < 5; k++) {
+          const fx = x0 + 0.8 + k * 0.6, fz = z0 + 1.6 + ((hh >> k) & 3) * 0.2;
+          b.setColor(k % 2 ? 0xd88a5a : 0xe8d070);
+          b.blob(fx, height(fx, fz) + 0.18, fz, 0.12, 0.1, 0.12, 0.2, k + hh);
+        }
+      }
       // road paint: center dashes on straight road runs
       if (t === Tile.Road) {
         const ew = tileAt(tx - 1, tz) === Tile.Road && tileAt(tx + 1, tz) === Tile.Road;
@@ -175,11 +210,13 @@ export function buildGround(layout: WorldLayout, cx: number, cz: number, height:
 const sideDir = (side: number): [number, number] =>
   side === 0 ? [0, 1] : side === 1 ? [0, -1] : side === 2 ? [1, 0] : [-1, 0];
 
-function wallColor(b: BuildingDef, p: DistrictPalette, out: THREE.Color): THREE.Color {
+const WARM = new THREE.Color(0xe0c08e);
+function wallColor(b: BuildingDef, p: DistrictPalette, out: THREE.Color, restore = 0): THREE.Color {
   const v = b.variant % 3;
   out.setHex(v === 0 ? p.wallA : v === 1 ? p.wallB : p.wallC);
-  // grime with decay
-  out.lerp(c2.setHex(0x3e3a34), b.decay * 0.28);
+  // grime with decay — restored districts get scrubbed and warmed
+  out.lerp(c2.setHex(0x3e3a34), b.decay * 0.28 * (1 - restore / 5));
+  out.lerp(WARM, restore * 0.045);
   return out;
 }
 
@@ -187,10 +224,11 @@ function wallColor(b: BuildingDef, p: DistrictPalette, out: THREE.Color): THREE.
  * Emit a building into `mb` (world space). `removed` = removed piece indices.
  * lod=true: cheap silhouette (single box + roof) for mid distance.
  */
-export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly PieceInfo[], removed: ReadonlySet<number>, p: DistrictPalette, windowLit: number): void {
+export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly PieceInfo[], removed: ReadonlySet<number>, p: DistrictPalette, windowLit: number, restore = 0): void {
   const H = BUILDING_FLOOR_H;
   mb.pushTRS(b.x, 0, b.z, (b.rot * Math.PI) / 2);
-  const wc = wallColor(b, p, new THREE.Color());
+  const wc = wallColor(b, p, new THREE.Color(), restore);
+  const ruin = Math.max(0, b.decay * (1 - restore / 4));
   const trim = new THREE.Color(p.trim).lerp(c2.setHex(0x3e3a34), b.decay * 0.3);
   const rng = (i: number) => (hash2(b.variant, i) % 1000) / 1000;
   const shop = b.lot === 'shop' || b.lot === 'clinic';
@@ -220,7 +258,9 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
             mb.box((xa + xb) / 2, (ya + yb) / 2, (ua + ub) / 2, (xb - xa) / 2, (yb - ya) / 2, (ub - ua) / 2);
           }
         };
-        mb.setColor(c1.copy(wc).multiplyScalar(jit * (pc.floor === 0 ? 0.92 : 1)));
+        // per-floor tone so tall facades read as layered, not flat
+        const floorTone = 0.95 + (((pc.floor * 7 + b.variant) % 3) - 1) * 0.035;
+        mb.setColor(c1.copy(wc).multiplyScalar(jit * floorTone * (pc.floor === 0 ? 0.92 : 1)));
         if (pc.kind === 'wall') {
           seg(u0, u0 + len, y0, y1);
         } else if (pc.kind === 'window') {
@@ -239,6 +279,19 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
           mb.setEmissive(0);
           mb.setColor(trim);
           seg(u0 + pier - 0.06, u0 + len - pier + 0.06, y0 + sill - 0.08, y0 + sill, 0.06);
+          // rain streaks under sills on neglected buildings
+          if (ruin > 0.25 && rng(pc.index + 41) < 0.6) {
+            mb.setColor(c1.copy(wc).multiplyScalar(0.62));
+            const sx = u0 + pier + 0.15 + rng(pc.index + 43) * (len - 2 * pier - 0.5);
+            seg(sx, sx + 0.18, y0 + Math.max(0.05, sill - 1.3), y0 + sill - 0.08, 0.004);
+          }
+          // restored: planter boxes with greenery under some windows
+          if (restore >= 3 && pc.floor > 0 && rng(pc.index + 51) < 0.45) {
+            mb.setColor(0x6a4a34);
+            seg(u0 + pier, u0 + len - pier, y0 + sill - 0.28, y0 + sill - 0.08, 0.28);
+            mb.setColor(rng(pc.index + 53) < 0.5 ? 0x5f8a48 : 0xc87a5a);
+            seg(u0 + pier + 0.05, u0 + len - pier - 0.05, y0 + sill - 0.08, y0 + sill + 0.12, 0.24, -0.04);
+          }
           // occasional boarded window in ruins
           if (b.decay > 0.45 && rng(pc.index + 3) < 0.35) {
             mb.setColor(0x6a5a44);
@@ -260,6 +313,12 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
             mb.setColor(c1.setHex(p.accent).multiplyScalar(0.85));
             if (alongX) mb.box(u0 + len / 2, y0 + 2.95, z1 + 0.55 * nz, len / 2 + 1.5, 0.06, 0.6);
             else mb.box(x1 + 0.55 * nx, y0 + 2.95, u0 + len / 2, 0.6, 0.06, len / 2 + 1.5);
+            // sign board above the awning; lit once the district has power
+            mb.setColor(c1.setHex(p.trim).multiplyScalar(0.55));
+            seg(u0 + 0.3, u0 + len - 0.3, y0 + 3.08, y0 + 3.42, 0.1);
+            mb.setColor(c1.setHex(p.accent).multiplyScalar(restore >= 2 ? 1.1 : 0.7)).setEmissive(restore >= 2 ? 0.9 : 0);
+            seg(u0 + 0.6, u0 + len - 0.6, y0 + 3.16, y0 + 3.34, 0.12);
+            mb.setEmissive(0);
           }
         }
         // cornice band at top of each floor (outer face)

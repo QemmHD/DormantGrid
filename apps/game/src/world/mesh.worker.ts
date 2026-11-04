@@ -15,6 +15,7 @@ export interface ChunkRequest {
   bids: number[];
   removed: Record<number, number[]>;
   windowLit: number[];
+  restore: number[];
 }
 
 export interface ChunkArrays {
@@ -62,7 +63,7 @@ ctx.onmessage = (e: MessageEvent) => {
   if (m.t === 'chunk' && layout) {
     const t0 = performance.now();
     const L = layout;
-    const ground = m.ground ? arrays(buildGround(L, m.cx, m.cz, (x, z) => heightAt(L, x, z))) : null;
+    const ground = m.ground ? arrays(buildGround(L, m.cx, m.cz, (x, z) => heightAt(L, x, z), m.restore)) : null;
     let bld: ChunkArrays | null = null;
     if (m.bids.length) {
       const mb = new MeshBuilder({ groundAO: true });
@@ -70,7 +71,7 @@ ctx.onmessage = (e: MessageEvent) => {
         const b = L.buildings[bid];
         const ps = pieces(bid);
         const removed = new Set(m.removed[bid] ?? initialRuinedPieces(b, ps));
-        meshBuilding(mb, b, ps, removed, paletteOf(L, b.district), m.windowLit[b.district] ?? 0.05);
+        meshBuilding(mb, b, ps, removed, paletteOf(L, b.district), m.windowLit[b.district] ?? 0.05, m.restore[b.district] ?? 0);
       }
       bld = arrays(mb);
     }

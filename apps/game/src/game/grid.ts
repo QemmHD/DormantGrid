@@ -132,6 +132,7 @@ export class Grid {
   /** Re-apply node colors + district window lighting from the save. */
   refresh(): void {
     const w = this.game.save.world;
+    const before = this.game.view.restore.join(',');
     for (const nv of this.nodes) {
       const on = this.isOnline(nv.def);
       this.ringMats.get(nv.def.id)!.color.copy(on ? ON : OFF);
@@ -144,7 +145,9 @@ export class Grid {
       const st = (w.districts[d.index]?.state ?? 0) as RestorationState;
       const base = d.key === 'haven' ? 0.35 : 0.04;
       this.game.view.windowLit[d.index] = Math.max(base, [0.04, 0.12, 0.45, 0.65, 0.85][st]);
+      this.game.view.restore[d.index] = d.key === 'haven' ? Math.max(2, st) : st;
     }
+    if (this.game.view.restore.join(',') !== before) this.game.view.refreshAll();
   }
 
   private nearNode(r: number): NodeView | null {

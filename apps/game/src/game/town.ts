@@ -75,7 +75,7 @@ export class Town {
     });
     game.tickers.push((dt, simDt) => this.tick(dt, simDt));
     game.onSleepHook = (hours) => {
-      this.advance(hours);
+      this.advance(hours, false);
       this.lastHour = Math.floor(game.save.world.hour + hours);
     };
   }
@@ -121,11 +121,19 @@ export class Town {
     return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: restored * 2 };
   }
 
-  /** Advance the town sim by whole hours (also used for sleep / catch-up). */
-  advance(hours: number): void {
+  /**
+   * Run the town sim over `hours`.
+   * - live catch-up (rewind=true): those hours have ALREADY passed on the world clock, so step over
+   *   [now-hours, now] without moving the clock (tickTown itself advances world.hour).
+   * - sleep (rewind=false): step forward from now; the caller then sets the final hour.
+   */
+  advance(hours: number, rewind = true): void {
     const w = this.game.save.world;
     if (hours <= 0) return;
+    const now = w.hour;
+    if (rewind) w.hour = now - hours;
     const ev = tickTown(w, hours, this.ctx());
+    if (rewind) w.hour = now;
     this.react(ev);
   }
 

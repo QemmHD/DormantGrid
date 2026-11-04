@@ -19,11 +19,11 @@ interface Key {
 const KEYS: Key[] = [
   { h: 0, top: 0x060a12, horizon: 0x142030, sun: 0x7f96c0, sunI: 0.42, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.95 },
   { h: 4.5, top: 0x080c14, horizon: 0x18242e, sun: 0x7f96c0, sunI: 0.38, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.9 },
-  { h: 6, top: 0x2c3a52, horizon: 0xc58a62, sun: 0xffb27a, sunI: 0.9, hemiSky: 0x6a7a92, hemiGround: 0x2a2420, hemiI: 0.7 },
-  { h: 8, top: 0x4f6e8e, horizon: 0xa9b4b8, sun: 0xfff0d8, sunI: 1.9, hemiSky: 0x9fb0c4, hemiGround: 0x3d3a34, hemiI: 0.85 },
-  { h: 13, top: 0x4d6f92, horizon: 0xb7c2c6, sun: 0xfff6e8, sunI: 2.25, hemiSky: 0xaab9cc, hemiGround: 0x46423a, hemiI: 0.9 },
-  { h: 17, top: 0x4a6382, horizon: 0xc9a27e, sun: 0xffd1a0, sunI: 1.8, hemiSky: 0x9ca8b8, hemiGround: 0x403830, hemiI: 0.85 },
-  { h: 19, top: 0x26304a, horizon: 0xd0784e, sun: 0xff9a5a, sunI: 0.95, hemiSky: 0x6a6a86, hemiGround: 0x2a2220, hemiI: 0.7 },
+  { h: 6, top: 0x2c3a52, horizon: 0xc58a62, sun: 0xffb27a, sunI: 0.9, hemiSky: 0x6a7a92, hemiGround: 0x3a3228, hemiI: 0.82 },
+  { h: 8, top: 0x4f6e8e, horizon: 0xa9b4b8, sun: 0xfff0d8, sunI: 1.9, hemiSky: 0xa4b4c6, hemiGround: 0x5a5346, hemiI: 1.05 },
+  { h: 13, top: 0x4d6f92, horizon: 0xb7c2c6, sun: 0xfff6e8, sunI: 2.25, hemiSky: 0xaebdcf, hemiGround: 0x625a4c, hemiI: 1.1 },
+  { h: 17, top: 0x4a6382, horizon: 0xc9a27e, sun: 0xffd1a0, sunI: 1.8, hemiSky: 0xa0abba, hemiGround: 0x5a4c40, hemiI: 1.0 },
+  { h: 19, top: 0x26304a, horizon: 0xd0784e, sun: 0xff9a5a, sunI: 0.95, hemiSky: 0x6e6e8a, hemiGround: 0x3a2e28, hemiI: 0.82 },
   { h: 20.5, top: 0x0b111c, horizon: 0x2a2a3a, sun: 0x8a96c0, sunI: 0.4, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.9 },
   { h: 24, top: 0x060a12, horizon: 0x142030, sun: 0x7f96c0, sunI: 0.42, hemiSky: 0x34466a, hemiGround: 0x14161c, hemiI: 0.95 },
 ];
