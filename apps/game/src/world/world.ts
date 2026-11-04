@@ -78,7 +78,7 @@ export class WorldView {
         this.worker = null;
         this.workerReady = false;
       };
-      this.worker.postMessage({ t: 'init', seed: layout.seed });
+      this.worker.postMessage({ t: 'init', seed: layout.seed, genVersion: layout.genVersion });
     } catch {
       this.worker = null;
     }

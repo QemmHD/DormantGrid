@@ -39,7 +39,7 @@ for (let i = 0; i < way.length; i++) {
   samples.push(s);
 }
 await page.evaluate(() => window.gc && window.gc());
-const final = await page.evaluate(() => ({ heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null, hash: window.__dg.layout.hash }));
+const final = await page.evaluate(() => (window.gc?.(), { heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null, hash: window.__dg.layout.hash }));
 const first = samples[4], last = samples[samples.length - 1];
 console.log('first', JSON.stringify(first));
 console.log('last ', JSON.stringify(last));
@@ -50,7 +50,7 @@ const maxCols = Math.max(...samples.map((s) => s.cols));
 if (last.geo > first.geo + 60) { console.log('FAIL geometry count grew', first.geo, '→', last.geo); ok = false; } else console.log('ok   geometry count bounded (max', maxGeo + ')');
 if (last.tex > first.tex + 4) { console.log('FAIL texture count grew'); ok = false; } else console.log('ok   texture count bounded', last.tex);
 if (maxCols > 40000) { console.log('FAIL colliders unbounded', maxCols); ok = false; } else console.log('ok   colliders bounded (max', maxCols + ')');
-if (final.hash !== '9cf52650') { console.log('FAIL world hash differs', final.hash); ok = false; } else console.log('ok   world hash deterministic', final.hash);
+if (final.hash !== 'ff749351') { console.log('FAIL world hash differs', final.hash); ok = false; } else console.log('ok   world hash deterministic', final.hash);
 if (errs.length) { console.log('FAIL errors', errs.slice(0, 3)); ok = false; }
 await browser.close();
 srv.kill();

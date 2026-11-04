@@ -386,6 +386,50 @@ const builders: Record<PropKind, () => Omit<PropShape, 'geo'> & { b: MeshBuilder
     b.bevelBox(-0.4, 0.12, -0.2, 0.18, 0.12, 0.15, 0.03);
     return { b, col: null, tints: [0xffffff, 0xd0c8b8], small: true, shadow: false };
   },
+  // ---- worldgen v2 street dressing
+  cone: () => {
+    const b = new MeshBuilder({ groundAO: true });
+    b.setColor(0x2a2a2a);
+    b.box(0, 0.02, 0, 0.22, 0.02, 0.22);
+    b.setColor(0xffffff);
+    b.cylinder(0, 0.04, 0, 0.17, 0.03, 0.62, 8, false);
+    b.setColor(0xf0ece0);
+    b.cylinder(0, 0.3, 0, 0.105, 0.08, 0.1, 8, false);
+    return { b, col: null, tints: [0xe0662e, 0xd85a28, 0xe8a030], small: true, shadow: false };
+  },
+  barrier: () => {
+    const b = new MeshBuilder({ groundAO: true, jitter: 0.06 });
+    b.setColor(0xffffff);
+    b.bevelBox(0, 0.16, 0, 1.45, 0.16, 0.32, 0.05);
+    b.bevelBox(0, 0.52, 0, 1.45, 0.22, 0.14, 0.05);
+    b.setColor(0xc89a3a);
+    b.box(0, 0.62, 0.145, 1.2, 0.05, 0.005);
+    b.box(0, 0.62, -0.145, 1.2, 0.05, 0.005);
+    return { b, col: [1.45, 0.42, 0.3], tints: [0xb8b4aa, 0xa8a49a, 0xc4bcae], small: false, shadow: true };
+  },
+  planter: () => {
+    const b = new MeshBuilder({ groundAO: true });
+    b.setColor(0x9a948a);
+    b.bevelBox(0, 0.28, 0, 0.55, 0.28, 0.55, 0.05);
+    b.setColor(0x4a3a2c);
+    b.box(0, 0.57, 0, 0.48, 0.02, 0.48);
+    b.setColor(0x5f7048);
+    b.blob(0, 0.85, 0, 0.5, 0.36, 0.5, 0.25, 9);
+    b.blob(0.2, 0.75, -0.15, 0.32, 0.26, 0.32, 0.25, 10);
+    return { b, col: [0.55, 0.45, 0.55], tints: [0xffffff, 0xe0d8c8, 0xc8c8c0], small: true, shadow: true };
+  },
+  weeds: () => {
+    const b = new MeshBuilder();
+    b.setColor(0xffffff);
+    for (let i = 0; i < 6; i++) {
+      const a = i * 1.05;
+      const r = 0.12 + (i % 3) * 0.08;
+      b.pushTRS(Math.cos(a) * r, 0, Math.sin(a) * r, a).push(RZ(0.25 + (i % 2) * 0.2));
+      b.cylinder(0, 0, 0, 0.07, 0, 0.45 + (i % 3) * 0.15, 3, false);
+      b.pop().pop();
+    }
+    return { b, col: null, tints: [0x6a7a44, 0x7a7a48, 0x5a6a3e, 0x8a7a4a], small: true, shadow: false };
+  },
 };
 
 const cache = new Map<PropKind, PropShape>();

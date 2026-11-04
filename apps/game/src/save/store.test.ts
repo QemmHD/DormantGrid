@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { newGame, encodeSave } from '@dg/sim';
+import { SAVE_SCHEMA_VERSION } from '@dg/shared';
 import { SaveStore, exportJSON, importJSON } from './store';
 import { Bus } from '../game/api';
 
@@ -49,13 +50,14 @@ describe('SaveStore', () => {
   it('migrates old-schema saves on load', async () => {
     const { s } = await fresh();
     const g = newGame(9, 'standard', { x: 5, z: 5 }) as unknown as Record<string, unknown>;
-    // synthesize a v0 save (schema missing); the sim registry has a v0→v1 migration
+    // synthesize a v0 save (schema missing); the sim registry migrates v0→v1→v2
     delete g.schema;
     const bytes = encodeSave(g as never);
     const db = (s as unknown as { db: { put: (st: string, v: unknown, k: string) => Promise<void> } }).db;
     await db.put('saves', { meta: { rev: 1, schema: 0, savedAt: 0, playtime: 0, bytes: bytes.length }, bytes }, 'main');
     const back = await s.loadLocal();
-    expect(back?.schema).toBe(1);
+    expect(back?.schema).toBe(SAVE_SCHEMA_VERSION);
+    expect(back?.world.genVersion).toBe(1); // pre-versioning saves were made on worldgen v1
   });
 
   it('kv store works and clearLocal keeps an undo slot', async () => {

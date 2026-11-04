@@ -63,6 +63,10 @@ export const PROP_SALVAGE: Record<PropKind, SalvageDef> = {
   stove: { tool: 'crowbar', best: 'torch', time: 4, weight: 0.7, sfx: 'metal', yields: [Y('mat.scrap', 5, 7), Y('comp.fitting', 1, 1, 0.5)] },
   terminal: { tool: 'crowbar', best: 'saw', time: 3, weight: 0.4, sfx: 'plastic', yields: [Y('mat.wiring', 2, 4), Y('comp.circuit', 1, 1, 0.4), Y('mat.plastic', 1, 2), Y('misc.lore_tape', 1, 1, 0.25)] },
   debris: { tool: 'hands', best: 'hands', time: 0.6, weight: 0.15, sfx: 'stone', yields: [Y('mat.brick', 1, 2), Y('mat.scrap', 0, 1), Y('mat.timber', 0, 1)] },
+  cone: { tool: 'hands', best: 'hands', time: 0.6, weight: 0.1, sfx: 'plastic', yields: [Y('mat.plastic', 1, 2)] },
+  barrier: { tool: 'pickaxe', best: 'pickaxe', time: 5, weight: 0.8, sfx: 'stone', yields: [Y('mat.brick', 4, 6), Y('mat.scrap', 1, 2)] },
+  planter: { tool: 'hands', best: 'pickaxe', time: 2.5, weight: 0.4, sfx: 'stone', yields: [Y('mat.brick', 1, 3), Y('mat.organic', 2, 3), Y('food.berries', 1, 2, 0.2)] },
+  weeds: { tool: 'hands', best: 'hands', time: 0.5, weight: 0.05, sfx: 'foliage', yields: [Y('mat.organic', 1, 2), Y('misc.feed', 1, 1, 0.15)] },
 };
 
 /** Building pieces derived by worldgen; key = piece kind. */

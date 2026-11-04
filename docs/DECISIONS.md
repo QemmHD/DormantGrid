@@ -23,3 +23,12 @@ Newest last. Each entry: what, why, and what would change it.
 15. **Title.** Kept *DORMANT GRID*. Alternatives for the owner to consider: *Brownout*, *Restart City*, *Lights On*.
 16. **World seed is fixed (1337) for everyone for now.** This keeps co-op and saves simple. Per-save seeds are a later option, since the save already stores `world.seed`.
 17. **Bundle baseline raised to ~0.54 MB gzip** (from 0.46 MB). The chunk-mesher Web Worker bundles its own copy of the sim worldgen, three.js math and the mesher. That's an intentional trade of ~80 KB download for zero main-thread mesh hitches. Still 22× under the 12 MB budget.
+
+## 2026-11-04 — Worldgen versioning (save safety)
+- Saves store `world.seed`, `world.genVersion` and deltas only (removed prop ids, removed building pieces, placed pieces, drops, crops, survivors, player). Generated props/buildings are never saved; a test asserts the JSON has no `props`/`buildings`.
+- `WORLDGEN_VERSION` (shared) = 2. Rule: a new version may only APPEND after the previous version's output, using its own RNG fork, so every older id keeps its meaning. `layout.propMarks[v]` records where each version's props end. v1 hash `9cf52650` is frozen by a test; v2 = `ff749351`.
+- Save schema 1 → 2 migration sets `genVersion: 1`. On load, `upgradeWorldGen(save, layout)` moves the save to the latest worldgen and marks any NEW prop that would land on the player's pieces/drops/bed/survivors/player as removed (only new ids). Saves from a future worldgen are refused with `future_version`, not loaded.
+- A future non-additive worldgen change must keep older versions reproducible (`generateWorld(seed, v)`) and add an id-remap migration. Logged so nobody "just tweaks" v1.
+- The game still runs one fixed seed (1337); `world.seed` is stored for the future, but loading a save with a different seed is not supported yet (all shipped saves are 1337).
+- v2 dressing: curb-parked cars/vans, clutter clusters on the building side of sidewalks, road debris everywhere (more in danger), arterial barrier checkpoints with cones, corner signs, sidewalk weeds, downtown/market planters, bushes/weeds against walls, yard ground cover. New kinds: cone, barrier, planter, weeds. +4,683 props (16,687 → 21,370); medium-tier draw calls 89 → 95; heap after GC unchanged (~55–78 MB, precise-memory measurement).
+- walk.mjs now forces GC before the final heap read; the earlier 160 MB readings were Chrome's bucketed `performance.memory`, not a leak.

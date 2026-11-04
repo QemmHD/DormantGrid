@@ -15,6 +15,7 @@ export function townFixture(seed: number, survivors: number, plots: number, beds
   for (let i = 0; i < plots; i++) add('farm_plot', 620 + (i % 5) * 4, 600 + Math.floor(i / 5) * 4);
   const world: WorldSave = {
     seed,
+    genVersion: 2,
     hour: 7,
     weather: 'clear',
     removedProps: [],
