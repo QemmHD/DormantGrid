@@ -25,6 +25,7 @@ import {
   hourOfDay,
   isNight,
   migrateSave,
+  TIER_HP_MULT,
   plant as plantCrop,
   harvest as harvestCrop,
   waterCrop,
@@ -1212,6 +1213,36 @@ export class Game implements GameAPI {
     }
     this.base.rebuild(w.pieces, w.crops, w.hour);
     this.bus.emit({ type: 'inventory' });
+  }
+
+  private lastPieceToast = 0;
+  /** Enemies damage a placed piece. Higher tiers soak more. Destroyed pieces collapse with no refund. */
+  damagePiece(id: number, dmg: number): void {
+    const w = this.save.world;
+    const p = w.pieces.find((x) => x.id === id);
+    if (!p) return;
+    p.hp -= dmg / TIER_HP_MULT[p.tier];
+    const pos = this.base.pos.get(id);
+    if (pos) {
+      this.fx.debris(pos.x, pos.y + 1, pos.z, p.tier >= 2 ? 'stone' : 'wood', 0.2, 3);
+      audio.play(p.tier >= 2 ? 'hitStone' : 'hitWood', { pos, vol: 0.7 });
+    }
+    if (p.hp > 0) return;
+    const fallen = collapsePlacedAfterRemoval(w.pieces, id);
+    const all = [id, ...fallen];
+    for (const pid of all) this.onWorldAction?.({ type: 'pieceRemoved', id: pid });
+    w.pieces = w.pieces.filter((x) => !all.includes(x.id));
+    w.crops = w.crops.filter((c) => !all.includes(c.plot));
+    if (this.save.player.bed && !w.pieces.some((x) => x.piece === 'bed' && Math.hypot(x.x - this.save.player.bed!.x, x.z - this.save.player.bed!.z) < 0.5)) this.save.player.bed = null;
+    this.base.rebuild(w.pieces, w.crops, w.hour);
+    if (pos) {
+      this.fx.debris(pos.x, pos.y + 1, pos.z, 'wood', 0.8);
+      audio.play('collapse', { pos });
+    }
+    if (this.time - this.lastPieceToast > 4) {
+      this.lastPieceToast = this.time;
+      this.toast(`${getPiece(p.piece)?.name ?? 'Something'} at Haven was torn down.`, 'bad');
+    }
   }
 
   private dismantlePlaced(p: PlacedPiece): void {

@@ -2,7 +2,7 @@
 // and Ashline raiders. Simple readable state machines with telegraphed attacks,
 // full hit feedback, and fairness rules (no spawns in view, none in restored areas).
 import * as THREE from 'three';
-import { RESTORATION_FX, districtAt, getItem } from '@dg/sim';
+import { RESTORATION_FX, districtAt, getItem, getPiece } from '@dg/sim';
 import type { RestorationState } from '@dg/shared';
 import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
@@ -55,6 +55,9 @@ interface Enemy {
   flash: number;
   wave: boolean;
   tag: string;
+  targetPiece: number;
+  pieceScanT: number;
+  trapT: number;
 }
 
 const geoCache = new Map<EnemyKind, THREE.BufferGeometry>();
@@ -110,7 +113,7 @@ function enemyGeo(kind: EnemyKind): THREE.BufferGeometry {
 const eyeGeo = new THREE.SphereGeometry(0.07, 6, 4);
 
 export class Enemies {
-  private list: Enemy[] = [];
+  list: Enemy[] = [];
   private nextId = 1;
   private spawnT = 4;
   private mat = makeChunkMaterial();
@@ -227,7 +230,7 @@ export class Enemies {
     obj.scale.setScalar(0.01);
     this.game.scene.add(obj);
     const pos = new THREE.Vector3(x, y, z);
-    this.list.push({ id: this.nextId++, kind, def, obj, rig, eye, pos, vel: new THREE.Vector3(), yaw: Math.random() * 6.28, hp: def.hp, state: wave ? 'chase' : 'wander', t: 0, home: pos.clone(), wanderTo: pos.clone(), flash: 0, wave, tag });
+    this.list.push({ id: this.nextId++, kind, def, obj, rig, eye, pos, vel: new THREE.Vector3(), yaw: Math.random() * 6.28, hp: def.hp, state: wave ? 'chase' : 'wander', t: 0, home: pos.clone(), wanderTo: pos.clone(), flash: 0, wave, tag, targetPiece: -1, pieceScanT: 0, trapT: 0 });
     if (def.machine) audio.play('drone', { pos: { x, z }, vol: 0.4 });
   }
 
@@ -320,6 +323,24 @@ export class Enemies {
         }
         case 'chase':
           engaged++;
+          if (e.tag === 'raid' && dist > 18) {
+            e.pieceScanT -= dt;
+            if (e.pieceScanT <= 0) {
+              e.pieceScanT = 1;
+              e.targetPiece = this.nearestPiece(e);
+            }
+            const tp = e.targetPiece >= 0 ? g.base.pos.get(e.targetPiece) : undefined;
+            if (tp) {
+              const pd = Math.hypot(tp.x - e.pos.x, tp.z - e.pos.z);
+              if (pd < 2.2) {
+                e.state = 'windup';
+                e.t = 0;
+                if (e.eye) e.eye.material = this.eyeMatWarn;
+                e.rig?.setState('attack');
+              } else this.steer(e, tp.x, tp.z, e.def.speed, dt);
+              break;
+            }
+          } else e.targetPiece = -1;
           if (!playerAlive || dist > sense * 2.2) {
             e.wave = false;
             e.state = 'wander';
@@ -336,8 +357,15 @@ export class Enemies {
           break;
         case 'windup':
           engaged++;
-          e.yaw = Math.atan2(dx, dz);
+          if (e.targetPiece < 0) e.yaw = Math.atan2(dx, dz);
           if (e.t >= e.def.windup) {
+            if (e.targetPiece >= 0) {
+              g.damagePiece(e.targetPiece, e.def.damage * 2);
+              e.state = 'recover';
+              e.t = 0;
+              if (e.eye) e.eye.material = this.eyeMatIdle;
+              break;
+            }
             // resolve: dodge i-frames and range check keep it fair
             if (dist < e.def.reach + 0.4 && !g.player.dodging && playerAlive) {
               g.hurt(e.def.damage, e.def.machine ? 'blunt' : e.kind === 'hound' ? 'bite' : 'cut', e.kind);
@@ -376,6 +404,7 @@ export class Enemies {
       e.pos.z = tmp.z;
       const ground = g.view.surface(e.pos.x, e.pos.z);
       e.pos.y = ground + e.def.fly + (e.def.fly ? Math.sin(e.t * 3 + e.id) * 0.15 : 0);
+      if (!e.def.fly) this.checkTraps(e, dt);
       e.obj.position.copy(e.pos);
       e.obj.rotation.y = e.yaw;
       if (e.kind === 'drone') e.obj.rotation.z = Math.sin(e.t * 2) * 0.1;
@@ -424,6 +453,57 @@ export class Enemies {
     }
     e.pos.x += (Math.sin(e.yaw) * speed + sx * 2) * dt;
     e.pos.z += (Math.cos(e.yaw) * speed + sz * 2) * dt;
+  }
+
+  private nearestPiece(e: Enemy): number {
+    const g = this.game;
+    let best = -1;
+    let bd = 70;
+    for (const p of g.save.world.pieces) {
+      const def = getPiece(p.piece);
+      if (!def?.solid) continue;
+      const d = Math.hypot(p.x - e.pos.x, p.z - e.pos.z);
+      if (d < bd) {
+        bd = d;
+        best = p.id;
+      }
+    }
+    return best;
+  }
+
+  /** Traps and defenses placed by the player act on ground enemies. */
+  private checkTraps(e: Enemy, dt: number): void {
+    const g = this.game;
+    e.trapT = Math.max(0, e.trapT - dt);
+    for (const p of g.save.world.pieces) {
+      if (p.piece !== 'bear_trap' && p.piece !== 'spike_strip' && p.piece !== 'barricade') continue;
+      const d = Math.hypot(p.x - e.pos.x, p.z - e.pos.z);
+      if (p.piece === 'bear_trap' && d < 0.9 && e.trapT <= 0) {
+        e.trapT = 6;
+        e.state = 'stagger';
+        e.t = -2.5; // pinned ~3 s
+        e.vel.set(0, 0, 0);
+        this.hurtQuiet(e, 25);
+        audio.play('hitMetal', { pos: e.pos, pitch: 0.7 });
+        g.fx.sparks(e.pos.x, e.pos.y + 0.3, e.pos.z, 8);
+        p.hp -= 10;
+      } else if (p.piece === 'spike_strip' && d < 1.1) {
+        this.hurtQuiet(e, 14 * dt);
+        e.pos.x -= Math.sin(e.yaw) * e.def.speed * 0.5 * dt;
+        e.pos.z -= Math.cos(e.yaw) * e.def.speed * 0.5 * dt;
+      } else if (p.piece === 'barricade' && d < 1.4) {
+        this.hurtQuiet(e, 10 * dt);
+        const k = (1.4 - d) / Math.max(0.1, d);
+        e.pos.x += (e.pos.x - p.x) * k;
+        e.pos.z += (e.pos.z - p.z) * k;
+      }
+    }
+  }
+
+  private hurtQuiet(e: Enemy, dmg: number): void {
+    e.hp -= dmg;
+    e.flash = Math.max(e.flash, 0.08);
+    if (e.hp <= 0 && e.state !== 'dead') this.kill(e);
   }
 
   /** Drones call for help: nearby enemies join the chase. */

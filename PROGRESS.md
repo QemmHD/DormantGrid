@@ -99,7 +99,7 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 | 6 Accounts, cloud saves, updates | ✅ Tested against local wrangler; not deployed |
 | 7 Survivors | ✅ Autonomous sim + near rendering. The "20 days hands-off" check is a sim soak test, not a client test |
 | 8 Farming | 🟡 Plots and crops work. Livestock, hunting and cooking-quality UI are only in the sim |
-| 9 Combat | 🟡 Melee, dodge, ranged weapons (projectiles, ammo, aim assist), 5 enemy types, drone alerts, **telegraphed raids** on Haven (`node tests/raid-flow.mjs`). Stealth and trap triggers are not done |
+| 9 Combat | 🟡 Melee, dodge, ranged weapons (projectiles, ammo, aim assist), 5 enemy types, drone alerts, **telegraphed raids** on Haven (`node tests/raid-flow.mjs`). Raiders tear down placed pieces when you're away; bear traps, spike strips and barricades hurt or pin enemies (`node tests/defense-flow.mjs`). Stealth not done |
 | 10 Grid | ✅ Reboot sequence and restoration ripple. District services UI is minimal |
 | 11 Factions + campaign | 🟡 Quests and journal across 4 acts, Guild trade and lore terminals. Contracts, faction events and the endings flow are not playable yet |
 | 12 Co-op | 🟡 Host/join, remote players, shared world events, pings and reconnect exist. Verified end-to-end only against local wrangler by the net track; not verified in-world with two clients |
@@ -113,15 +113,15 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 4. Optional: the title decision (DECISIONS #15).
 
 ## NEXT ACTIONS
-1. Raids: survivor guards fight in-world, and raiders damage placed pieces (outcome is currently stock/injury only).
+1. Raids: survivor guards fight in-world (raiders already damage placed pieces; traps already trigger).
 2. Ranged enemies (raider sniper) shooting back.
 3. Stealth (crouch, noise/light visibility) and traps triggering on enemies.
 4. Livestock pens (coop/pen) and the hunting/butchering loop in the client.
 5. Contracts UI with the Guild and Reavers, faction events, and an endings sequence for Act IV (Core).
-6. Two-client co-op in-world Playwright test against `wrangler dev`.
+6. Two-client co-op: `tests/coop-live.mjs <url>` exists, but it **can't run from the Claude sandbox**. Its proxy rejects WebSocket upgrades (HTTP/2 re-termination). Run it from a normal machine.
 7. Visual regression reference screenshots plus a bot playthrough in CI.
 8. Photo mode with postcard export, and a daily Town Board popup on waking (generator exists: `townBoard`).
-9. Survivor pathing via the sim nav grid (currently straight-line steering with collision push-out).
+9. ~~Survivor pathing via the sim nav grid~~ — done (A* on the 2 m grid, repaths when the target moves).
 10. Stairs inside enterable ruins; upper floors.
 11. Lighthouse PWA audit; automated contrast checks.
 12. After the first device report: tune DPR steps, the detail radius, and shadow size per tier.
