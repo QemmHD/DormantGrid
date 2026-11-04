@@ -11,6 +11,8 @@ const patterns = [
   /\bsk-[A-Za-z0-9]{32,}\b/,
   /CLOUDFLARE_API_TOKEN\s*[:=]\s*['"][A-Za-z0-9_-]{30,}['"]/,
   /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/,
+  /\bcfut_[A-Za-z0-9]{20,}\b/, // Cloudflare user API token
+  /\bcfat_[A-Za-z0-9]{20,}\b/, // Cloudflare account API token
 ];
 let bad = 0;
 for (const f of files) {
