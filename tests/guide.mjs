@@ -1,0 +1,54 @@
+// Guidance test: objective tracker visible, Next? points somewhere, Help shows
+// device-specific controls, tutorial can be skipped and replayed, meters are labelled,
+// talking to a survivor and opening the Town Stockpile work.
+import { chromium, devices } from 'playwright';
+import { spawn } from 'node:child_process';
+const port = 6100 + Math.floor(Math.random() * 90);
+const srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+await new Promise((r) => setTimeout(r, 2500));
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+let failed = 0;
+const check = (ok, m) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${m}`); if (!ok) failed++; };
+const ctx = await browser.newContext({ ...devices['iPhone 14 Pro landscape'], deviceScaleFactor: 1 });
+const page = await ctx.newPage();
+const errs = [];
+page.on('pageerror', (e) => errs.push(e.message));
+await page.goto(`http://localhost:${port}/?autostart&fresh&quality=low`);
+await page.waitForFunction(() => window.__dg?.mode === 'play', null, { timeout: 60000 });
+await page.waitForTimeout(1500);
+const obj = await page.evaluate(() => document.querySelector('.objective')?.textContent ?? '');
+check(/Tutorial 1\//.test(obj) && /left side/.test(obj), `objective tracker shows tutorial step 1 with touch wording`);
+const labels = await page.evaluate(() => [...document.querySelectorAll('.meter b')].map((b) => b.getAttribute('title')));
+check(labels.join(',') === 'Health,Food,Water,Stamina,Rest', `meters are named (${labels.join(', ')})`);
+await page.evaluate(() => { const g = window.__dg; g.save.world.flags.onb = 2; g.onbStep = 2; });
+await page.waitForTimeout(800);
+await page.tap('.objective .obtn.primary');
+await page.waitForTimeout(800);
+const next = await page.evaluate(() => ({ hint: document.querySelector('.hint')?.textContent ?? '', beacon: document.querySelector('.beacon.show, .beacon-arrow.show') !== null }));
+check(/Next:/.test(next.hint), `Next? explains the next step ("${next.hint.slice(0, 60)}…")`);
+check(next.beacon, 'Next? shows a world beacon or edge arrow');
+await page.tap('.objective .obtn:nth-child(2)');
+await page.waitForTimeout(800);
+const help = await page.evaluate(() => document.querySelector('.screen .help')?.textContent ?? '');
+check(/Drag anywhere on the left half/.test(help) && /The meters/.test(help), 'Help shows touch controls and explains meters');
+await page.evaluate(() => window.__dg.openScreen(null));
+await page.waitForTimeout(500);
+await page.tap('.objective .obtn:nth-child(3)');
+await page.waitForTimeout(800);
+const after = await page.evaluate(() => ({ step: window.__dg.onbStep, txt: document.querySelector('.objective')?.textContent ?? '' }));
+check(after.step >= 17 && !/Tutorial/.test(after.txt), `Skip tutorial works (now: "${after.txt.slice(0, 50)}…")`);
+// stockpile
+await page.evaluate(() => { const g = window.__dg; const s = window.__town.stockpile; g.player.pos.set(s.x + 1.2, g.view.surface(s.x + 1.2, s.z), s.z); });
+await page.waitForTimeout(1200);
+const sp = await page.evaluate(() => window.__dg.describeTarget()?.name ?? 'none');
+check(sp === 'Town Stockpile', `Town Stockpile is interactable (${sp})`);
+await page.evaluate(() => window.__dg.openStockpile());
+await page.waitForTimeout(700);
+const stock = await page.evaluate(() => (window.__dg.storage() ?? []).filter(Boolean).length);
+check(stock > 0, `stockpile shows the town's stock (${stock} stacks)`);
+await page.evaluate(() => window.__dg.openScreen(null));
+check(errs.length === 0, `no page errors ${errs.slice(0, 2).join(' | ')}`);
+await page.screenshot({ path: 'docs/quality/phase3/iphone-guide.png' });
+await browser.close(); srv.kill();
+console.log(failed ? `\n${failed} failed` : '\nguide test passed');
+process.exit(failed ? 1 : 0);

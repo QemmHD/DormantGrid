@@ -501,3 +501,56 @@ html:not(.touch) .act.zoom { display: none; }
 /* the bottom prompt is redundant on touch now that the world marker exists */
 html.touch .prompt { display: none; }
 .act.interact[data-kind="idle"] { --kc: #9aa3a8; opacity: 0.8; }
+
+/* ===== Rework: guidance layout ===== */
+.meters { pointer-events: auto !important; }
+.meter { cursor: pointer; }
+.meter b { width: 20px; height: 20px; }
+.meter b svg { width: 13px; height: 13px; stroke: #111; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.meter .mlbl { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; min-width: 40px; }
+.meter.low .mlbl { color: var(--danger); font-weight: 700; }
+/* tutorial/contextual hint lives at the bottom, above the quick bar, never under banners */
+.hint { top: auto; bottom: calc(var(--safe-b) + 84px); max-width: min(520px, 56vw); transform: translate(-50%, 10px); }
+.hint.show { transform: translate(-50%, 0); }
+.toast .tn { margin-left: 6px; font-weight: 800; color: var(--warm); font-size: 11px; }
+
+/* objective tracker (under the meters) */
+.objective { position: fixed; left: calc(var(--safe-l) + 12px); top: calc(var(--safe-t) + 142px); width: min(250px, 30vw); padding: 8px 10px 8px 12px;
+  border-radius: 12px; background: rgba(13,16,20,0.74); border-left: 3px solid var(--accent); font-size: calc(12.5px * var(--text-scale)); line-height: 1.35; pointer-events: auto; transition: opacity .3s; }
+.objective .ot { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 800; margin-bottom: 2px; }
+.objective .ob { color: var(--text); }
+.objective .op { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+.objective .orow { display: flex; gap: 6px; margin-top: 6px; }
+.objective .obtn { min-height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.06); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+.objective .obtn.primary { background: var(--accent-dim); color: var(--accent); border-color: rgba(57,230,208,0.4); }
+.objective.done { border-left-color: var(--ok); }
+.objective.flash { animation: objFlash .9s; }
+@keyframes objFlash { 0% { box-shadow: 0 0 0 0 rgba(57,230,208,.7);} 100% { box-shadow: 0 0 0 14px rgba(57,230,208,0);} }
+@media (max-height: 420px) { .objective { top: calc(var(--safe-t) + 128px); width: 210px; } .meter .mlbl { display: none; } }
+/* guide beacon (where to go) */
+.beacon { position: fixed; left: 0; top: 0; pointer-events: none !important; display: flex; flex-direction: column; align-items: center; opacity: 0; transition: opacity .2s; z-index: 7; margin: -34px 0 0 -16px; }
+.beacon.show { opacity: 1; }
+.beacon i { width: 22px; height: 22px; transform: rotate(45deg); border: 3px solid var(--accent); background: rgba(57,230,208,0.25); box-shadow: 0 0 14px rgba(57,230,208,0.6); animation: bob 1.2s ease-in-out infinite; }
+.beacon span { margin-top: 8px; font-size: 11px; font-weight: 800; color: var(--accent); text-shadow: 0 1px 3px #000; }
+@keyframes bob { 50% { transform: rotate(45deg) translate(-3px,-3px); } }
+.beacon-arrow { position: fixed; left: 0; top: 0; width: 0; height: 0; margin: -9px 0 0 -9px; border-left: 18px solid var(--accent); border-top: 10px solid transparent; border-bottom: 10px solid transparent; opacity: 0; transition: opacity .2s; pointer-events: none !important; filter: drop-shadow(0 0 5px rgba(57,230,208,0.7)); z-index: 7; }
+.beacon-arrow.show { opacity: 1; }
+/* help screen */
+.help h3 { margin: 14px 0 6px; font-size: calc(14px * var(--text-scale)); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.help table { width: 100%; border-collapse: collapse; font-size: calc(13px * var(--text-scale)); }
+.help td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.help td:first-child { color: var(--warm); font-weight: 700; white-space: nowrap; width: 38%; }
+.help .sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+@media (max-height: 500px) {
+  .meters { gap: 3px; top: calc(var(--safe-t) + 8px); }
+  .meter b { width: 17px; height: 17px; border-radius: 5px; }
+  .meter b svg { width: 11px; height: 11px; }
+  .meter .bar { width: 74px; height: 5px; }
+  .objective { top: calc(var(--safe-t) + 112px); width: 200px; padding: 6px 8px 6px 10px; font-size: 11.5px; }
+  .objective .ot { font-size: 9px; letter-spacing: 0.1em; }
+  .objective .orow { gap: 4px; margin-top: 5px; }
+  .objective .obtn { min-height: 32px; padding: 0 8px; font-size: 11px; }
+  .district-banner { top: 16%; }
+  .district-banner p { display: none; }
+  .district-banner h2 { font-size: 22px; }
+}

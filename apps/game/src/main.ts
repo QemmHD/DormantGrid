@@ -57,7 +57,7 @@ async function start() {
     bootDone();
     return;
   }
-  const [{ Game }, { UI }, { Services }, { mountNetUI }, { Town }] = await Promise.all([
+  const [{ Game }, { UI }, { Services }, { mountNetUI }, { Town, jobLabel }] = await Promise.all([
     import('./game/game'),
     import('./ui/ui'),
     import('./net/services'),
@@ -70,6 +70,7 @@ async function start() {
   const { Trader } = await import('./game/trader');
   const { Raids } = await import('./game/raids');
   const { Markers } = await import('./game/markers');
+  const { Guide } = await import('./game/guide');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
@@ -104,6 +105,44 @@ async function start() {
   new CoopView(game, svc.coop);
   const trader = new Trader(game);
   new Markers(game);
+  new Guide(game, ui);
+  town.onTalk = (s) => {
+    const wrap = document.createElement('div');
+    const traits = s.traits.join(' · ');
+    const info = document.createElement('p');
+    info.textContent = `${traits}. Mood ${Math.round(s.mood)}%, fed ${Math.round(s.hunger)}%${s.injured ? ', injured' : ''}. Right now: ${jobLabel(s.job)}.`;
+    const ask = document.createElement('p');
+    ask.textContent = 'What should they work on?';
+    const grid = document.createElement('div');
+    grid.className = 'tabs';
+    const jobs: [string, string][] = [['auto', 'Their choice'], ['farm', 'Farm'], ['gather', 'Gather'], ['build', 'Build'], ['cook', 'Cook'], ['guard', 'Guard'], ['scavenge', 'Scavenge'], ['heal', 'Heal']];
+    for (const [id, label] of jobs) {
+      const b = document.createElement('button');
+      b.className = `tab${s.job === id ? ' on' : ''}`;
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        town.assign(s.id, id);
+        game.save.world.flags['ledgerOpened'] = true;
+        ui.closeDialog();
+        game.input.uiBlocking = !!ui.openScreen;
+      });
+      grid.append(b);
+    }
+    wrap.append(info, ask, grid);
+    const close = document.createElement('button');
+    close.className = 'btn';
+    close.textContent = 'Later';
+    close.addEventListener('click', () => {
+      ui.closeDialog();
+      game.input.uiBlocking = !!ui.openScreen;
+    });
+    game.input.uiBlocking = true;
+    game.input.releaseAll();
+    ui.dialog(s.name, wrap, [close]);
+  };
+  game.tickers.push(() => {
+    if (ui.openScreen === 'ledger' && game.save) game.save.world.flags['ledgerOpened'] = true;
+  });
   (window as unknown as { __raids: unknown }).__raids = new Raids(game, enemies);
   trader.onLore = (title, header, body) => {
     const wrap = document.createElement('div');

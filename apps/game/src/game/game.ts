@@ -166,7 +166,7 @@ export class Game implements GameAPI {
   private autosaveT = 0;
   private districtIdx = -1;
   private build: { piece: string; tier: number; rot: number; ok: boolean; reason: string | null } | null = null;
-  private onbStep = 0;
+  onbStep = 0;
   private onbStartPos = new THREE.Vector3();
   private onbYaw = 0;
   private dropMeshes: THREE.Mesh[] = [];
@@ -181,6 +181,8 @@ export class Game implements GameAPI {
   openScreenHook: ((id: ScreenId | null) => void) | null = null;
   /** reads a lore terminal prop (set by Trader module) */
   terminalHook: ((pid: number) => void) | null = null;
+  /** Town stockpile position (set by the Town module) */
+  stockpilePos: (() => THREE.Vector3 | null) | null = null;
   /** co-op: piece ids are offset per player so peers never collide */
   pieceIdBase = 0;
   /** called after a teammate's nodeOnline so the grid view refreshes */
@@ -618,8 +620,14 @@ export class Game implements GameAPI {
     this.useSlot(i);
   }
 
+  private storageOverride: (ItemStack | null)[] | null = null;
+  /** Open the shared Town Stockpile in the storage screen (survivors eat and build from it). */
+  openStockpile(): void {
+    this.storageOverride = this.save.world.townStock;
+    this.openScreen('storage');
+  }
   storage(): (ItemStack | null)[] | null {
-    return this.storageTarget?.store ?? null;
+    return this.storageOverride ?? this.storageTarget?.store ?? null;
   }
   moveToStorage(i: number): void {
     const st = this.inv[i];
@@ -979,6 +987,7 @@ export class Game implements GameAPI {
         if (t.piece.piece === 'bed') return this.trySleep();
         if (t.piece.piece === 'farm_plot') return this.tendPlot(t.piece);
         if (def?.storageSlots) {
+          this.storageOverride = null;
           this.storageTarget = t.piece;
           this.openScreen('storage');
           return;
@@ -1634,8 +1643,6 @@ export class Game implements GameAPI {
       return;
     }
     const step = ONBOARDING[this.onbStep];
-    const touch = this.input.usingTouch || document.documentElement.classList.contains('touch');
-    this.bus.emit({ type: "hint", text: `**${step.title}** — ${touch ? step.touch : step.desktop}` });
     if (step.trigger === 'moved') this.onbStartPos.copy(this.player.pos);
     if (step.trigger === 'looked') this.onbYaw = this.camera.yaw;
   }

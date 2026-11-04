@@ -6,21 +6,21 @@ import type { CollisionWorld } from './collision';
 export class ThirdPersonCamera {
   readonly cam: THREE.PerspectiveCamera;
   yaw = Math.PI; // facing -z initially (camera behind looking forward)
-  pitch = -0.22;
-  distance = 4.6;
+  pitch = -0.3;
+  distance = 5;
   /** zoom limits */
   minDist = 2.4;
   maxDist = 8;
-  private curDist = 4.6;
+  private curDist = 5;
   /** look targets; actual yaw/pitch ease toward them (≈30 ms) to remove touch jitter */
   private tYaw = Math.PI;
-  private tPitch = -0.22;
+  private tPitch = -0.3;
   /** fraction 0..1: how close the camera is to the player (for fading the player mesh) */
   closeness = 0;
   /** subtle head-bob driver set by the game (0 when still) */
   bob = 0;
   private bobPhase = 0;
-  shoulder = 0.55;
+  shoulder = 0.7;
   private trauma = 0;
   private fovKick = 0;
   private baseFov = 62;
@@ -60,7 +60,7 @@ export class ThirdPersonCamera {
   }
 
   private lastYaw = Math.PI;
-  private lastPitch = -0.22;
+  private lastPitch = -0.3;
 
   update(dt: number, target: THREE.Vector3, sprinting: boolean, world: CollisionWorld | null): void {
     this.time += dt;
