@@ -124,6 +124,7 @@ export class Enemies {
   private sinceCombat = 99;
   enabled = true;
   private tmpP = { x: 0, y: 0, z: 0 };
+  private readonly lookAt = new THREE.Vector3();
   private projGeo: THREE.BufferGeometry;
   private projMat = new THREE.MeshBasicMaterial({ color: 0xe8d8b0 });
   private projs: { mesh: THREE.Mesh; vel: THREE.Vector3; dmg: number; life: number }[] = [];
@@ -415,6 +416,7 @@ export class Enemies {
       if (e.rig) {
         e.rig.speed = e.state === 'chase' ? e.def.speed : e.state === 'wander' ? e.def.speed * 0.35 : 0;
         if (e.state === 'chase' || e.state === 'wander') e.rig.setState('idle');
+        e.rig.lookTarget = e.state === 'wander' ? null : this.lookAt.copy(g.player.pos);
         e.rig.update(dt);
       }
     }

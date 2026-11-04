@@ -14,12 +14,13 @@ export interface QualitySettings {
   lodRadius: number; // streaming cells with low detail
   fogFar: number;
   propDensity: number; // 0..1 fraction of small props shown
+  patterns: boolean; // shader facade patterns (fragment cost; off on the weakest tier)
 }
 
 export const QUALITY: Record<QualityTier, QualitySettings> = {
-  low: { tier: 'low', shadows: false, shadowSize: 512, maxDpr: 1.0, detailRadius: 1, lodRadius: 2, fogFar: 190, propDensity: 0.55 },
-  medium: { tier: 'medium', shadows: true, shadowSize: 1024, maxDpr: 1.25, detailRadius: 1, lodRadius: 3, fogFar: 250, propDensity: 0.8 },
-  high: { tier: 'high', shadows: true, shadowSize: 2048, maxDpr: 1.5, detailRadius: 2, lodRadius: 3, fogFar: 320, propDensity: 1 },
+  low: { tier: 'low', shadows: false, shadowSize: 512, maxDpr: 1.0, detailRadius: 1, lodRadius: 2, fogFar: 190, propDensity: 0.55, patterns: false },
+  medium: { tier: 'medium', shadows: true, shadowSize: 1024, maxDpr: 1.25, detailRadius: 1, lodRadius: 3, fogFar: 250, propDensity: 0.8, patterns: true },
+  high: { tier: 'high', shadows: true, shadowSize: 2048, maxDpr: 1.5, detailRadius: 2, lodRadius: 3, fogFar: 320, propDensity: 1, patterns: true },
 };
 
 // Coarse DPR steps. iOS leaks memory when the drawing buffer is resized often,

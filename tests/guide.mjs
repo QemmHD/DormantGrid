@@ -4,7 +4,7 @@
 import { chromium, devices } from 'playwright';
 import { spawn } from 'node:child_process';
 const port = 6100 + Math.floor(Math.random() * 90);
-const srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+const srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 let failed = 0;

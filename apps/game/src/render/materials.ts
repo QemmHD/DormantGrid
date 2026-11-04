@@ -15,6 +15,8 @@ export interface ChunkUniforms {
   uWindow: { value: number };
   uGrid: { value: number };
   uTint: { value: THREE.Color };
+  /** facade pattern strength (0 disables the pattern branch entirely) */
+  uPattern: { value: number };
 }
 
 let shared: {
@@ -56,6 +58,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     uWindow: { value: 0 },
     uGrid: { value: 0 },
     uTint: { value: new THREE.Color(1, 1, 1) },
+    uPattern: { value: 1 },
   };
   const m = new THREE.MeshLambertMaterial({ vertexColors: true }) as THREE.MeshLambertMaterial & { userData: { u: ChunkUniforms } };
   m.userData.u = u;
@@ -63,6 +66,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     shader.uniforms.uWindow = u.uWindow;
     shader.uniforms.uGrid = u.uGrid;
     shader.uniforms.uTint = u.uTint;
+    shader.uniforms.uPattern = u.uPattern;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aEmit;\nvarying float vEmit;\nvarying vec3 vGritP;\nvarying vec3 vGritN;')
       .replace(
@@ -83,7 +87,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
         '#include <common>',
         `#include <common>
         varying float vEmit; varying vec3 vGritP; varying vec3 vGritN;
-        uniform float uWindow; uniform float uGrid; uniform vec3 uTint;
+        uniform float uWindow; uniform float uGrid; uniform vec3 uTint; uniform float uPattern;
         float dgHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float dgNoise(vec2 p) {
           vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -103,7 +107,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
           diffuseColor.rgb *= mix(0.82, 1.1, g) - streak * 0.18;
           // procedural surface patterns (normal-map-free detail). Faded by screen-space
           // derivative so they never shimmer at distance.
-          if (vEmit < -0.5) {
+          if (uPattern > 0.0 && vEmit < -0.5) {
             float code = floor(-vEmit + 0.5);
             // wall plane: u = horizontal along the face, v = world height
             vec2 wp = vec2(an.x > an.z ? vGritP.z : vGritP.x, vGritP.y);
@@ -138,7 +142,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
             }
             vec2 fw = fwidth(wp);
             float fade = 1.0 - smoothstep(0.02, 0.07, max(fw.x, fw.y));
-            diffuseColor.rgb *= mix(1.0, k, fade);
+            diffuseColor.rgb *= mix(1.0, k, fade * uPattern);
           }
         }
         if (vEmit > 1.5) {

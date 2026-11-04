@@ -9,7 +9,7 @@ const q = process.argv[2] ?? 'medium';
 const TRI_BUDGET = 300_000;
 const CALL_BUDGET = 150;
 const port = 4800 + Math.floor(Math.random() * 300);
-const srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+const srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });

@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 
 const [, , path = '/', out = 'tests/output/shot.png', wait = '6000', w = '1280', h = '720', scriptFile] = process.argv;
 const port = 4173 + Math.floor(Math.random() * 500);
-const srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+const srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });

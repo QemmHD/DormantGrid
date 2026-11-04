@@ -9,7 +9,7 @@ let srv = null;
 let base = external;
 if (!external) {
   const port = 4600 + Math.floor(Math.random() * 300);
-  srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+  srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
   base = `http://localhost:${port}`;
   await new Promise((r) => setTimeout(r, 2500));
 }

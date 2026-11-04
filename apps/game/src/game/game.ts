@@ -156,6 +156,7 @@ export class Game implements GameAPI {
   private last = performance.now();
   readonly rng = new Rng(Date.now() & 0xffffffff);
   private target: Target | null = null;
+  private readonly playerLook = new THREE.Vector3();
   private targetTimer = 0;
   private holdT = 0;
   private holdHitT = 0;
@@ -258,6 +259,7 @@ export class Game implements GameAPI {
       this.renderer.post = q.tier === 'low' ? null : new PostFX(this.renderer.gl, this.scene, this.camera.cam, q.tier === 'high');
       this.view.radius = q.detailRadius;
       this.view.propDensity = q.propDensity;
+      for (const u of this.view.uniforms) u.uPattern.value = q.patterns ? 1 : 0;
       this.atm.setShadows(q.shadows ? q.shadowSize : 0);
       this.view.setShadows(q.shadows);
     };
@@ -290,6 +292,7 @@ export class Game implements GameAPI {
     const v = new WorldView(this.layout, this.collision, this.renderer.quality.shadows);
     v.radius = this.renderer.quality.detailRadius;
     v.propDensity = this.renderer.quality.propDensity;
+    for (const u of v.uniforms) u.uPattern.value = this.renderer.quality.patterns ? 1 : 0;
     this.scene.add(v.group);
     return v;
   }
@@ -1819,6 +1822,16 @@ export class Game implements GameAPI {
       this.player.update(simDt, { x: 0, y: 0, mag: 0, sprint: false, jump: false, dodge: false, camYaw: this.camera.yaw }, this.collision);
     }
     for (const t of this.tickers) t(dt, playing && !this.paused ? simDt : 0);
+    {
+      const look = this.playerLook;
+      const tp = this.target?.pos;
+      if (tp) look.copy(tp);
+      else {
+        const cy = this.camera.yaw;
+        look.set(this.player.pos.x + Math.sin(cy) * 12, this.player.pos.y + 1.6 + Math.sin(this.camera.pitch) * 12, this.player.pos.z + Math.cos(cy) * 12);
+      }
+      this.player.rig.lookTarget = this.mode === 'play' ? look : null;
+    }
     this.player.rig.update(simDt);
     this.view.update(this.player.pos.x, this.player.pos.z);
     this.fx.target.copy(this.player.pos);

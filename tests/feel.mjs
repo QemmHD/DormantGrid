@@ -10,7 +10,7 @@ let base = process.argv[2];
 let srv = null;
 if (!base) {
   const port = 5900 + Math.floor(Math.random() * 90);
-  srv = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+  srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
   base = `http://localhost:${port}`;
   await new Promise((r) => setTimeout(r, 2500));
 }
@@ -126,7 +126,12 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
   const pos = () => page.evaluate(() => ({ x: window.__dg.player.pos.x, z: window.__dg.player.pos.z, sp: Math.hypot(window.__dg.player.vel.x, window.__dg.player.vel.z) }));
   const a = await pos();
   await page.keyboard.down('KeyW');
+  // frame-rate independent: SwiftShader can run at ~5 fps and the sim clamps dt,
+  // so wait for (sim) distance rather than a fixed wall-clock window
   await page.waitForTimeout(1500);
+  await page
+    .waitForFunction((p) => Math.hypot(window.__dg.player.pos.x - p.x, window.__dg.player.pos.z - p.z) > 1, a, { timeout: 4000 })
+    .catch(() => {});
   const walk = await pos();
   await page.keyboard.down('ShiftLeft');
   // peak speed while sprinting (the path may end at an obstacle)
@@ -137,9 +142,10 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
   }
   await page.keyboard.up('ShiftLeft');
   await page.keyboard.up('KeyW');
-  check(Math.hypot(walk.x - a.x, walk.z - a.z) > 1, 'W walks');
+  check(Math.hypot(walk.x - a.x, walk.z - a.z) > 1, `W walks (${Math.hypot(walk.x - a.x, walk.z - a.z).toFixed(2)} m, from ${a.x.toFixed(1)},${a.z.toFixed(1)})`);
   check(run.sp > walk.sp + 1, `Shift sprints (${walk.sp.toFixed(1)} → ${run.sp.toFixed(1)} m/s)`);
   await page.waitForTimeout(600);
+  await page.waitForFunction(() => Math.hypot(window.__dg.player.vel.x, window.__dg.player.vel.z) < 0.3, null, { timeout: 2500 }).catch(() => {});
   const stop = await pos();
   check(stop.sp < 0.3, `decelerates to a stop (${stop.sp.toFixed(2)} m/s)`);
   // wheel zoom
