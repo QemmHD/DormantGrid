@@ -50,6 +50,10 @@ jobs:
             [ "$TOKEN" != "$CF_TOKEN" ] && echo "::notice::CLOUDFLARE_API_TOKEN secret contained extra characters (whitespace/quotes/prefix); they were stripped. Consider re-saving the secret."
             [ "$ACCOUNT" != "$CF_ACCOUNT" ] && echo "::notice::CLOUDFLARE_ACCOUNT_ID secret contained extra characters; they were stripped."
             printf '%s' "$ACCOUNT" | grep -Eq '^[0-9a-f]{32}$' || echo "::warning::CLOUDFLARE_ACCOUNT_ID does not look like a 32-hex account id."
+            # Non-revealing shape diagnostics (length + character classes only)
+            bad=$(printf '%s' "$TOKEN" | LC_ALL=C tr -d 'A-Za-z0-9_-' | wc -c)
+            echo "token shape: length=${#TOKEN} non-token-chars=$bad starts-with-cfut=$([[ "$TOKEN" == cfut_* ]] && echo yes || echo no)"
+            echo "account shape: length=${#ACCOUNT}"
             { echo "CLOUDFLARE_API_TOKEN=$TOKEN"; echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT"; } >> "$GITHUB_ENV"
             echo "has_cf=true" >> "$GITHUB_OUTPUT"
           else
