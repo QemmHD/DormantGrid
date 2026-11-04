@@ -1318,9 +1318,25 @@ export class Game implements GameAPI {
     tickStamina(p, 0, eq?.weapon?.stamina ?? 8, modifiers(p));
     audio.play('swing', { vol: 0.6 });
     const dmg = eq?.weapon?.damage ?? (eq?.tool ? 12 : 6);
+    if (eq?.weapon?.kind === 'ranged') {
+      const ammo = eq.weapon.ammo;
+      if (ammo && !this.inv.some((s) => s?.id === ammo)) {
+        audio.play('deny');
+        this.toast(`Out of ${getItem(ammo)?.name ?? 'ammo'}.`, 'bad');
+        this.player.rig.setState('idle');
+        return;
+      }
+      if (ammo) removeItem(this.inv, ammo, 1);
+      this.player.rig.setState('aim');
+      this.fireHook?.(dmg, eq.weapon.range, eq.id);
+      this.bus.emit({ type: 'inventory' });
+      return;
+    }
     setTimeout(() => this.resolveSwing(dmg), cd * 0.45 * 1000);
   }
 
+  /** ranged weapon fire (set by Enemies) */
+  fireHook: ((damage: number, range: number, weapon: string) => void) | null = null;
   /** Hook for the combat system (enemies). Returns true if it consumed the hit. */
   swingHook: ((damage: number) => boolean) | null = null;
 
@@ -1624,7 +1640,7 @@ export class Game implements GameAPI {
       this.player.update(simDt, mi, this.collision);
       const rig = this.player.rig;
       if (!this.player.dodging && rig.state === 'dodge' && rig.stateT > 0.42) rig.setState('idle');
-      if (rig.state === 'attack' && rig.stateT > rig.attackDur) rig.setState('idle');
+      if ((rig.state === 'attack' || rig.state === 'aim') && rig.stateT > rig.attackDur) rig.setState('idle');
       if (rig.state === 'interact' && this.holdT === 0) rig.setState('idle');
       if (this.mode === 'play' && !blocked) {
         this.targetTimer -= dt;
