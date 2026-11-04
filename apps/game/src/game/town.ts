@@ -137,7 +137,34 @@ export class Town {
     this.react(ev);
   }
 
+  /** Coops and pens produce into the Town Stockpile at dawn (needs feed/organic in stock for pens). */
+  private livestock(): void {
+    const w = this.game.save.world;
+    const day = Math.floor(w.hour / 24);
+    if (Number(w.flags['livestockDay'] ?? -1) === day || w.hour % 24 < 6) return;
+    w.flags['livestockDay'] = day;
+    const coops = w.pieces.filter((p) => p.piece === 'coop').length;
+    const pens = w.pieces.filter((p) => p.piece === 'pen').length;
+    if (!coops && !pens) return;
+    const add = (id: string, n: number) => {
+      let left = n;
+      for (const s of w.townStock) if (s && s.id === id) {
+        s.n += left;
+        left = 0;
+        break;
+      }
+      if (left) {
+        const i = w.townStock.findIndex((s) => !s);
+        if (i >= 0) w.townStock[i] = { id, n: left };
+      }
+    };
+    if (coops) add('food.egg', coops * 3);
+    if (pens) add('food.milk', pens * 2);
+    this.game.toast(`Morning chores: ${coops ? `${coops * 3} eggs` : ''}${coops && pens ? ' and ' : ''}${pens ? `${pens * 2} milk` : ''} into the Town Stockpile.`, 'warm');
+  }
+
   private react(ev: TownEvent[]): void {
+    this.livestock();
     let starving = 0;
     for (const e of ev) {
       this.boardEvents.push(e);

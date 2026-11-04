@@ -185,6 +185,36 @@ export function buildGround(layout: WorldLayout, cx: number, cz: number, height:
           b.blob(fx, height(fx, fz) + 0.18, fz, 0.12, 0.1, 0.12, 0.2, k + hh);
         }
       }
+      // non-interactive street clutter (never highlighted): debris by the curb, cones, sandbags
+      if (st < 3 && t === Tile.Road && hh % 11 === 0) {
+        const nearCurb = tileAt(tx + 1, tz) === Tile.Sidewalk || tileAt(tx - 1, tz) === Tile.Sidewalk || tileAt(tx, tz + 1) === Tile.Sidewalk || tileAt(tx, tz - 1) === Tile.Sidewalk;
+        if (nearCurb) {
+          const bx = x0 + 1 + (hh % 3) * 0.7, bz = z0 + 1 + ((hh >> 3) % 3) * 0.7;
+          for (let k = 0; k < 4; k++) {
+            b.setColor(k % 2 ? 0x6e6a62 : 0x58544c);
+            b.bevelBox(bx + (k % 2) * 0.45 - 0.2, l + 0.12 + (k > 1 ? 0.14 : 0), bz + (k >> 1) * 0.35, 0.22 + (k % 3) * 0.05, 0.12, 0.18, 0.03);
+          }
+          b.setColor(0x4a3a2c);
+          b.box(bx + 0.3, l + 0.32, bz + 0.2, 0.5, 0.03, 0.04);
+        }
+      }
+      if (st < 3 && t === Tile.Sidewalk && hh % 17 === 0) {
+        const k = layout.districts[d]?.key;
+        if (k === 'downtown' || k === 'industrial' || k === 'market') {
+          // traffic cones
+          for (let i = 0; i < 2; i++) {
+            const ox = x0 + 1 + i * 1.3, oz = z0 + 2;
+            b.setColor(0xc86a32);
+            b.cylinder(ox, l, oz, 0.16, 0.03, 0.55, 6);
+            b.setColor(0xe8e0d0);
+            b.cylinder(ox, l + 0.25, oz, 0.1, 0.08, 0.08, 6, false);
+          }
+        } else {
+          // sandbag line
+          b.setColor(0x8a7a5a);
+          for (let i = 0; i < 4; i++) b.bevelBox(x0 + 0.6 + i * 0.75, l + 0.13, z0 + 2, 0.36, 0.13, 0.2, 0.08);
+        }
+      }
       // road paint: center dashes on straight road runs
       if (t === Tile.Road) {
         const ew = tileAt(tx - 1, tz) === Tile.Road && tileAt(tx + 1, tz) === Tile.Road;

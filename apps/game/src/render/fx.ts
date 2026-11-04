@@ -153,6 +153,11 @@ export class FX {
     }
   }
 
+  /** Rising smoke puff (camp fires, chimneys). */
+  smoke(x: number, y: number, z: number, color = 0x7a7670): void {
+    this.spawn(1, x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, color, 0.35 + Math.random() * 0.25, 3 + Math.random() * 1.5, (Math.random() - 0.5) * 0.3 + 0.25, 0.9 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3);
+  }
+
   sparks(x: number, y: number, z: number, n = 8, color = 0xffc070): void {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;

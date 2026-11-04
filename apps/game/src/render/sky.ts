@@ -212,11 +212,11 @@ export class Atmosphere {
     lerpKey(h, 'sun', this.sun.color);
     // grade: cold in ruins, warm in restored
     this.sun.color.lerp(warmth > 0.5 ? WARM : COLD, Math.abs(warmth - 0.5) * 0.5);
-    this.sun.intensity = sunI * 1.7;
+    this.sun.intensity = sunI * 1.45;
     lerpKey(h, 'hemiSky', this.hemi.color);
     this.hemi.color.lerp(warmth > 0.5 ? WARM : COLD, Math.abs(warmth - 0.5) * 0.35);
     lerpKey(h, 'hemiGround', this.hemi.groundColor);
-    this.hemi.intensity = lerpNum(h, 'hemiI') * 2.7 * (1 + this.cloud * 0.15);
+    this.hemi.intensity = lerpNum(h, "hemiI") * 3.1 * (1 + this.cloud * 0.15);
 
     // the shadow-casting light follows the focus point; at night it is the moon
     const L = isDay ? this.sunDir : this.moonDir.set(-this.sunDir.x, Math.max(0.35, -this.sunDir.y), this.sunDir.z).normalize();

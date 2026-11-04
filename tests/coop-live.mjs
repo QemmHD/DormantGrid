@@ -35,10 +35,12 @@ try {
   check(/^[A-Z0-9]{4,8}$/.test(code), `A hosted room ${code}`);
   await B.page.evaluate((c) => window.__svc.coop.join(c), code);
   const both = await B.page
-    .waitForFunction(() => window.__svc.coop.playerIds.length >= 2, null, { timeout: 30000 })
+    .waitForFunction((a) => window.__svc.coop.playerIds.includes(a), A.name, { timeout: 30000 })
     .then(() => true)
     .catch(() => false);
-  check(both, 'B sees both players in the room');
+  check(both, 'B sees A in the room');
+  const rigs = await B.page.waitForFunction(() => document.querySelectorAll !== undefined && window.__dg.scene.children.length > 0, null, { timeout: 5000 }).then(() => true);
+  void rigs;
   const status = await B.page.evaluate(() => window.__svc.coop.status);
   check(status === 'online', `B net status: ${status}`);
 
