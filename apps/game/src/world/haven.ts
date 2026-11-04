@@ -171,8 +171,18 @@ export class HavenCamp {
     this.group.add(new THREE.Line(wire, new THREE.LineBasicMaterial({ color: 0x1a1612 })));
   }
 
+  /** smoke emitter hook (set by the game: FX.smoke) */
+  smoke: ((x: number, y: number, z: number) => void) | null = null;
+  private smokeT = 0;
+
   update(dt: number, night: number): void {
     this.t += dt;
+    this.smokeT -= dt;
+    if (this.smoke && this.smokeT <= 0) {
+      this.smokeT = 0.35;
+      const f = this.flames[Math.floor(Math.random() * this.flames.length)];
+      if (f) this.smoke(f.position.x, f.position.y + 0.5, f.position.z);
+    }
     for (let i = 0; i < this.flames.length; i++) {
       const f = this.flames[i];
       const s = 0.85 + Math.sin(this.t * 13 + i * 3) * 0.1 + Math.sin(this.t * 7.3 + i) * 0.08;

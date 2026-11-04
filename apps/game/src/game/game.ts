@@ -230,6 +230,7 @@ export class Game implements GameAPI {
     this.scene.add(this.base.group);
     this.camp = new HavenCamp(this.layout.spawn.x, this.layout.spawn.z, (x, z) => this.view.surface(x, z), this.collision);
     this.scene.add(this.camp.group);
+    this.camp.smoke = (x, y, z) => this.fx.smoke(x, y, z);
     const rig = new CharacterRig(randomLook(7, { backpack: true, hairStyle: 1, shirt: 0x46535c, accent: 0xe8a65a }));
     this.scene.add(rig.root);
     this.player = new PlayerController(rig);

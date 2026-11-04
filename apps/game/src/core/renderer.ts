@@ -61,7 +61,7 @@ export class Renderer {
     container.appendChild(this.canvas);
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
     this.gl.toneMapping = THREE.ACESFilmicToneMapping;
-    this.gl.toneMappingExposure = 1.05;
+    this.gl.toneMappingExposure = 1.32;
     this.gl.shadowMap.enabled = this.quality.shadows;
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.gl.info.autoReset = false;
