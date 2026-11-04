@@ -3,13 +3,13 @@
 ## ☀️ Morning report
 
 ### Live URLs
-- **Full game (accounts, cloud saves, co-op): https://dormant-grid.dg-server.workers.dev**
-  - The Worker serves the game and `/api` + `/ws`, with the AccountRegistry, PlayerVault and WorldRoom Durable Objects.
-  - Deployed 2026-11-04 with `wrangler deploy` from a session. Version `0653506e`.
-  - `node tests/live-smoke.mjs https://dormant-grid.dg-server.workers.dev` passed **14/14**: shell, manifest, sw.js, all 39 referenced assets 200; username claim, whoami and cloud save PUT→GET round trip; duplicate (case-insensitive) claim rejected 409; `/api/version`; service worker registered; game boots; local save survives reload; zero console errors.
-- **Offline build (local saves only): https://qemmhd.github.io/DormantGrid/**
-  - Published by `pages-fallback.yml` on every push to `main`.
-  - `node tests/live-smoke.mjs https://qemmhd.github.io/DormantGrid --offline` passed **8/8**: shell, manifest, sw.js, all 39 assets 200 under `/DormantGrid/`; service worker registered; game boots; local save survives reload; zero console errors.
+- **Offline build, current code (local saves only): https://qemmhd.github.io/DormantGrid/**
+  - Published by `pages-fallback.yml` from merge `c2e5d33` (worldgen v2, building close-ups, animation, GLB pipeline).
+  - `node tools/live-smoke-retry.mjs https://qemmhd.github.io/DormantGrid --offline` → **PASS on attempt 1/3**.
+- **Full game (accounts, cloud saves, co-op): https://dormant-grid.dg-server.workers.dev**, but on the **previous build** (deployed earlier on 2026-11-04 from a session, version `0653506e`).
+  - This round's CI deploy (run 41920700503): quality gates **passed** in CI. The Worker deploy then **failed at Cloudflare auth** ("Invalid format for Authorization header"), so the smoke and rollback steps were skipped. See BLOCKERS.
+  - The session token was no longer in this container's environment, so no direct deploy was made this round. The token was never written anywhere.
+  - `node tools/live-smoke-retry.mjs https://dormant-grid.dg-server.workers.dev` against the running (previous) build → **PASS on attempt 1/3**.
 
 ### BLOCKERS (owner)
 1. **The `CLOUDFLARE_API_TOKEN` repo secret holds the wrong value.** The workflow's non-revealing check reports a 32-character value without the `cfut_` prefix, which matches the length of the account ID. Re-save the secret with the API token itself.
@@ -18,6 +18,55 @@
 2. **Rotate the Cloudflare API token** once the secret is fixed. It was shared in chat.
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
+
+### This round (2026-11-04, "Next round") — status
+1. **Save safety + worldgen v2 — done.**
+   - Saves store `world.seed`, `world.genVersion` and deltas only (removed prop/piece ids, placed pieces, drops, crops, survivors, player). A test asserts no generated props or buildings are in a save.
+   - `WORLDGEN_VERSION = 2`. v1 is frozen: hash `9cf52650` is asserted. v2 = v1 plus appended street dressing (hash `ff749351`), so every old id still names the same prop (tested prop by prop).
+   - Save schema 1 → 2 migration sets `genVersion: 1`. On load, `upgradeWorldGen` moves old saves to v2 and clears any *new* prop that would land on the player's pieces, drops, bed, survivors or position. A future-version save is refused, not loaded.
+   - Streets: +4,683 props (16,687 → 21,370). That's curb-parked cars and vans, clutter clusters, debris, arterial barrier checkpoints with cones, corner signs, weeds, planters, and bushes against walls. New kinds: cone, barrier, planter, weeds.
+   - Tests: `packages/sim/test/worldgen-version.test.ts` (11 tests). Screenshots: `docs/quality/props-v2/`.
+2. **Deploy check — done.**
+   - `tools/live-smoke-retry.mjs` runs the live smoke up to 3 times, 15 s apart, and prints the exact failing checks for each attempt. Only the last attempt decides the outcome. Wired into `deploy.yml`, with an HTTP-only fallback if the Playwright browser can't install.
+   - Tested: real URL → PASS on attempt 1; bogus URL → per-attempt FAIL lines, exit 1.
+3. **Models — done (procedural).**
+   - Building close-ups:
+     - shader facade patterns (brick, siding, panels, corrugated, shingles, plaster), off on the low tier
+     - baked vertical AO under cornices, in window heads and in door recesses
+     - window frames, mullions, transoms and lintels; door casings; corner pilasters
+     - gable ridge caps, fascia boards, dormers; parapet coping, hatches, skylights, vents, antenna masts; roof tone variety
+   - Animation polish:
+     - smoothed idle↔walk↔run blend
+     - idle weight shift
+     - hip sway, twist and roll with shoulder counter-rotation
+     - elbow pump when running, a settle on stop, and a body rock while interacting
+     - head and chest look-at: the player looks at the target or where the camera points; survivors, the trader and raiders look at the player
+   - Tests: `apps/game/src/render/character.test.ts`. Screenshots: `docs/quality/buildings-v2/`.
+4. **Asset pipeline — done for props and the robot; buildings and rigged characters are validated only.**
+   - `assets/registry.json` holds 30 stable IDs with iPhone budgets.
+   - Ingest checks real size and units (rejects centimeters), pivot, a 90° rotation, rig and clips, and texture MB. There's a new `buildings/` category.
+   - The runtime GLB loader replaces prop batches and the robot enemy, with procedural fallback. The loader chunks are lazy and not precached.
+   - `docs/asset-requests/models-top30.md` is generated, with ChatGPT-ready prompts: a reference sheet for every model, plus a Blender script prompt for the 12 simple rigid shapes.
+   - Tests: `tests/ingest-glb.mjs` (in `npm run check`) and `tests/models-flow.mjs` (end to end).
+5. **Gates + fixes found along the way:**
+   - The raid arrival was up to 1 game-hour late, and a raid could resolve before its raiders spawned. Both fixed.
+   - Test scripts leaked a `vite preview` server per run (31 found). Fixed.
+   - The feel and budget checks waited on wall-clock time instead of rendered frames. Fixed.
+   - The far-mesh trees are 43k tris lighter.
+   - New gate: `tests/budget-tris.mjs`, which checks main-pass tris and calls per district at the iPhone tier.
+   - `GAME_VERSION` and `MIN_CLIENT` are now 0.2.0, so old clients can't join v2 rooms.
+
+### What is still weak (honest)
+- **Nothing in this round was tested on a real iPhone.** All numbers are SwiftShader/headless.
+- **Facade patterns cost fragment time.** Under SwiftShader the medium tier drops from ~6.0 to ~4.3 fps. A real phone GPU should pay much less, but that's unmeasured. They're off on low, and auto quality is the safety net.
+- **The medium tier is close to the triangle budget.** Downtown is at 290k of 300k main-pass tris; with the shadow pass it's 487k. Shadows on medium may be the first thing to cut after a device report.
+- **The initial payload is 0.59 MB**, about 9% over the 0.54 MB baseline (the gate allows 10%). The next feature that adds eager code will need a deliberate baseline bump or a split.
+- **Buildings and characters are still procedural boxes up close.** The patterns and trim help at 5–15 m, but there are no real textures, silhouettes are blocky, and hands and faces are minimal. GLB buildings and rigged characters can't be used in game yet (validated only).
+- **Animation is procedural.** It has no foot IK on slopes or stairs, no turn-in-place steps, no attack anticipation beyond the existing wind-up, and no look-at in co-op remote players.
+- **The street dressing is random-ish.** There's no hand-authored storytelling (crashed-car pileups, barricaded blocks). Weeds dominate the new prop count, and haven is deliberately sparse.
+- **The world seed is fixed (1337).** Saves store it, but loading a different seed isn't supported.
+- **A co-op room can't mix worldgen versions**, so the client version gate refuses 0.1.0 clients. Old PWAs must update.
+- Still open from before: stealth, livestock and hunting, contracts and endings, survivor guards in raids, stairs in ruins, live two-client co-op verification.
 
 ### Rework pass (from the owner's iPhone test) — status
 Full before/after write-up: `docs/quality/REPORT.md`. The audit is in `docs/QUALITY_AUDIT.md`; screenshots are in `docs/quality/{before,phase1,phase3,phase4,after}/`.
@@ -67,14 +116,15 @@ All headless Chromium/SwiftShader. **Nothing has been measured on a real iPhone.
 
 | Counter | Measured | Budget |
 |---|---|---|
-| Draw calls, medium tier at spawn (iPhone default) | 37–41 | 150 / 250 peak |
-| Draw calls, high tier (desktop) | ~80 | — |
-| Triangles, medium (incl. shadow pass) | ~200k | ≤ 300k |
-| Triangles, high | ~490k (desktop only) | — |
+| Draw calls, medium tier (iPhone default), main pass, densest districts | 46–73 (with shadow pass 69–99) | 150 / 250 peak |
+| Triangles, medium, main pass: downtown / residential / market / industrial / haven | 290k / 275k / 244k / 201k / 194k (`tests/budget-tris.mjs`) | ≤ 300k |
+| Triangles, medium incl. shadow pass, downtown | 487k | — |
+| Triangles, high | 500–670k main pass (desktop only) | — |
 | Texture memory | ≈ 0 MB (vertex colors only; shadow map + a 19×19 data texture) | ≤ 150 MB |
-| Initial payload | 0.54 MB gzip (baseline raised on purpose for the worker; DECISIONS #17) | ≤ 12 MB |
+| Initial payload | 0.59 MB gzip (baseline 0.54 MB; GLB loader chunks are on-demand and not precached) | ≤ 12 MB |
 | Chunk mesh build | off-thread in a Web Worker; worst main-thread sync build 32 ms (spawn/teleport only) | — |
-| Memory walk (48 waypoints across the town) | geometries ≤ 75, textures 5, colliders ≤ 5.3k; heap returns to ~60 MB; world hash stable `9cf52650` | stable, no leaks |
+| Memory walk (48 waypoints across the town) | geometries ≤ 82, textures 7, colliders ≤ 5.4k; heap after GC 48–55 MB; world hash stable `ff749351` (v2) | stable, no leaks |
+| Props in the world | 21,370 (v2; v1 had 16,687) | — |
 
 Untested on a device: fps, real GPU memory, iOS memory kill and context-loss recovery, touch feel, audio unlock, and PWA install/update on iOS.
 
@@ -85,7 +135,7 @@ Untested on a device: fps, real GPU memory, iOS memory kill and context-loss rec
 | 2. `npm run smoke` (load, enter, move, salvage, inventory UI, save → reload → restore, zero console errors) | **PASS** |
 | 3. Screenshot review (menu, Haven day/night, phone layout, town overview, trade, grid defend/online, intro) | **DONE**; fixes applied |
 | 4. Bundle budget | **PASS** |
-| 5. Counters vs. budgets | **PASS** (headless) |
+| 5. Counters vs. budgets | **PASS** (headless; `tests/budget-tris.mjs` per district) |
 | 6. Memory walk (`node tests/walk.mjs`) | **PASS** |
 | 7. Determinism (sim tests + in-browser hash) | **PASS** |
 | 8. Save round-trip, migration, corruption fuzz (sim + net tests) | **PASS** |
@@ -93,7 +143,9 @@ Untested on a device: fps, real GPU memory, iOS memory kill and context-loss rec
 | Independent review subagent | **DONE**; 15 findings, all fixed |
 | Server security self-review | **DONE** by the server track |
 | Visual regression references, CI bot playthrough, Lighthouse PWA audit | **SKIPPED** (not built yet) |
-| Live-URL smoke | **SKIPPED** (no deploy) |
+| Browser flows: smoke, feel, guide, systems, grid, raid, defense, walk, models-flow | **PASS** (2026-11-04) |
+| GLB ingest test (`tests/ingest-glb.mjs`, in `npm run check`) | **PASS** |
+| Live-URL smoke | see Live URLs above |
 
 ### Phase status (honest)
 No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to a public URL) is blocked on the secrets.
@@ -123,15 +175,16 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 4. Optional: the title decision (DECISIONS #15).
 
 ## NEXT ACTIONS
-1. Raids: survivor guards fight in-world (raiders already damage placed pieces; traps already trigger).
-2. Ranged enemies (raider sniper) shooting back.
-3. Stealth (crouch, noise/light visibility) and traps triggering on enemies.
-4. Livestock pens (coop/pen) and the hunting/butchering loop in the client.
-5. Contracts UI with the Guild and Reavers, faction events, and an endings sequence for Act IV (Core).
-6. Two-client co-op: `tests/coop-live.mjs <url>` exists, but it **can't run from the Claude sandbox**. Its proxy rejects WebSocket upgrades (HTTP/2 re-termination). Run it from a normal machine.
-7. Visual regression reference screenshots plus a bot playthrough in CI.
-8. Photo mode with postcard export, and a daily Town Board popup on waking (generator exists: `townBoard`).
-9. ~~Survivor pathing via the sim nav grid~~ — done (A* on the 2 m grid, repaths when the target moves).
-10. Stairs inside enterable ruins; upper floors.
-11. Lighthouse PWA audit; automated contrast checks.
-12. After the first device report: tune DPR steps, the detail radius, and shadow size per tier.
+1. **Owner:** fix the `CLOUDFLARE_API_TOKEN` secret (see BLOCKERS), then re-run "Deploy (Cloudflare)". It now retries the live smoke 3× and rolls back on a final failure.
+2. **Owner:** an iPhone device report with **Settings → Show performance overlay → Copy device report** in downtown, on medium and on low. Decide whether medium keeps shadows and facade patterns.
+3. Wire GLB **buildings**: replace intact landmark buildings (lot + footprint match, scale ±25%) and drop back to procedural pieces on first damage.
+4. Drive **rigged GLB characters** with an AnimationMixer (clips from the registry), keeping the procedural rig as the fallback and for look-at layering.
+5. Load manifest **images and audio** at runtime (textures, decals, icons, SFX). Only models are live today.
+6. Foot IK on slopes and stairs, turn-in-place steps, and look-at for co-op remote players.
+7. Authored street set pieces in worldgen v3 (pile-ups, barricaded blocks, collapsed facades), appended per the versioning rule.
+8. Raids: survivor guards fight in-world; ranged raiders shoot back.
+9. Stealth, livestock and hunting in the client; Guild and Reaver contracts UI; Act IV endings.
+10. Two-client co-op over the live URL (`tests/coop-live.mjs`), from a normal machine (the sandbox proxy blocks WebSockets).
+11. Visual regression reference screenshots and a bot playthrough in CI; Lighthouse PWA audit; automated contrast checks.
+12. Stairs inside enterable ruins; upper floors.
+13. If the payload baseline is hit: split `ui` or `services` further, or accept a deliberate baseline bump with a DECISIONS entry.
