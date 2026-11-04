@@ -14,6 +14,7 @@ import {
   NAV_SIZE,
   Tile,
   DISTRICT_KEYS,
+  WORLDGEN_VERSION,
   type BuildingDef,
   type ControlNodeDef,
   type DistrictInfo,
@@ -148,10 +149,11 @@ export const PROP_HALF: Record<PropKind, [number, number]> = {
   pipe: [0.4, 2.0], haybale: [0.9, 0.9], stump: [0.5, 0.5], locker: [0.3, 0.3], shelf: [0.9, 0.3],
   table: [0.8, 0.5], chair: [0.3, 0.3], bed: [0.9, 1.1], cabinet: [0.5, 0.3], sofa: [1.0, 0.45],
   fridge: [0.4, 0.4], stove: [0.4, 0.4], terminal: [0.4, 0.3], debris: [1.0, 1.0],
+  cone: [0.25, 0.25], barrier: [1.5, 0.35], planter: [0.6, 0.6], weeds: [0.4, 0.4],
 };
 
 /** Large props that block navigation */
-export const PROP_BLOCKS_NAV: ReadonlySet<PropKind> = new Set<PropKind>(['car', 'van', 'bus', 'container', 'dumpster']);
+export const PROP_BLOCKS_NAV: ReadonlySet<PropKind> = new Set<PropKind>(['car', 'van', 'bus', 'container', 'dumpster', 'barrier']);
 
 // ---------------------------------------------------------------- helpers
 
@@ -206,9 +208,16 @@ const RESERVED = -2;
 
 // ---------------------------------------------------------------- generator
 
-export function generateWorld(seed: number): WorldLayout {
+/**
+ * Generate the world for a seed at a given worldgen version (default: latest).
+ * Version N output is version N-1 output plus appended props — see WORLDGEN_VERSION.
+ */
+export function generateWorld(seed: number, version: number = WORLDGEN_VERSION): WorldLayout {
+  if (!Number.isInteger(version) || version < 1 || version > WORLDGEN_VERSION) {
+    throw new Error(`unsupported worldgen version ${version} (supported 1..${WORLDGEN_VERSION})`);
+  }
   const g = new Gen(seed >>> 0);
-  return g.run();
+  return g.run(version);
 }
 
 class Gen {
@@ -238,7 +247,7 @@ class Gen {
     this.rng = new Rng(hash2(seed, 0x51d));
   }
 
-  run(): WorldLayout {
+  run(version: number): WorldLayout {
     this.setupDistricts();
     this.setupRiverAndRail();
     this.paintDistrictMap();
@@ -259,9 +268,17 @@ class Gen {
     this.interiorProps();
     this.outskirtsProps();
     this.fallbackNodes();
+    // ---- version marks: everything above is worldgen v1 and must never change
+    const propMarks = [0, this.props.length];
+    if (version >= 2) {
+      this.densifyV2(cells);
+      propMarks.push(this.props.length);
+    }
 
     const layout: WorldLayout = {
       seed: this.seed,
+      genVersion: version,
+      propMarks,
       size: WORLD_SIZE,
       districts: this.districts,
       districtMap: this.districtMap,
@@ -1147,6 +1164,149 @@ class Gen {
         if (!kind) continue;
         const scale = kind === 'haybale' ? 1 : r.range(0.75, 1.35);
         this.tryProp(kind, x, z, r.range(0, Math.PI * 2), scale, grassy, -1, 0);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ v2 street dressing
+  /**
+   * Worldgen v2: denser, more varied streets. Appends only (new ids after all v1
+   * props), uses its own RNG stream, and respects the same tile/prop occupancy, so
+   * v1 ids, buildings, nodes and tiles are untouched.
+   */
+  densifyV2(cells: Block[]): void {
+    const r = this.rng.fork(40);
+    const onRoad = (t: number) => t === Tile.Road || t === Tile.Bridge;
+    const onWalk = (t: number) => t === Tile.Sidewalk;
+    const yardTile = (t: number) => t === Tile.Grass || t === Tile.Lot || t === Tile.Dirt;
+    const softTile = (t: number) => t === Tile.Grass || t === Tile.Dirt || t === Tile.Lot || t === Tile.Sidewalk;
+    const sp = this.spawn;
+    // keep the start area, nodes and their approach clear
+    const clear = (x: number, z: number) => {
+      if (Math.hypot(x - sp.x, z - sp.z) < 26) return false;
+      for (const n of this.nodes) if (Math.hypot(x - n.x, z - n.z) < 9) return false;
+      return true;
+    };
+    const put = (kind: PropKind, x: number, z: number, rot: number, scale: number, allowed: (t: number) => boolean) =>
+      clear(x, z) && this.tryProp(kind, x, z, rot, scale, allowed);
+    const dangerAt = (x: number, z: number) => this.districts[this.districtAtM(x, z)].danger;
+    const keyAt = (x: number, z: number) => DISTRICT_KEYS[this.districtAtM(x, z)];
+    const CLUSTERS: [PropKind[], number][] = [
+      [['barrel', 'barrel', 'crate'], 3],
+      [['crate', 'crate', 'pallet'], 3],
+      [['trashbag', 'trashbag', 'trashbag', 'tire'], 3],
+      [['barrel', 'pallet', 'tire'], 2],
+      [['crate', 'barrel'], 2],
+      [['cone', 'cone', 'debris'], 2],
+    ];
+
+    for (const s of this.segments) {
+      if (!s.kept) continue;
+      const rh = s.arterial ? 8 : 4;
+      const len = s.b - s.a;
+      const at = (along: number, off: number): [number, number] => (s.vertical ? [s.c + off, along] : [along, s.c + off]);
+      const mid = at((s.a + s.b) / 2, 0);
+      const danger = dangerAt(mid[0], mid[1]);
+      const key = keyAt(mid[0], mid[1]);
+      const calm = key === 'haven' ? 0.35 : 1;
+      const along0 = s.vertical ? 0 : Math.PI / 2;
+
+      // 1. cars parked along the curb, nose-to-tail with gaps
+      for (const sgn of [-1, 1]) {
+        for (let t = 9; t < len - 9; t += r.range(5.5, 9)) {
+          if (!r.chance((0.16 + danger * 0.03) * calm)) continue;
+          const kind: PropKind = r.chance(0.2) ? 'van' : 'car';
+          const rot = along0 + (sgn < 0 ? Math.PI : 0) + r.range(-0.05, 0.05);
+          const [x, z] = at(s.a + t, sgn * (rh - 1.35));
+          if (put(kind, x, z, rot, 1, onRoad)) t += 4;
+        }
+      }
+      // 2. clutter clusters hugging the building side of the sidewalk
+      for (const sgn of [-1, 1]) {
+        for (let t = 5; t < len - 5; t += r.range(7, 13)) {
+          if (!r.chance((0.22 + danger * 0.04) * calm)) continue;
+          const set = weighted(r, CLUSTERS);
+          const off = sgn * (rh + 3.3);
+          let along = s.a + t;
+          for (const kind of set) {
+            const [x, z] = at(along, off + r.range(-0.3, 0.3));
+            put(kind, x, z, r.range(0, 6.28), 1, onWalk);
+            along += r.range(1.0, 1.6);
+          }
+        }
+      }
+      // 3. scattered road debris everywhere (more in danger), plus the odd tire/bag in the gutter
+      for (let t = 6; t < len - 6; t += r.range(5, 9)) {
+        if (!r.chance((0.05 + danger * 0.035) * calm)) continue;
+        const off = r.range(-rh + 0.8, rh - 0.8);
+        const [x, z] = at(s.a + t, off);
+        const kind = weighted<PropKind>(r, [['debris', 5], ['tire', 1], ['trashbag', 1], ['cone', 1], ['rubble', danger >= 2 ? 2 : 0]]);
+        put(kind, x, z, r.range(0, 6.28), r.range(0.8, 1.15), onRoad);
+      }
+      // 4. arterial checkpoints: a jersey-barrier line with cones across one lane
+      if (s.arterial && danger >= 1 && len > 40 && r.chance(0.18 + danger * 0.06)) {
+        const t = r.range(14, len - 14);
+        const side = r.chance(0.5) ? -1 : 1;
+        for (let k = 0; k < 2; k++) {
+          const [x, z] = at(s.a + t, side * (2.4 + k * 3.3));
+          put('barrier', x, z, along0 + Math.PI / 2 + r.range(-0.08, 0.08), 1, onRoad);
+        }
+        for (let k = 0; k < 3; k++) {
+          const [x, z] = at(s.a + t - 3 - k * 1.6, side * (1.5 + k * 1.8));
+          put('cone', x, z, r.range(0, 6.28), 1, onRoad);
+        }
+      }
+      // 5. street signs at both ends (corners), facing the road
+      for (const end of [4, len - 4]) {
+        if (!r.chance(0.55)) continue;
+        const sgn = r.chance(0.5) ? -1 : 1;
+        const [x, z] = at(s.a + end, sgn * (rh + 0.9));
+        const face = s.vertical ? (sgn > 0 ? -Math.PI / 2 : Math.PI / 2) : sgn > 0 ? Math.PI : 0;
+        put('sign', x, z, face + r.range(-0.15, 0.15), 1, onWalk);
+      }
+      // 6. foliage: weeds in sidewalk cracks, planters downtown / market
+      for (const sgn of [-1, 1]) {
+        for (let t = 3; t < len - 3; t += r.range(4, 8)) {
+          const [x, z] = at(s.a + t, sgn * (rh + r.range(0.4, 3.6)));
+          if (r.chance(0.22)) put('weeds', x, z, r.range(0, 6.28), r.range(0.7, 1.3), softTile);
+        }
+        if (key === 'downtown' || key === 'market' || key === 'haven') {
+          for (let t = 8; t < len - 8; t += 16) {
+            if (!r.chance(0.4)) continue;
+            const [x, z] = at(s.a + t, sgn * (rh + 1.1));
+            put('planter', x, z, along0, 1, onWalk);
+          }
+        }
+      }
+    }
+
+    // 7. buildings: bushes and weeds against the walls, trash by the door side
+    for (const b of this.buildings) {
+      const wx = b.rot & 1 ? b.d : b.w;
+      const wz = b.rot & 1 ? b.w : b.d;
+      const n = Math.round((wx + wz) / 7);
+      for (let k = 0; k < n; k++) {
+        if (!r.chance(0.5)) continue;
+        const wall = r.int(0, 3);
+        const u = r.range(-0.45, 0.45);
+        const gap = r.range(1.1, 1.8);
+        const x = wall < 2 ? b.x + u * wx : b.x + (wall === 2 ? -1 : 1) * (wx / 2 + gap);
+        const z = wall < 2 ? b.z + (wall === 0 ? -1 : 1) * (wz / 2 + gap) : b.z + u * wz;
+        const kind = weighted<PropKind>(r, [['bush', 4], ['weeds', 4], ['trashbag', 1], ['barrel', 1], ['crate', 1]]);
+        put(kind, x, z, r.range(0, 6.28), kind === 'bush' ? r.range(0.7, 1.1) : 1, yardTile);
+      }
+    }
+
+    // 8. yards and parks: a second, lighter foliage pass for ground cover
+    for (const c of cells) {
+      if (c.haven) continue;
+      const area = (c.rect.x1 - c.rect.x0) * (c.rect.z1 - c.rect.z0);
+      const attempts = Math.round((area / 100) * (c.park ? 1.2 : 0.5));
+      for (let a = 0; a < attempts; a++) {
+        const x = r.range(c.rect.x0 + 1, c.rect.x1 - 1);
+        const z = r.range(c.rect.z0 + 1, c.rect.z1 - 1);
+        const kind = weighted<PropKind>(r, [['weeds', 5], ['bush', 3], ['rock', 1], ['tree', c.park ? 1 : 0]]);
+        put(kind, x, z, r.range(0, 6.28), r.range(0.75, 1.2), yardTile);
       }
     }
   }

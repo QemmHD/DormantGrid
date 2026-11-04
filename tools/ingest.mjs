@@ -23,6 +23,7 @@ const MANIFEST = path.join(ASSETS, 'manifest.json');
 const REPORT = path.join(ASSETS, 'REPORT.md');
 const ASSETS_MD = path.join(REPO, 'ASSETS.md');
 const DRY = process.argv.includes('--dry');
+const REGISTRY = path.join(REPO, 'assets', 'registry.json');
 
 const MB = 1024 * 1024;
 
@@ -30,6 +31,7 @@ const MB = 1024 * 1024;
 export const CATEGORIES = {
   props: { prefixes: ['prop'], kind: 'model', maxTris: 800, maxBytes: 2 * MB, tex: 1024 },
   'building-pieces': { prefixes: ['piece'], kind: 'model', maxTris: 400, maxBytes: 2 * MB, tex: 1024 },
+  buildings: { prefixes: ['bldg'], kind: 'model', maxTris: 6000, maxBytes: 6 * MB, tex: 1024 },
   characters: { prefixes: ['char'], kind: 'model', maxTris: 3000, maxBones: 40, maxBytes: 4 * MB, tex: 1024 },
   textures: { prefixes: ['tex', 'atlas'], kind: 'image', maxPx: 1024, minPx: 256, pow2: true, maxBytes: 8 * MB },
   decals: { prefixes: ['decal'], kind: 'image', maxPx: 1024, minPx: 64, pow2: true, alpha: true, maxBytes: 8 * MB },
@@ -115,7 +117,7 @@ async function processImage(file, spec, outDir, id) {
 }
 
 async function inspectGlb(file) {
-  const { NodeIO } = await import('@gltf-transform/core');
+  const { NodeIO, getBounds, ImageUtils } = await import('@gltf-transform/core');
   const { ALL_EXTENSIONS } = await import('@gltf-transform/extensions');
   const { MeshoptDecoder } = await import('meshoptimizer');
   await MeshoptDecoder.ready;
@@ -134,18 +136,101 @@ async function inspectGlb(file) {
   }
   let bones = 0;
   for (const skin of root.listSkins()) bones = Math.max(bones, skin.listJoints().length);
-  return { tris, bones, materials: root.listMaterials().length, anims: root.listAnimations().length };
+  // world-space bounds of the default scene (skinned meshes use their bind pose)
+  const scene = root.getDefaultScene() ?? root.listScenes()[0];
+  let bounds = null;
+  if (scene) {
+    const b = getBounds(scene);
+    if (b.min.every(Number.isFinite) && b.max.every(Number.isFinite)) bounds = { min: b.min, max: b.max };
+  }
+  // resident texture memory estimate: RGBA8 + mip chain (x1.33)
+  let texBytes = 0;
+  const texSizes = [];
+  for (const t of root.listTextures()) {
+    const img = t.getImage();
+    const size = img ? ImageUtils.getSize(img, t.getMimeType()) : null;
+    if (size) {
+      texSizes.push(size);
+      texBytes += size[0] * size[1] * 4 * 1.33;
+    }
+  }
+  return {
+    tris,
+    bones,
+    materials: root.listMaterials().length,
+    anims: root.listAnimations().length,
+    clips: root.listAnimations().map((a) => a.getName().toLowerCase()),
+    bounds,
+    texMB: texBytes / MB,
+    texMax: texSizes.reduce((m, s) => Math.max(m, s[0], s[1]), 0),
+  };
 }
 
-async function processModel(file, spec, outDir, id) {
+/** Registry checks: size / units, pivot, long axis, rig + clips. Returns { errs, warns }. */
+export function checkAgainstRegistry(info, reg) {
+  const errs = [];
+  const warns = [];
+  if (!reg) return { errs, warns };
+  if (info.bounds && reg.size) {
+    const size = [0, 1, 2].map((i) => info.bounds.max[i] - info.bounds.min[i]);
+    const ratio = size.map((v, i) => v / reg.size[i]);
+    const worst = Math.max(...ratio.map((r) => (r > 0 ? Math.max(r, 1 / r) : Infinity)));
+    const dims = size.map((v) => v.toFixed(2)).join(' x ');
+    const want = reg.size.join(' x ');
+    if (worst >= 3) {
+      const avg = ratio.reduce((a, b) => a + b, 0) / 3;
+      const hint = avg > 50 ? ' (looks like centimeters: scale by 0.01)' : avg < 0.05 ? ' (looks like it was scaled down: check export units)' : '';
+      errs.push(`size ${dims} m is far from the expected ${want} m${hint}`);
+    } else if (worst > 1.35) warns.push(`size ${dims} m differs from the expected ${want} m by more than 35%`);
+    // pivot: base on y=0, centered on x/z
+    const h = size[1];
+    if (Math.abs(info.bounds.min[1]) > Math.max(0.05, h * 0.03)) warns.push(`pivot is not at the base (min y = ${info.bounds.min[1].toFixed(2)} m); the game re-bases it`);
+    const cx = (info.bounds.max[0] + info.bounds.min[0]) / 2;
+    const cz = (info.bounds.max[2] + info.bounds.min[2]) / 2;
+    if (Math.abs(cx) > size[0] * 0.15 + 0.02 || Math.abs(cz) > size[2] * 0.15 + 0.02) warns.push(`pivot is off-center (${cx.toFixed(2)}, ${cz.toFixed(2)}); the game re-centers it`);
+    // long axis: elongated assets must run along Z (front faces +Z)
+    const wantLongZ = reg.size[2] > reg.size[0] * 1.4;
+    const wantLongX = reg.size[0] > reg.size[2] * 1.4;
+    if ((wantLongZ && size[0] > size[2] * 1.2) || (wantLongX && size[2] > size[0] * 1.2)) {
+      warns.push('long axis looks rotated 90 degrees: the front should face +Z');
+    }
+  } else if (!info.bounds) warns.push('could not compute bounds');
+  if (reg.bones !== undefined) {
+    if (reg.bones > 0 && info.bones === 0) warns.push('not rigged: this slot expects a skinned humanoid');
+    if (info.bones > Math.max(reg.bones, 0) && reg.bones > 0) errs.push(`${info.bones} bones; budget is ${reg.bones}`);
+  }
+  if (reg.clips?.length) {
+    const missing = reg.clips.filter((c) => !info.clips.includes(c));
+    if (missing.length) warns.push(`missing animation clips: ${missing.join(', ')}`);
+  }
+  return { errs, warns };
+}
+
+let registryCache = null;
+async function registry() {
+  if (!registryCache) {
+    const r = await readJson(REGISTRY, { models: [] });
+    registryCache = new Map((r.models ?? []).map((m) => [m.id, m]));
+  }
+  return registryCache;
+}
+
+async function processModel(file, catSpec, outDir, id) {
+  const stable = id.replace(/_\d{2}$/, '');
+  const reg = (await registry()).get(stable) ?? null;
+  // registry entries override the category caps (per-asset iPhone budgets)
+  const spec = { ...catSpec, maxTris: reg?.tris ?? catSpec.maxTris, tex: reg?.tex ?? catSpec.tex };
   const info = await inspectGlb(file);
   const errs = [];
   if (info.tris === 0) errs.push('no triangles found');
   if (info.tris > spec.maxTris * 1.5) errs.push(`${info.tris} triangles; budget is ${spec.maxTris}`);
   if (spec.maxBones && info.bones > spec.maxBones) errs.push(`${info.bones} bones; budget is ${spec.maxBones}`);
   if (info.materials > 5) errs.push(`${info.materials} materials; maximum is 5`);
+  const rc = checkAgainstRegistry(info, reg);
+  errs.push(...rc.errs);
   if (errs.length) return { errs };
-  const warns = [];
+  const warns = [...rc.warns];
+  if (!reg) warns.push(`"${stable}" is not in assets/registry.json: validated with category caps only, and the game will not use it`);
   if (info.tris > spec.maxTris) warns.push(`${info.tris} triangles is over the ${spec.maxTris} budget; simplified`);
   const out = path.join(outDir, id + '.glb');
   if (!DRY) {
@@ -171,9 +256,23 @@ async function processModel(file, spec, outDir, id) {
   }
   const after = DRY ? info : await inspectGlb(out);
   const bytes = DRY ? 0 : (await fs.stat(out)).size;
+  if (reg?.texMB && after.texMB > reg.texMB * 1.05) warns.push(`textures use ~${after.texMB.toFixed(1)} MB resident; budget is ${reg.texMB} MB`);
+  const size = after.bounds ? [0, 1, 2].map((i) => +(after.bounds.max[i] - after.bounds.min[i]).toFixed(3)) : undefined;
   return {
     out,
-    entry: { kind: 'model', tris: after.tris, bones: after.bones || undefined, anims: after.anims || undefined, bytes },
+    entry: {
+      kind: 'model',
+      stable,
+      replaces: reg?.replaces,
+      runtime: reg?.runtime,
+      tris: after.tris,
+      bones: after.bones || undefined,
+      anims: after.anims || undefined,
+      clips: after.clips.length ? after.clips : undefined,
+      size,
+      texMB: after.texMB ? +after.texMB.toFixed(2) : undefined,
+      bytes,
+    },
     warns,
   };
 }

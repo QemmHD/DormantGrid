@@ -54,9 +54,9 @@ function arrays(b: MeshBuilder): ChunkArrays | null {
 const ctx = self as unknown as { postMessage: (m: unknown, t?: Transferable[]) => void; onmessage: ((e: MessageEvent) => void) | null };
 
 ctx.onmessage = (e: MessageEvent) => {
-  const m = e.data as { t: 'init'; seed: number } | ChunkRequest;
+  const m = e.data as { t: 'init'; seed: number; genVersion: number } | ChunkRequest;
   if (m.t === 'init') {
-    layout = generateWorld(m.seed);
+    layout = generateWorld(m.seed, m.genVersion);
     ctx.postMessage({ t: 'ready', hash: layout.hash });
     return;
   }

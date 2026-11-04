@@ -4,7 +4,7 @@
 import type { ConditionId, ItemStack } from './items';
 import type { RestorationState } from './world';
 
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
 
 export type Difficulty = 'chill' | 'standard' | 'hard';
 
@@ -85,6 +85,8 @@ export interface DistrictSave {
 
 export interface WorldSave {
   seed: number;
+  /** worldgen version the prop/building IDs below refer to (see WORLDGEN_VERSION) */
+  genVersion: number;
   /** Game time in hours since start (day = floor(h/24)) */
   hour: number;
   weather: string;

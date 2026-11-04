@@ -35,6 +35,7 @@ export class Town {
   private cropSig = '';
   private lastHungerToast = -999;
   private tmpP = { x: 0, y: 0, z: 0 };
+  private readonly lookAt = new THREE.Vector3();
   readonly home: { x: number; z: number };
 
   /** set by main: opens the talk dialog for a survivor */
@@ -283,6 +284,7 @@ export class Town {
       if (s.injured && !moving) n.rig.setState('sit');
       n.rig.root.position.copy(n.pos);
       n.rig.root.rotation.y = n.yaw;
+      n.rig.lookTarget = Math.hypot(px - n.pos.x, pz - n.pos.z) < 7 && g.mode === 'play' ? this.lookAt.copy(g.player.pos) : null;
       n.rig.update(simDt);
       // barks when the player walks up
       n.barkT -= dt;

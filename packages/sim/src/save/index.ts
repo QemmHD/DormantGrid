@@ -5,6 +5,7 @@ import {
   DISTRICT_KEYS,
   GAME_VERSION,
   SAVE_SCHEMA_VERSION,
+  WORLDGEN_VERSION,
   type ConditionId,
   type CropSave,
   type Difficulty,
@@ -16,8 +17,10 @@ import {
   type PlayerSave,
   type RestorationState,
   type SurvivorSave,
+  type WorldLayout,
   type WorldSave,
 } from '@dg/shared';
+import { PROP_HALF } from '../world/gen';
 import { newPlayer } from '../systems/survival';
 
 export type SaveErrorReason =
@@ -59,6 +62,7 @@ export function newGame(seed: number, difficulty: Difficulty, spawn: { x: number
   }));
   const world: WorldSave = {
     seed: seed >>> 0,
+    genVersion: WORLDGEN_VERSION,
     hour: 8, // day 0, 08:00
     weather: 'clear',
     removedProps: [],
@@ -242,6 +246,12 @@ function validateCrop(v: unknown, path: string): CropSave {
   return c;
 }
 
+function genVersionOf(v: unknown): number {
+  const g = int(v, 'world.genVersion', 1, 1e6);
+  if (g > WORLDGEN_VERSION) throw new SaveError('future_version', 'world.genVersion', `world v${g}, game supports v${WORLDGEN_VERSION}`);
+  return g;
+}
+
 function validateWorld(v: unknown): WorldSave {
   const w = obj(v, 'world');
   const removedPiecesIn = obj(w.removedPieces, 'world.removedPieces');
@@ -290,6 +300,7 @@ function validateWorld(v: unknown): WorldSave {
   const maxPieceId = pieces.reduce((m, p) => Math.max(m, p.id), 0);
   return {
     seed: int(w.seed, 'world.seed', 0, 4294967295) >>> 0,
+    genVersion: genVersionOf(w.genVersion),
     hour: num(w.hour, 'world.hour', 0, 1e7),
     weather: str(w.weather, 'world.weather', 16),
     removedProps: [...new Set(arr(w.removedProps, 'world.removedProps').map((x, i) => int(x, `world.removedProps[${i}]`, 0, 1e7)))].sort(
@@ -386,7 +397,54 @@ export const MIGRATIONS: Record<number, (raw: Obj) => Obj> = {
       world,
     };
   },
+  // v1 -> v2: worldgen versioning. Every v1 save was made against worldgen v1.
+  1: (raw) => {
+    const w = isObj(raw.world) ? { ...raw.world } : {};
+    w.genVersion = 1;
+    return { ...raw, schema: 2, world: w };
+  },
 };
+
+/**
+ * Move a save to a newer worldgen version. Versions only append props, so all
+ * existing ids keep their meaning; the only conflict is a NEW prop landing on
+ * something the player owns (placed pieces, crops' plots, drops, bed, survivors,
+ * the player). Those new props are marked removed. Returns the ids it removed.
+ * Must be called with a layout generated at the target version.
+ */
+export function upgradeWorldGen(save: GameSave, layout: WorldLayout): number[] {
+  const w = save.world;
+  if (w.genVersion >= layout.genVersion) return [];
+  const from = layout.propMarks[w.genVersion];
+  if (from === undefined) throw new SaveError('bad_field', 'world.genVersion', `layout has no mark for v${w.genVersion}`);
+  const spots: [number, number, number][] = []; // x, z, clearance radius
+  for (const p of w.pieces) spots.push([p.x, p.z, 2.6]);
+  for (const d of w.drops) spots.push([d.x, d.z, 1.5]);
+  for (const sv of w.survivors) spots.push([sv.x, sv.z, 1.5]);
+  const pl = save.player;
+  spots.push([pl.x, pl.z, 3]);
+  if (pl.bed) spots.push([pl.bed.x, pl.bed.z, 2.5]);
+  const removed = new Set(w.removedProps);
+  const added: number[] = [];
+  for (let i = from; i < layout.props.length; i++) {
+    const p = layout.props[i];
+    if (p.building >= 0) continue;
+    const [hx, hz] = PROP_HALF[p.kind];
+    const pr = Math.hypot(hx, hz) * p.scale;
+    for (const [x, z, r] of spots) {
+      if (Math.hypot(p.x - x, p.z - z) < pr + r) {
+        if (!removed.has(p.id)) {
+          removed.add(p.id);
+          added.push(p.id);
+        }
+        break;
+      }
+    }
+  }
+  w.removedProps = [...removed].sort((a, b) => a - b);
+  w.genVersion = layout.genVersion;
+  return added;
+}
 
 /** Upgrade any supported raw save to the current schema and validate it. */
 export function migrateSave(raw: unknown): GameSave {

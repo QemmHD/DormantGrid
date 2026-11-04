@@ -5,8 +5,11 @@ built-in kits cover every piece. Use this sheet
 only if you make models in another tool.
 
 Format: GLB, ≤ 400 triangles each,
-1 unit = 1 m, Y up, forward −Z, pivot at the
-base center. Snap grid: 2 m.
+1 unit = 1 m, Y up, front faces +Z, pivot at the
+base center. Snap grid: 4 m cells, 3 m storeys
+(sizes below match `packages/sim/src/data/pieces.ts`).
+In game today: validated by ingest only; the game
+still draws its procedural pieces.
 Drop into: `assets/incoming/building-pieces/`
 
 Tiers per piece: `scrap`, `timber`, `brick`,
@@ -14,14 +17,14 @@ Tiers per piece: `scrap`, `timber`, `brick`,
 
 | # | ID stem | Size (m) |
 |---|---|---|
-| 1 | piece.foundation_<tier>_01 | 2×2×0.4 |
-| 2 | piece.wall_<tier>_01 | 2×3×0.2 |
-| 3 | piece.doorway_<tier>_01 | 2×3×0.2, 1×2.2 opening |
-| 4 | piece.window_<tier>_01 | 2×3×0.2, 1×1 opening |
-| 5 | piece.floor_<tier>_01 | 2×2×0.2 |
-| 6 | piece.roof_<tier>_01 | 2×2, 30° slope |
-| 7 | piece.stairs_<tier>_01 | 2×4 run, 3 rise |
-| 8 | piece.fence_<tier>_01 | 2×1.2 |
+| 1 | piece.foundation_<tier>_01 | 4×4×0.4 |
+| 2 | piece.wall_<tier>_01 | 4×3×0.3 |
+| 3 | piece.doorway_<tier>_01 | 4×3×0.3, 1.3×2.4 opening |
+| 4 | piece.window_<tier>_01 | 4×3×0.3, 1.6×1.4 opening |
+| 5 | piece.floor_<tier>_01 | 4×4×0.25 |
+| 6 | piece.roof_<tier>_01 | 4×4×0.4 |
+| 7 | piece.stairs_<tier>_01 | 4×4 run, 3 rise |
+| 8 | piece.fence_<tier>_01 | 4×1.3×0.2 |
 | 9 | piece.door_<tier>_01 | 1×2.2 |
 
 City kit pieces, for the procedural town

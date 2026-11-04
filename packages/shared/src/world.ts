@@ -133,7 +133,12 @@ export type PropKind =
   | 'fridge'
   | 'stove'
   | 'terminal'
-  | 'debris';
+  | 'debris'
+  // worldgen v2 street dressing
+  | 'cone'
+  | 'barrier'
+  | 'planter'
+  | 'weeds';
 
 export interface PropDef {
   id: number;
@@ -162,8 +167,22 @@ export interface Polyline {
   width: number;
 }
 
+/**
+ * Worldgen version. Saves record the version their prop/building IDs refer to.
+ * Rule: a new version may only APPEND props/buildings after the previous
+ * version's output (same RNG streams, same IDs), so every older save's IDs stay
+ * valid. A non-additive change needs an ID remap migration in @dg/sim/save.
+ *   1 — original layout (hash 9cf52650 for seed 1337)
+ *   2 — (hash ff749351 for seed 1337) v1 + denser street dressing (parked cars, clutter clusters, debris, signs, foliage)
+ */
+export const WORLDGEN_VERSION = 2;
+
 export interface WorldLayout {
   seed: number;
+  /** worldgen version this layout was produced with */
+  genVersion: number;
+  /** propMarks[v] = number of props that existed in version v (props [0, propMarks[v]) are identical) */
+  propMarks: number[];
   size: number;
   districts: DistrictInfo[];
   /** TILES*TILES district index per ground tile */

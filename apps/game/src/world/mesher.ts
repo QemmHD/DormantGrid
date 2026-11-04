@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { CELL_SIZE, TILES, TILE_SIZE, Tile, hash2, valueNoise2, type BuildingDef, type WorldLayout } from '@dg/shared';
 import { BUILDING_FLOOR_H, type PieceInfo } from '@dg/sim';
 import { MeshBuilder } from '../render/geo';
+import { PATTERN } from '../render/materials';
 import { PALETTES, type DistrictPalette } from '../content/palette';
 
 const c1 = new THREE.Color();
@@ -241,6 +242,31 @@ const sideDir = (side: number): [number, number] =>
   side === 0 ? [0, 1] : side === 1 ? [0, -1] : side === 2 ? [1, 0] : [-1, 0];
 
 const WARM = new THREE.Color(0xe0c08e);
+const RUST = new THREE.Color(0x7a4a36);
+const MOSS = new THREE.Color(0x4f5a3a);
+
+/** Facade surface pattern per lot (shader-side, no textures). */
+function wallPattern(b: BuildingDef): number {
+  switch (b.lot) {
+    case 'house':
+      return b.variant % 3 === 0 ? PATTERN.brick : b.variant % 3 === 1 ? PATTERN.siding : PATTERN.plaster;
+    case 'apartment':
+    case 'shelter':
+      return b.variant % 4 === 3 ? PATTERN.plaster : PATTERN.brick;
+    case 'shop':
+      return b.variant % 2 ? PATTERN.brick : PATTERN.plaster;
+    case 'office':
+    case 'clinic':
+      return PATTERN.panels;
+    case 'warehouse':
+    case 'factory':
+    case 'depot':
+    case 'barn':
+      return PATTERN.corrugated;
+    default:
+      return PATTERN.plaster;
+  }
+}
 function wallColor(b: BuildingDef, p: DistrictPalette, out: THREE.Color, restore = 0): THREE.Color {
   const v = b.variant % 3;
   out.setHex(v === 0 ? p.wallA : v === 1 ? p.wallB : p.wallC);
@@ -262,6 +288,13 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
   const trim = new THREE.Color(p.trim).lerp(c2.setHex(0x3e3a34), b.decay * 0.3);
   const rng = (i: number) => (hash2(b.variant, i) % 1000) / 1000;
   const shop = b.lot === 'shop' || b.lot === 'clinic';
+  const pat = wallPattern(b);
+  // roof tone variety: some rusted, some mossy, some darker
+  const roofBase = new THREE.Color(p.roof);
+  const rv = rng(77);
+  if (rv < 0.25) roofBase.lerp(RUST, 0.35);
+  else if (rv < 0.45) roofBase.lerp(MOSS, 0.3);
+  else if (rv < 0.65) roofBase.multiplyScalar(0.82);
 
   for (const pc of pieces) {
     if (removed.has(pc.index)) continue;
@@ -291,8 +324,23 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
         // per-floor tone so tall facades read as layered, not flat
         const floorTone = 0.95 + (((pc.floor * 7 + b.variant) % 3) - 1) * 0.035;
         mb.setColor(c1.copy(wc).multiplyScalar(jit * floorTone * (pc.floor === 0 ? 0.92 : 1)));
+        // front-only plate in wall space (2 tris), `out` meters proud of the outer face
+        const plate = (ua: number, ub: number, ya: number, yb: number, out: number) => {
+          if (alongX) {
+            const z = nz > 0 ? z1 + out : z0 - out;
+            if (nz > 0) mb.quad([ua, ya, z], [ub, ya, z], [ub, yb, z], [ua, yb, z]);
+            else mb.quad([ub, ya, z], [ua, ya, z], [ua, yb, z], [ub, yb, z]);
+          } else {
+            const x = nx > 0 ? x1 + out : x0 - out;
+            if (nx > 0) mb.quad([x, ya, ub], [x, ya, ua], [x, yb, ua], [x, yb, ub]);
+            else mb.quad([x, ya, ua], [x, ya, ub], [x, yb, ub], [x, yb, ua]);
+          }
+        };
+        // facade material: shader pattern + baked AO darkening up into the cornice shadow
+        mb.setPattern(pat).setVAO(y0, y1, 1, 0.84);
         if (pc.kind === 'wall') {
           seg(u0, u0 + len, y0, y1);
+          mb.setPattern(0).setVAO();
         } else if (pc.kind === 'window') {
           const big = shop && pc.floor === 0;
           const sill = big ? 0.5 : 1.0;
@@ -302,13 +350,32 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
           seg(u0, u0 + len, y0 + head, y1);
           seg(u0, u0 + pier, y0 + sill, y0 + head);
           seg(u0 + len - pier, u0 + len, y0 + sill, y0 + head);
-          // glass (recessed) + sill trim
+          mb.setPattern(0).setVAO();
+          // glass (recessed, darker under the head) + sill trim
           const lit = rng(pc.index + 99) < windowLit ? 0.6 + rng(pc.index + 7) * 0.4 : 0;
-          mb.setColor(lit > 0 ? GLASS_LIT : GLASS).setEmissive(lit);
-          seg(u0 + pier, u0 + len - pier, y0 + sill, y0 + head, -0.12, 0.12);
-          mb.setEmissive(0);
+          const ga = u0 + pier, gb = u0 + len - pier;
+          mb.setColor(lit > 0 ? GLASS_LIT : GLASS).setEmissive(lit).setVAO(y0 + sill, y0 + head, 1.1, 0.6);
+          seg(ga, gb, y0 + sill, y0 + head, -0.12, 0.12);
+          mb.setEmissive(0).setVAO();
           mb.setColor(trim);
-          seg(u0 + pier - 0.06, u0 + len - pier + 0.06, y0 + sill - 0.08, y0 + sill, 0.06);
+          seg(ga - 0.06, gb + 0.06, y0 + sill - 0.08, y0 + sill, 0.06);
+          // frame + mullions as front-only plates just proud of the glass (cheap: ~14 tris)
+          const fr = -0.1;
+          mb.setColor(c1.copy(trim).multiplyScalar(0.8));
+          plate(ga, gb, y0 + head - 0.06, y0 + head, fr);
+          plate(ga, gb, y0 + sill, y0 + sill + 0.05, fr);
+          plate(ga, ga + 0.06, y0 + sill, y0 + head, fr);
+          plate(gb - 0.06, gb, y0 + sill, y0 + head, fr);
+          const span = gb - ga;
+          const bars = big ? Math.max(1, Math.round(span / 1.2) - 1) : span > 1.0 ? 1 : 0;
+          for (let i = 1; i <= bars; i++) {
+            const m = ga + (span * i) / (bars + 1);
+            plate(m - 0.025, m + 0.025, y0 + sill, y0 + head, fr + 0.005);
+          }
+          if (!big) plate(ga, gb, y0 + sill + (head - sill) * 0.64, y0 + sill + (head - sill) * 0.64 + 0.045, fr + 0.005);
+          // lintel over the opening
+          mb.setColor(trim);
+          plate(ga - 0.12, gb + 0.12, y0 + head, y0 + head + 0.14, 0.03);
           // rain streaks under sills on neglected buildings
           if (ruin > 0.25 && rng(pc.index + 41) < 0.6) {
             mb.setColor(c1.copy(wc).multiplyScalar(0.62));
@@ -334,10 +401,16 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
           seg(u0, a, y0, y1);
           seg(a + dw, u0 + len, y0, y1);
           seg(a, a + dw, y0 + 2.4, y1);
-          mb.setColor(DOOR_DARK);
+          mb.setPattern(0).setVAO();
+          mb.setColor(DOOR_DARK).setVAO(y0 + 0.2, y0 + 2.4, 1.6, 0.7);
           seg(a, a + dw, y0 + 0.2, y0 + 2.4, -0.25, 0.25);
+          mb.setVAO();
           mb.setColor(trim);
           seg(a - 0.1, a + dw + 0.1, y0 + 2.4, y0 + 2.55, 0.07);
+          // door casing (jambs) as plates
+          mb.setColor(c1.copy(trim).multiplyScalar(0.85));
+          plate(a - 0.1, a, y0, y0 + 2.4, 0.03);
+          plate(a + dw, a + dw + 0.1, y0, y0 + 2.4, 0.03);
           if (shop) {
             // awning
             mb.setColor(c1.setHex(p.accent).multiplyScalar(0.85));
@@ -349,6 +422,15 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
             mb.setColor(c1.setHex(p.accent).multiplyScalar(restore >= 2 ? 1.1 : 0.7)).setEmissive(restore >= 2 ? 0.9 : 0);
             seg(u0 + 0.6, u0 + len - 0.6, y0 + 3.16, y0 + 3.34, 0.12);
             mb.setEmissive(0);
+          }
+        }
+        // corner quoins / pilasters: bevel the hard box corners (front/back walls own the corners)
+        if (pc.side === 0 || pc.side === 1) {
+          const zc = pc.side === 0 ? b.d / 2 : -b.d / 2;
+          mb.setColor(c1.copy(trim).lerp(wc, 0.35));
+          for (const xc of [-b.w / 2, b.w / 2]) {
+            if (Math.abs((xc < 0 ? x0 : x1) - xc) > 0.05) continue;
+            mb.box(xc, (y0 + y1) / 2, zc, 0.17, (y1 - y0) / 2, 0.17);
           }
         }
         // cornice band at top of each floor (outer face)
@@ -369,16 +451,31 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
         mb.box(cx, cy, cz, hx, hy, hz, pc.floor > 0);
         break;
       case 'roof': {
-        const roofCol = new THREE.Color(p.roof).multiplyScalar(jit);
+        const roofCol = roofBase.clone().multiplyScalar(jit);
         if (b.roof === 'gable') {
           const along = hx >= hz;
-          mb.setColor(roofCol);
-          if (along) mb.gable(cx, y0, cz, hx, hz, y1 - y0, 0.35);
-          else {
-            mb.pushTRS(cx, 0, cz, Math.PI / 2);
-            mb.gable(0, y0, 0, hz, hx, y1 - y0, 0.35);
-            mb.pop();
+          const [ax, az] = along ? [hx, hz] : [hz, hx];
+          if (!along) mb.pushTRS(cx, 0, cz, Math.PI / 2);
+          const gx = along ? cx : 0, gz = along ? cz : 0;
+          mb.setColor(roofCol).setPattern(PATTERN.shingles);
+          mb.gable(gx, y0, gz, ax, az, y1 - y0, 0.35);
+          mb.setPattern(0);
+          // ridge cap + fascia boards give the roof thickness and a crisp silhouette
+          mb.setColor(c1.copy(roofCol).multiplyScalar(0.72));
+          mb.box(gx, y1 + 0.02, gz, ax + 0.4, 0.07, 0.13);
+          mb.setColor(c1.copy(trim).multiplyScalar(0.9));
+          for (const sz of [-1, 1]) mb.box(gx, y0 - 0.06, gz + sz * (az + 0.33), ax + 0.37, 0.08, 0.04);
+          // occasional dormer on wide house roofs
+          if (ax > 4 && rng(61) < 0.4) {
+            const dx = gx + (rng(62) - 0.5) * ax;
+            mb.setColor(c1.copy(wc).multiplyScalar(0.95));
+            mb.box(dx, y0 + (y1 - y0) * 0.35, gz + az * 0.45, 0.6, (y1 - y0) * 0.3, 0.45);
+            mb.setColor(GLASS);
+            mb.box(dx, y0 + (y1 - y0) * 0.38, gz + az * 0.45 + 0.46, 0.38, (y1 - y0) * 0.18, 0.01);
+            mb.setColor(roofCol);
+            mb.gable(dx, y0 + (y1 - y0) * 0.65, gz + az * 0.45, 0.6, 0.5, 0.45, 0.1);
           }
+          if (!along) mb.pop();
           // chimney
           if (rng(5) < 0.6) {
             mb.setColor(c1.copy(wc).multiplyScalar(0.8));
@@ -389,9 +486,10 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
           const tw = (hx * 2) / teeth;
           for (let i = 0; i < teeth; i++) {
             const a = x0 + i * tw;
-            mb.setColor(roofCol);
+            mb.setColor(roofCol).setPattern(PATTERN.corrugated);
             mb.quad([a, y0, z1], [a + tw, y0, z1], [a + tw, y1, z0 + 0.01], [a, y1, z0 + 0.01], 0.95);
             mb.quad([a + tw, y0, z0], [a + tw, y1, z0], [a + tw, y1, z1], [a + tw, y0, z1], 0.85);
+            mb.setPattern(0);
             mb.setColor(GLASS).setEmissive(windowLit > 0.5 ? 0.4 : 0);
             mb.quad([a + tw, y0, z0], [a, y0, z0], [a, y1, z0], [a + tw, y1, z0], 0.9);
             mb.setEmissive(0);
@@ -405,6 +503,40 @@ export function meshBuilding(mb: MeshBuilder, b: BuildingDef, pieces: readonly P
           mb.box(cx, y0 + ph / 2, z0 + 0.12, hx, ph / 2, 0.12);
           mb.box(x1 - 0.12, y0 + ph / 2, cz, 0.12, ph / 2, hz - 0.24);
           mb.box(x0 + 0.12, y0 + ph / 2, cz, 0.12, ph / 2, hz - 0.24);
+          // parapet coping: a lighter, slightly wider cap reads as a bevelled edge
+          mb.setColor(c1.copy(trim).multiplyScalar(1.12));
+          mb.box(cx, y0 + ph + 0.04, z1 - 0.12, hx + 0.04, 0.04, 0.17);
+          mb.box(cx, y0 + ph + 0.04, z0 + 0.12, hx + 0.04, 0.04, 0.17);
+          mb.box(x1 - 0.12, y0 + ph + 0.04, cz, 0.17, 0.04, hz - 0.24);
+          mb.box(x0 + 0.12, y0 + ph + 0.04, cz, 0.17, 0.04, hz - 0.24);
+          // roof furniture variety: hatch, skylight, vent stacks, antenna mast
+          const extra = rng(90);
+          if (extra < 0.35) {
+            const hx2 = cx - hx * 0.4, hz2 = cz + hz * 0.3;
+            mb.setColor(0x5a5e60);
+            mb.bevelBox(hx2, y0 + 0.45, hz2, 0.5, 0.25, 0.5, 0.05);
+            mb.setColor(0x3a3e40);
+            mb.box(hx2, y0 + 0.71, hz2, 0.42, 0.01, 0.42);
+          } else if (extra < 0.6 && hx > 3 && hz > 3) {
+            const sx = cx + hx * 0.2, sz2 = cz - hz * 0.25;
+            mb.setColor(c1.copy(trim).multiplyScalar(0.8));
+            mb.box(sx, y0 + 0.3, sz2, 1.1, 0.15, 0.7);
+            mb.setColor(GLASS).setEmissive(windowLit > 0.5 ? 0.3 : 0);
+            mb.box(sx, y0 + 0.47, sz2, 1.0, 0.02, 0.6);
+            mb.setEmissive(0);
+          }
+          if (rng(91) < 0.5) {
+            mb.setColor(0x6a6e72);
+            const vx = cx + hx * 0.55, vz = cz + hz * 0.5;
+            for (let i = 0; i < 1 + Math.floor(rng(92) * 3); i++) mb.cylinder(vx - i * 0.6, y0 + 0.2, vz, 0.09, 0.09, 0.8 + i * 0.25, 5);
+          }
+          if (rng(93) < 0.3 && b.floors >= 2) {
+            const mx = cx - hx * 0.6, mz = cz - hz * 0.55;
+            mb.setColor(0x2e3234);
+            mb.cylinder(mx, y0 + 0.2, mz, 0.05, 0.03, 3.4, 4);
+            mb.box(mx, y0 + 2.6, mz, 0.55, 0.02, 0.02);
+            mb.box(mx, y0 + 3.1, mz, 0.38, 0.02, 0.02);
+          }
           // rooftop clutter
           const units = 1 + Math.floor(rng(11) * 3);
           for (let i = 0; i < units; i++) {
@@ -503,8 +635,9 @@ export function buildFarMesh(layout: WorldLayout, height: (x: number, z: number)
     mb.setColor(c1.setHex(p.foliage).multiplyScalar(pr.kind === 'pine' ? 0.75 : 0.95));
     const s = pr.scale;
     const hy = pr.y + height(pr.x, pr.z);
-    if (pr.kind === 'pine') mb.cylinder(pr.x, hy + 0.8 * s, pr.z, 1.5 * s, 0, 4.6 * s, 5, false);
-    else mb.cylinder(pr.x, hy + 1.6 * s, pr.z, 1.6 * s, 0.9 * s, 2.6 * s, 5, true);
+    // 4-sided, capless: far trees are silhouettes; 8 tris each (was 10-20) keeps the far mesh ~50k tris lighter
+    if (pr.kind === 'pine') mb.cylinder(pr.x, hy + 0.8 * s, pr.z, 1.5 * s, 0, 4.6 * s, 4, false);
+    else mb.cylinder(pr.x, hy + 1.6 * s, pr.z, 1.6 * s, 0.5 * s, 2.6 * s, 4, false);
     pushCenter(from, pr.x, pr.z);
   }
   const geo = mb.toGeometry(true);

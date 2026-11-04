@@ -201,6 +201,7 @@ export class Trader {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.rig.root.rotation.y += d * Math.min(1, dt * 4);
     }
+    this.rig.lookTarget = this.near() ? this.game.player.pos : null;
     this.rig.update(dt);
   }
 }

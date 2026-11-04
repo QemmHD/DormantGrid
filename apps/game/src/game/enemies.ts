@@ -61,6 +61,11 @@ interface Enemy {
 }
 
 const geoCache = new Map<EnemyKind, THREE.BufferGeometry>();
+/** Tier B (GLB) replacements for rigid enemies; procedural geometry is the fallback. */
+const modelOverride = new Map<EnemyKind, { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[] }>();
+export function setEnemyModel(kind: EnemyKind, geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[]): void {
+  modelOverride.set(kind, { geo, mat });
+}
 
 function enemyGeo(kind: EnemyKind): THREE.BufferGeometry {
   let g = geoCache.get(kind);
@@ -124,6 +129,7 @@ export class Enemies {
   private sinceCombat = 99;
   enabled = true;
   private tmpP = { x: 0, y: 0, z: 0 };
+  private readonly lookAt = new THREE.Vector3();
   private projGeo: THREE.BufferGeometry;
   private projMat = new THREE.MeshBasicMaterial({ color: 0xe8d8b0 });
   private projs: { mesh: THREE.Mesh; vel: THREE.Vector3; dmg: number; life: number }[] = [];
@@ -216,7 +222,8 @@ export class Enemies {
       rig = new CharacterRig(randomLook(this.nextId * 131 + 7, { mask: true, shirt: 0x5a3a32, accent: 0x8a2f2a, hairStyle: 2 }));
       obj = rig.root;
     } else {
-      const m = new THREE.Mesh(enemyGeo(kind), this.mat);
+      const ov = modelOverride.get(kind);
+      const m = new THREE.Mesh(ov?.geo ?? enemyGeo(kind), ov?.mat ?? this.mat);
       m.castShadow = true;
       obj = new THREE.Group();
       obj.add(m);
@@ -415,6 +422,7 @@ export class Enemies {
       if (e.rig) {
         e.rig.speed = e.state === 'chase' ? e.def.speed : e.state === 'wander' ? e.def.speed * 0.35 : 0;
         if (e.state === 'chase' || e.state === 'wander') e.rig.setState('idle');
+        e.rig.lookTarget = e.state === 'wander' ? null : this.lookAt.copy(g.player.pos);
         e.rig.update(dt);
       }
     }

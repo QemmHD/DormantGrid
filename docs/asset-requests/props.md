@@ -7,7 +7,7 @@ If you use a 3D tool (Blender, a text-to-3D app,
 or Kenney/Quaternius CC0 packs), follow these specs.
 
 Format: GLB, ≤ 800 triangles, ≤ 5 materials,
-1 unit = 1 m, Y up, forward −Z, pivot at the
+1 unit = 1 m, Y up, front faces +Z, pivot at the
 center of the base. Textures ≤ 1024 px.
 Drop into: `assets/incoming/props/`
 

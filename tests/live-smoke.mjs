@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 
 const base = (process.argv[2] ?? '').replace(/\/$/, '');
 const offline = process.argv.includes('--offline');
+const noBrowser = process.argv.includes('--no-browser');
 if (!base) {
   console.error('usage: node tests/live-smoke.mjs <baseUrl> [--offline]');
   process.exit(2);
@@ -72,6 +73,10 @@ if (!offline) {
 }
 
 // 3. browser: SW registers, boots, local save round trip
+if (noBrowser) {
+  console.log(failed ? `\n${failed} check(s) failed` : '\nlive smoke passed (http only)');
+  process.exit(failed ? 1 : 0);
+}
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errs = [];

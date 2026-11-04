@@ -160,6 +160,9 @@ const REST: [number, number, number, number][] = [
   [10, 0, -0.42, 0], // LLegR
 ];
 
+const LOOK_TMP = new THREE.Vector3();
+const clampN = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
+
 export type AnimState = 'idle' | 'move' | 'attack' | 'heavy' | 'interact' | 'dodge' | 'hit' | 'sleep' | 'sit' | 'carry' | 'dead' | 'aim';
 
 export class CharacterRig {
@@ -177,6 +180,19 @@ export class CharacterRig {
   private flinch = 0;
   /** attack swing progress driver */
   attackDur = 0.45;
+  /** world-space point to look at (head + a little chest), or null to look ahead */
+  lookTarget: THREE.Vector3 | null = null;
+  /** smoothed locomotion weight 0..1 (no snapping between idle and walk) */
+  private walkW = 0;
+  /** smoothed run weight */
+  private runW = 0;
+  /** decaying "settle" after stopping */
+  private settle = 0;
+  private wasMoving = false;
+  private headYaw = 0;
+  private headPitch = 0;
+  /** per-rig idle timing offset so crowds don't sway in sync */
+  private readonly idleSeed = Math.random() * 100;
 
   constructor(public look: Look) {
     for (let i = 0; i < Bone.COUNT; i++) {
@@ -224,8 +240,15 @@ export class CharacterRig {
 
     const sp = this.speed;
     const moving = sp > 0.15;
-    const run = Math.min(1, Math.max(0, (sp - 2.6) / 2.5));
-    const walkF = moving ? 1 : 0;
+    const k8 = Math.min(1, dt * 8);
+    this.walkW += ((moving ? 1 : 0) - this.walkW) * k8;
+    this.runW += (Math.min(1, Math.max(0, (sp - 2.6) / 2.5)) - this.runW) * Math.min(1, dt * 5);
+    if (this.wasMoving && !moving) this.settle = 1;
+    this.wasMoving = moving;
+    this.settle = Math.max(0, this.settle - dt * 2.8);
+    const run = this.runW;
+    const walkF = this.walkW;
+    const idleW = 1 - walkF;
     this.phase += dt * (moving ? 2.2 + sp * 1.25 : 0);
     const ph = this.phase;
     const sw = Math.sin(ph);
@@ -236,26 +259,60 @@ export class CharacterRig {
     B[Bone.ULegR].rotation.x = -sw * legAmp;
     B[Bone.LLegL].rotation.x = Math.max(0, -cw) * (0.7 + run * 0.6) * walkF;
     B[Bone.LLegR].rotation.x = Math.max(0, cw) * (0.7 + run * 0.6) * walkF;
-    // arms counter-swing
+    // arms counter-swing; elbows bend more on the forward swing and pump when running
     const armAmp = (0.45 + run * 0.6) * walkF;
     B[Bone.UArmL].rotation.x = -sw * armAmp;
     B[Bone.UArmR].rotation.x = sw * armAmp;
-    B[Bone.LArmL].rotation.x = -(0.15 + run * 0.9) * walkF - 0.08;
-    B[Bone.LArmR].rotation.x = -(0.15 + run * 0.9) * walkF - 0.08;
-    B[Bone.UArmL].rotation.z = -0.06;
-    B[Bone.UArmR].rotation.z = 0.06;
-    // bob + lean
-    B[0].position.y = 0.95 + Math.abs(cw) * 0.045 * walkF * (1 + run) - run * 0.03;
-    this.lean += ((moving ? 0.06 + run * 0.16 : 0) - this.lean) * Math.min(1, dt * 8);
-    B[Bone.Spine].rotation.x = this.lean;
+    const elbow = 0.15 + run * 0.95;
+    B[Bone.LArmL].rotation.x = -(elbow + Math.max(0, sw) * (0.25 + run * 0.3)) * walkF - 0.08;
+    B[Bone.LArmR].rotation.x = -(elbow + Math.max(0, -sw) * (0.25 + run * 0.3)) * walkF - 0.08;
+    B[Bone.UArmL].rotation.z = -0.06 - run * 0.12 * walkF;
+    B[Bone.UArmR].rotation.z = 0.06 + run * 0.12 * walkF;
+    // hips: bob, lateral sway over the planted foot, twist + roll; shoulders counter-rotate
+    B[0].position.y = 0.95 + Math.abs(cw) * 0.045 * walkF * (1 + run) - run * 0.03 * walkF;
+    B[0].position.x = sw * 0.028 * walkF * (1 - run * 0.5);
+    B[0].rotation.y = -sw * (0.07 + run * 0.05) * walkF;
+    B[0].rotation.z = cw * 0.045 * walkF;
+    this.lean += ((moving ? 0.06 + run * 0.16 : 0) - this.lean) * k8;
+    B[Bone.Spine].rotation.x = this.lean - this.settle * 0.07;
     B[Bone.Spine].rotation.y = sw * 0.08 * walkF;
-    // idle breathing
+    B[Bone.Chest].rotation.y = sw * (0.06 + run * 0.06) * walkF;
+    B[Bone.Spine].rotation.z = -cw * 0.03 * walkF;
+    // idle: breathing + slow weight shift from foot to foot (hip slides, one knee softens)
     const br = Math.sin(this.breath * 1.7) * 0.025;
-    B[Bone.Chest].rotation.x = br * (1 - walkF);
-    B[Bone.Head].rotation.x = -br * 0.5 - this.lean * 0.5;
-    if (!moving) {
-      B[Bone.Head].rotation.y = Math.sin(this.breath * 0.37) * 0.25;
+    const shift = Math.sin((this.breath + this.idleSeed) * 0.42);
+    B[Bone.Chest].rotation.x = br * idleW;
+    B[0].position.x += shift * 0.035 * idleW;
+    B[0].rotation.z += -shift * 0.04 * idleW;
+    B[Bone.Spine].rotation.z += shift * 0.05 * idleW;
+    B[Bone.ULegL].rotation.z = -shift * 0.04 * idleW;
+    B[Bone.ULegR].rotation.z = -shift * 0.04 * idleW;
+    B[Bone.LLegL].rotation.x += Math.max(0, shift) * 0.12 * idleW;
+    B[Bone.LLegR].rotation.x += Math.max(0, -shift) * 0.12 * idleW;
+    B[Bone.UArmL].rotation.x += Math.sin(this.breath * 0.9 + 1) * 0.03 * idleW;
+    B[Bone.UArmR].rotation.x += Math.sin(this.breath * 0.9 + 2) * 0.03 * idleW;
+    // head: look at a target (clamped, smoothed), otherwise idle glances; stabilized against hip twist
+    let wantYaw = idleW * Math.sin((this.breath + this.idleSeed) * 0.37) * 0.25;
+    let wantPitch = 0;
+    if (this.lookTarget) {
+      const lp = LOOK_TMP.copy(this.lookTarget);
+      this.root.worldToLocal(lp);
+      const dx = lp.x, dz = lp.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.3) {
+        wantYaw = clampN(Math.atan2(dx, dz), -1.15, 1.15);
+        // eye height ~1.6 m
+        wantPitch = clampN(-Math.atan2(lp.y - 1.6, dist), -0.5, 0.45);
+        // past the clamp the head gives up rather than twisting to its back
+        if (Math.abs(Math.atan2(dx, dz)) > 2.2) wantYaw = 0;
+      }
     }
+    const k6 = Math.min(1, dt * 6);
+    this.headYaw += (wantYaw - this.headYaw) * k6;
+    this.headPitch += (wantPitch - this.headPitch) * k6;
+    B[Bone.Chest].rotation.y += this.headYaw * 0.3;
+    B[Bone.Head].rotation.y = this.headYaw * 0.7 - (B[Bone.Spine].rotation.y + B[0].rotation.y) * 0.8;
+    B[Bone.Head].rotation.x = -br * 0.5 * idleW - this.lean * 0.5 + this.headPitch + this.settle * 0.05;
 
     const t = this.stateT;
     switch (this.state) {
@@ -275,14 +332,20 @@ export class CharacterRig {
         break;
       }
       case 'interact': {
-        // working motion: repeated short pry/hammer
+        // working motion: repeated short pry/hammer, with the body rocking into each stroke
         const w2 = Math.sin(t * 9);
-        B[Bone.UArmR].rotation.x = -1.2 + w2 * 0.35;
-        B[Bone.LArmR].rotation.x = -0.7 + w2 * 0.2;
-        B[Bone.UArmL].rotation.x = -0.9 - w2 * 0.2;
-        B[Bone.LArmL].rotation.x = -0.6;
-        B[Bone.Spine].rotation.x = 0.25;
-        B[Bone.Head].rotation.x = 0.2;
+        const ease = Math.min(1, t / 0.15);
+        B[Bone.UArmR].rotation.x = (-1.2 + w2 * 0.35) * ease;
+        B[Bone.LArmR].rotation.x = (-0.7 + w2 * 0.2) * ease;
+        B[Bone.UArmL].rotation.x = (-0.9 - w2 * 0.2) * ease;
+        B[Bone.LArmL].rotation.x = -0.6 * ease;
+        B[Bone.Spine].rotation.x = 0.25 * ease + Math.max(0, w2) * 0.06;
+        B[Bone.Spine].rotation.y = w2 * 0.06;
+        B[0].position.y = 0.95 - 0.05 * ease - Math.max(0, w2) * 0.02;
+        B[Bone.LLegL].rotation.x = 0.18 * ease;
+        B[Bone.LLegR].rotation.x = 0.12 * ease;
+        B[Bone.ULegL].rotation.x = -0.1 * ease;
+        B[Bone.Head].rotation.x = 0.2 + this.headPitch * 0.5;
         break;
       }
       case 'carry':

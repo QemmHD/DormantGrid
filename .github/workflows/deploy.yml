@@ -80,20 +80,16 @@ jobs:
         env:
           URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          set -e
           if [ -z "$URL" ]; then echo "::error::wrangler did not report a deployment URL (is a workers.dev subdomain set up on the account?)"; exit 1; fi
           echo "Live URL: $URL" >> "$GITHUB_STEP_SUMMARY"
-          for i in 1 2 3 4 5; do
-            code=$(curl -s -o /tmp/version.json -w '%{http_code}' "$URL/api/version" || true)
-            [ "$code" = "200" ] && break
-            sleep $((i * 3))
-          done
-          cat /tmp/version.json; echo
-          [ "$code" = "200" ] || { echo "::error::/api/version returned $code"; exit 1; }
-          home=$(curl -s -o /dev/null -w '%{http_code}' "$URL/")
-          [ "$home" = "200" ] || { echo "::error::game shell returned $home"; exit 1; }
-          sw=$(curl -s -o /dev/null -w '%{http_code}' "$URL/manifest.webmanifest")
-          echo "manifest: $sw"
+          npx playwright install --with-deps chromium > /dev/null 2>&1 || echo "::warning::playwright browser install failed; running HTTP-only checks"
+          MODE=""
+          npx playwright --version > /dev/null 2>&1 && [ -d ~/.cache/ms-playwright ] || MODE="--no-browser"
+          # up to 3 attempts, 15 s apart; logs failing checks per attempt; only the last attempt decides
+          node tools/live-smoke-retry.mjs "$URL" $MODE --attempts 3 --gap 15 | tee /tmp/smoke.log
+          status=${PIPESTATUS[0]}
+          { echo '### Live smoke'; echo '```'; cat /tmp/smoke.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
       - name: Roll back on failed smoke test
         if: failure() && steps.deploy.outcome == 'success' && steps.smoke.outcome == 'failure'

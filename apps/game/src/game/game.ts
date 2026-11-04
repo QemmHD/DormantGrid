@@ -25,6 +25,7 @@ import {
   hourOfDay,
   isNight,
   migrateSave,
+  upgradeWorldGen,
   tileAt,
   TIER_HP_MULT,
   plant as plantCrop,
@@ -155,6 +156,7 @@ export class Game implements GameAPI {
   private last = performance.now();
   readonly rng = new Rng(Date.now() & 0xffffffff);
   private target: Target | null = null;
+  private readonly playerLook = new THREE.Vector3();
   private targetTimer = 0;
   private holdT = 0;
   private holdHitT = 0;
@@ -257,6 +259,7 @@ export class Game implements GameAPI {
       this.renderer.post = q.tier === 'low' ? null : new PostFX(this.renderer.gl, this.scene, this.camera.cam, q.tier === 'high');
       this.view.radius = q.detailRadius;
       this.view.propDensity = q.propDensity;
+      for (const u of this.view.uniforms) u.uPattern.value = q.patterns ? 1 : 0;
       this.atm.setShadows(q.shadows ? q.shadowSize : 0);
       this.view.setShadows(q.shadows);
     };
@@ -289,6 +292,7 @@ export class Game implements GameAPI {
     const v = new WorldView(this.layout, this.collision, this.renderer.quality.shadows);
     v.radius = this.renderer.quality.detailRadius;
     v.propDensity = this.renderer.quality.propDensity;
+    for (const u of v.uniforms) u.uPattern.value = this.renderer.quality.patterns ? 1 : 0;
     this.scene.add(v.group);
     return v;
   }
@@ -341,6 +345,10 @@ export class Game implements GameAPI {
 
   /** Load an existing save into the running world. */
   loadSave(save: GameSave): void {
+    // Saves made on an older worldgen keep every id (versions only append props);
+    // new props that would land on the player's base/drops/bed are marked removed.
+    const cleared = upgradeWorldGen(save, this.layout);
+    if (cleared.length) console.info(`[save] worldgen upgraded to v${this.layout.genVersion}; ${cleared.length} new prop(s) cleared around your base`);
     this.save = save;
     this.resetWorldView();
     this.placePlayer(save.player.x, save.player.z);
@@ -1814,6 +1822,16 @@ export class Game implements GameAPI {
       this.player.update(simDt, { x: 0, y: 0, mag: 0, sprint: false, jump: false, dodge: false, camYaw: this.camera.yaw }, this.collision);
     }
     for (const t of this.tickers) t(dt, playing && !this.paused ? simDt : 0);
+    {
+      const look = this.playerLook;
+      const tp = this.target?.pos;
+      if (tp) look.copy(tp);
+      else {
+        const cy = this.camera.yaw;
+        look.set(this.player.pos.x + Math.sin(cy) * 12, this.player.pos.y + 1.6 + Math.sin(this.camera.pitch) * 12, this.player.pos.z + Math.cos(cy) * 12);
+      }
+      this.player.rig.lookTarget = this.mode === 'play' ? look : null;
+    }
     this.player.rig.update(simDt);
     this.view.update(this.player.pos.x, this.player.pos.z);
     this.fx.target.copy(this.player.pos);
@@ -1905,6 +1923,7 @@ const PROP_NAMES: Record<string, string> = {
   pallet: 'Pallet', tire: 'Tire', trashbag: 'Trash Bags', mailbox: 'Mailbox', container: 'Shipping Container', pipe: 'Pipe Section',
   haybale: 'Hay Bale', stump: 'Stump', locker: 'Locker', shelf: 'Shelf', table: 'Table', chair: 'Chair', bed: 'Bed', cabinet: 'Cabinet',
   sofa: 'Sofa', fridge: 'Fridge', stove: 'Stove', terminal: 'Grid Terminal', debris: 'Debris',
+  cone: 'Traffic Cone', barrier: 'Concrete Barrier', planter: 'Planter', weeds: 'Weeds',
 };
 function propName(k: string): string {
   return PROP_NAMES[k] ?? k;

@@ -28,6 +28,9 @@ export class Raids {
   private lastHour = -1;
   private phase: 'none' | 'warning' | 'active' = 'none';
   private fighting = false;
+  /** staggered spawns not yet in the world; the raid can't be "repelled" before they arrive */
+  private pendingSpawns = 0;
+  private spawnSession = 0;
   private rng = new Rng(0x4a1d);
 
   constructor(private game: Game, private enemies: Enemies) {
@@ -36,6 +39,8 @@ export class Raids {
       this.lastHour = -1;
       this.phase = 'none';
       this.fighting = false;
+      this.pendingSpawns = 0;
+      this.spawnSession++;
     });
   }
 
@@ -44,7 +49,9 @@ export class Raids {
     if (g.mode === 'menu' || !g.save) return;
     const w = g.save.world;
     const h = Math.floor(w.hour);
-    if (h === this.lastHour && !this.fighting) return;
+    // scheduling runs once per game hour; once a raid is announced, check arrival every tick
+    // (otherwise a raid due at 8:15 would only arrive when the clock hits 9:00)
+    if (h === this.lastHour && !this.fighting && this.phase !== 'warning') return;
     const hourChanged = h !== this.lastHour;
     this.lastHour = h;
     const st = loadRaidState(w);
@@ -68,7 +75,7 @@ export class Raids {
       if (ph === 'warning' && plan) this.warn(plan);
       if (ph === 'active' && plan) this.arrive(plan);
     }
-    if (this.fighting && plan) {
+    if (this.fighting && plan && this.pendingSpawns === 0) {
       const left = this.enemies.aliveTagged('raid');
       const timedOut = w.hour > plan.arriveHour + 3;
       if (left === 0 || timedOut) this.resolve(plan, left === 0 && !timedOut);
@@ -113,7 +120,13 @@ export class Raids {
         const a = plan.dir + (this.rng.next() - 0.5) * 0.8;
         const r = 45 + this.rng.next() * 15;
         const x = home.x + Math.cos(a) * r, z = home.z + Math.sin(a) * r;
-        setTimeout(() => this.enemies.spawn(kind, Math.min(1200, Math.max(16, x)), Math.min(1200, Math.max(16, z)), true, 'raid'), i++ * 400);
+        this.pendingSpawns++;
+        const session = this.spawnSession;
+        setTimeout(() => {
+          if (session !== this.spawnSession) return; // world reset meanwhile
+          this.pendingSpawns = Math.max(0, this.pendingSpawns - 1);
+          if (this.fighting) this.enemies.spawn(kind, Math.min(1200, Math.max(16, x)), Math.min(1200, Math.max(16, z)), true, 'raid');
+        }, i++ * 400);
       }
     }
   }
