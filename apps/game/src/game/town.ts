@@ -3,7 +3,7 @@
 // One model drives near and far, so walking up to someone never pops.
 import * as THREE from 'three';
 import { Rng, hash2, type SurvivorSave } from '@dg/shared';
-import { barkFor, computeNeeds, cropStage, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
+import { barkFor, buildNavGrid, computeNeeds, cropStage, findPath, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
 import type { WorldSave } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import type { Game } from './game';
@@ -18,6 +18,12 @@ interface Near {
   pos: THREE.Vector3;
   yaw: number;
   barkT: number;
+  /** nav path waypoints toward the current target */
+  path: [number, number][] | null;
+  pathIdx: number;
+  pathTx: number;
+  pathTz: number;
+  repathT: number;
 }
 
 export class Town {
@@ -51,6 +57,18 @@ export class Town {
     // a little food in the town stock so day one is not a famine
     w.townStock[0] = { id: 'food.canned_beans', n: 6 };
     w.townStock[1] = { id: 'drink.clean_water', n: 6 };
+  }
+
+  private nav: Uint8Array | null = null;
+  private navAt = -1;
+  /** Coarse 2 m nav grid; rebuilt only when the set of removed props changes. */
+  private navGrid(): Uint8Array {
+    const removed = this.game.view.removedProps.size;
+    if (!this.nav || removed !== this.navAt) {
+      this.nav = buildNavGrid(this.game.layout, this.game.view.removedProps);
+      this.navAt = removed;
+    }
+    return this.nav;
   }
 
   rankInfo(): { rank: number; points: number; next: number | null } {
@@ -133,8 +151,24 @@ export class Town {
       const s = w.survivors.find((x) => x.id === n.id);
       if (!s) continue;
       const tgt = survivorTarget(s, w, (s.job as JobId) ?? 'auto', w.hour, this.home);
-      const dx = tgt.x - n.pos.x, dz = tgt.z - n.pos.z;
-      const d = Math.hypot(dx, dz);
+      // follow a nav-grid path; straight line only for short hops or when no path exists
+      n.repathT -= dt;
+      const farGoal = Math.hypot(tgt.x - n.pos.x, tgt.z - n.pos.z);
+      if (farGoal > 4 && (!n.path || n.repathT <= 0 || Math.hypot(tgt.x - n.pathTx, tgt.z - n.pathTz) > 3)) {
+        n.path = findPath(this.navGrid(), n.pos.x, n.pos.z, tgt.x, tgt.z, 6000);
+        n.pathIdx = 0;
+        n.pathTx = tgt.x;
+        n.pathTz = tgt.z;
+        n.repathT = 6 + Math.random() * 3;
+      } else if (farGoal <= 4) n.path = null;
+      let gx = tgt.x, gz = tgt.z;
+      if (n.path) {
+        while (n.pathIdx < n.path.length - 1 && Math.hypot(n.path[n.pathIdx][0] - n.pos.x, n.path[n.pathIdx][1] - n.pos.z) < 1.2) n.pathIdx++;
+        gx = n.path[n.pathIdx][0];
+        gz = n.path[n.pathIdx][1];
+      }
+      const dx = gx - n.pos.x, dz = gz - n.pos.z;
+      const d = Math.max(Math.hypot(dx, dz), farGoal > 0.6 && n.path ? 0.61 : 0);
       const speed = d > 6 ? 3.2 : 1.4;
       let moving = false;
       if (d > 0.6 && simDt > 0) {
@@ -220,7 +254,7 @@ export class Town {
       else rig.root.scale.setScalar(1);
     };
     requestAnimationFrame(grow);
-    this.near.set(s.id, { rig, id: s.id, pos, yaw: 0, barkT: 5 + Math.random() * 10 });
+    this.near.set(s.id, { rig, id: s.id, pos, yaw: 0, barkT: 5 + Math.random() * 10, path: null, pathIdx: 0, pathTx: 0, pathTz: 0, repathT: 0 });
   }
 
   reset(): void {
