@@ -54,6 +54,7 @@ interface Enemy {
   wanderTo: THREE.Vector3;
   flash: number;
   wave: boolean;
+  tag: string;
 }
 
 const geoCache = new Map<EnemyKind, THREE.BufferGeometry>();
@@ -120,10 +121,81 @@ export class Enemies {
   private sinceCombat = 99;
   enabled = true;
   private tmpP = { x: 0, y: 0, z: 0 };
+  private projGeo: THREE.BufferGeometry;
+  private projMat = new THREE.MeshBasicMaterial({ color: 0xe8d8b0 });
+  private projs: { mesh: THREE.Mesh; vel: THREE.Vector3; dmg: number; life: number }[] = [];
+
+  /** Fire a projectile from the player along the camera (with gentle aim assist). */
+  private fire(dmg: number, range: number, weapon: string): void {
+    const g = this.game;
+    const p = g.player.pos;
+    let dir = new THREE.Vector3(Math.sin(g.camera.yaw), Math.sin(g.camera.pitch) * 0.5 + 0.02, Math.cos(g.camera.yaw)).normalize();
+    // aim assist: snap toward the best enemy within a 25° cone
+    let best: Enemy | null = null;
+    let bestDot = Math.cos(0.44);
+    for (const e of this.list) {
+      if (e.state === 'dead') continue;
+      const to = this.tmp.set(e.pos.x - p.x, e.pos.y + (e.def.fly ? 0 : 1.0) - (p.y + 1.4), e.pos.z - p.z);
+      const d = to.length();
+      if (d > range) continue;
+      const dot = to.normalize().dot(dir);
+      if (dot > bestDot) {
+        bestDot = dot;
+        best = e;
+      }
+    }
+    if (best) dir = new THREE.Vector3(best.pos.x - p.x, best.pos.y + (best.def.fly ? 0 : 1.0) - (p.y + 1.4), best.pos.z - p.z).normalize();
+    g.player.yaw = Math.atan2(dir.x, dir.z);
+    const m = new THREE.Mesh(this.projGeo, this.projMat);
+    m.position.set(p.x + dir.x * 0.6, p.y + 1.4, p.z + dir.z * 0.6);
+    m.lookAt(m.position.clone().add(dir));
+    g.scene.add(m);
+    const speed = weapon.includes('rifle') ? 80 : weapon.includes('nail') ? 45 : 32;
+    this.projs.push({ mesh: m, vel: dir.multiplyScalar(speed), dmg, life: range / speed + 0.1 });
+    audio.play(weapon.includes('rifle') || weapon.includes('nail') ? 'shot' : 'bow', { vol: 0.8 });
+    g.camera.addTrauma(weapon.includes('rifle') ? 0.25 : 0.08);
+    g.camera.kickFov(weapon.includes('rifle') ? 3 : 1);
+  }
+
+  private updateProjectiles(dt: number): void {
+    for (let i = this.projs.length - 1; i >= 0; i--) {
+      const pr = this.projs[i];
+      pr.life -= dt;
+      pr.vel.y -= 4 * dt;
+      pr.mesh.position.addScaledVector(pr.vel, dt);
+      const pos = pr.mesh.position;
+      let hit: Enemy | null = null;
+      for (const e of this.list) {
+        if (e.state === 'dead') continue;
+        const cy = e.pos.y + (e.def.fly ? 0 : 0.9);
+        if (Math.hypot(e.pos.x - pos.x, e.pos.z - pos.z) < e.def.size * 0.8 + 0.3 && Math.abs(cy - pos.y) < 1.1) {
+          hit = e;
+          break;
+        }
+      }
+      const ground = this.game.view.surface(pos.x, pos.z);
+      if (hit) this.damage(hit, pr.dmg, pr.vel.clone().setY(0).normalize());
+      if (hit || pr.life <= 0 || pos.y < ground) {
+        if (!hit) this.game.fx.dust(pos.x, Math.max(ground, pos.y), pos.z, 2);
+        pr.mesh.removeFromParent();
+        this.projs.splice(i, 1);
+      }
+    }
+  }
 
   constructor(private game: Game) {
     game.tickers.push((dt, simDt) => this.update(simDt));
     game.swingHook = (dmg) => this.playerSwing(dmg);
+    game.fireHook = (dmg, range, weapon) => this.fire(dmg, range, weapon);
+    const pg = new THREE.CylinderGeometry(0.025, 0.025, 0.7, 4);
+    pg.rotateX(Math.PI / 2);
+    this.projGeo = pg;
+  }
+
+  aliveTagged(tag: string): number {
+    let n = 0;
+    for (const e of this.list) if (e.state !== 'dead' && e.tag === tag) n++;
+    return n;
   }
 
   get alive(): number {
@@ -132,7 +204,7 @@ export class Enemies {
     return n;
   }
 
-  spawn(kind: EnemyKind, x: number, z: number, wave = false): void {
+  spawn(kind: EnemyKind, x: number, z: number, wave = false, tag = ''): void {
     const def = DEFS[kind];
     let obj: THREE.Object3D;
     let rig: CharacterRig | null = null;
@@ -155,7 +227,7 @@ export class Enemies {
     obj.scale.setScalar(0.01);
     this.game.scene.add(obj);
     const pos = new THREE.Vector3(x, y, z);
-    this.list.push({ id: this.nextId++, kind, def, obj, rig, eye, pos, vel: new THREE.Vector3(), yaw: Math.random() * 6.28, hp: def.hp, state: wave ? 'chase' : 'wander', t: 0, home: pos.clone(), wanderTo: pos.clone(), flash: 0, wave });
+    this.list.push({ id: this.nextId++, kind, def, obj, rig, eye, pos, vel: new THREE.Vector3(), yaw: Math.random() * 6.28, hp: def.hp, state: wave ? 'chase' : 'wander', t: 0, home: pos.clone(), wanderTo: pos.clone(), flash: 0, wave, tag });
     if (def.machine) audio.play('drone', { pos: { x, z }, vol: 0.4 });
   }
 
@@ -202,6 +274,7 @@ export class Enemies {
   private update(dt: number): void {
     const g = this.game;
     if (dt <= 0) return;
+    this.updateProjectiles(dt);
     this.spawnT -= dt;
     if (this.spawnT <= 0) {
       this.spawnT = 6 + Math.random() * 6;
@@ -222,7 +295,7 @@ export class Enemies {
         continue;
       }
       // despawn far ambient enemies
-      if (dist > 80) {
+      if (dist > 80 && e.tag !== 'raid') {
         e.state = 'dead';
         e.t = 0;
         continue;
@@ -381,10 +454,14 @@ export class Enemies {
       // soft aim assist: snap toward the nearest enemy in a wider arc
       return false;
     }
-    const e = best;
+    this.damage(best, damage, this.tmp.set(best.pos.x - pp.x, 0, best.pos.z - pp.z).normalize());
+    return true;
+  }
+
+  private damage(e: Enemy, damage: number, dir: THREE.Vector3): void {
+    const g = this.game;
     e.hp -= damage;
     e.flash = 0.15;
-    const dir = this.tmp.set(e.pos.x - pp.x, 0, e.pos.z - pp.z).normalize();
     e.vel.copy(dir).multiplyScalar(e.kind === 'bot' ? 2 : 6);
     e.state = 'stagger';
     e.t = 0;
@@ -401,7 +478,6 @@ export class Enemies {
     g.camera.addTrauma(0.22);
     g.camera.kickFov(3);
     if (e.hp <= 0) this.kill(e);
-    return true;
   }
 
   private kill(e: Enemy): void {
