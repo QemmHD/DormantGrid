@@ -51,6 +51,12 @@ async function start() {
     bootDone();
     return;
   }
+  if (new URLSearchParams(location.search).get('ui') === 'harness') {
+    const { runHarness } = await import('./ui/harness');
+    await runHarness();
+    bootDone();
+    return;
+  }
   const { Game } = await import('./game/game');
   bootProgress(0.3);
   const game = new Game();
