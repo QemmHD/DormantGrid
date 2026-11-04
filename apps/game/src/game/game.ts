@@ -75,7 +75,7 @@ import { BaseView, levelFromY, STOREY_H } from './base';
 import { HavenCamp } from '../world/haven';
 import { Bus, loadSettings, storeSettings, type CraftInfo, type GameAPI, type GameMode, type ScreenId, type Settings } from './api';
 import { ONBOARDING, type OnboardingTrigger } from '../content/onboarding';
-import { DISTRICT_INTROS } from '../content/campaign';
+import { ACTS, DISTRICT_INTROS } from '../content/campaign';
 
 export const SEED = 1337;
 const INTERACT_RANGE = 3.2;
@@ -154,6 +154,8 @@ export class Game implements GameAPI {
   hasSaveHook: (() => boolean) | null = null;
   /** UI hook to open screens */
   openScreenHook: ((id: ScreenId | null) => void) | null = null;
+  /** reads a lore terminal prop (set by Trader module) */
+  terminalHook: ((pid: number) => void) | null = null;
   /** co-op: local world actions to broadcast */
   onWorldAction: ((ev: WorldEvent) => void) | null = null;
   /** returns the UI's currently open screen */
@@ -291,6 +293,7 @@ export class Game implements GameAPI {
     this.camera.yaw = 2.4;
     this.startPlaying();
     this.persist('new');
+    this.playIntro();
   }
 
   async continueGame(): Promise<void> {
@@ -318,6 +321,61 @@ export class Game implements GameAPI {
     this.searchedProps.clear();
     this.applyWorldState();
     this.view.loadAround(this.save.player.x, this.save.player.z);
+  }
+
+  private introT = -1;
+  private introCard: HTMLElement | null = null;
+
+  /** Cinematic opening: swoop from above the dead city down to Haven. */
+  playIntro(): void {
+    if (new URLSearchParams(location.search).has('autostart')) return;
+    this.introT = 0;
+    this.setMode('cinematic');
+    document.getElementById('app')!.classList.add('letterbox');
+    const act = ACTS[0];
+    const card = document.createElement('div');
+    card.className = 'district-banner show';
+    card.style.top = '58%';
+    card.style.background = 'radial-gradient(ellipse at center, rgba(6,8,10,0.72) 0%, rgba(6,8,10,0) 75%)';
+    card.style.padding = '28px 60px';
+    card.innerHTML = `<div class="state"></div><h2></h2><p></p>`;
+    (card.children[0] as HTMLElement).textContent = `${act.subtitle}`;
+    (card.children[1] as HTMLElement).textContent = act.title;
+    (card.children[2] as HTMLElement).textContent = act.text;
+    (card.children[2] as HTMLElement).style.maxWidth = '560px';
+    card.style.opacity = '0';
+    document.getElementById('ui')!.appendChild(card);
+    setTimeout(() => (card.style.opacity = '1'), 1200);
+    this.introCard = card;
+    audio.play('powerUp', { vol: 0.35, pitch: 0.5 });
+  }
+
+  private updateIntro(dt: number): void {
+    if (this.introT < 0) return;
+    const D = 7;
+    this.introT += dt;
+    const skip = this.input.wasPressed('attack') || this.input.wasPressed('interact') || this.input.wasPressed('jump') || this.input.wasPressed('menu');
+    const k = Math.min(1, this.introT / D);
+    const e = k * k * k * (k * (k * 6 - 15) + 10);
+    const p = this.player.pos;
+    const a = this.camera.yaw + Math.PI + (1 - e) * 1.2;
+    const hi = tmpV.set(p.x + Math.sin(a) * 140 * (1 - e) + 0, p.y + 90 * (1 - e) + 2, p.z + Math.cos(a) * 140 * (1 - e));
+    const cam = this.camera.cam;
+    cam.position.lerpVectors(hi, cam.position, e);
+    const look = new THREE.Vector3(608, 0, 608).lerp(new THREE.Vector3(p.x, p.y + 1.5, p.z), Math.min(1, e * 1.2));
+    cam.lookAt(look);
+    if (k >= 1 || skip) {
+      this.introT = -1;
+      document.getElementById('app')!.classList.remove('letterbox');
+      if (this.introCard) {
+        const c = this.introCard;
+        c.style.opacity = '0';
+        setTimeout(() => c.remove(), 900);
+        this.introCard = null;
+      }
+      this.setMode('play');
+      this.showOnboarding();
+    }
   }
 
   private startPlaying(): void {
@@ -793,6 +851,8 @@ export class Game implements GameAPI {
         verb = !c || !c.crop ? 'Plant in' : c.growth >= 1 ? 'Harvest' : c.water < 0.4 ? 'Water' : 'Check';
       }
       this.bus.emit({ type: 'prompt', text: verb ? `${verb} ${t.name}` : `Hold to dismantle ${t.name}`, sub: verb ? 'hold to dismantle' : undefined, key: 'E' });
+    } else if (t.kind === 'prop' && this.layout.props[t.id].kind === 'terminal') {
+      this.bus.emit({ type: 'prompt', text: 'Read Grid terminal', sub: 'hold to salvage', key: 'E' });
     } else if (t.kind === 'prop' && PROP_SALVAGE[this.layout.props[t.id].kind]?.container && !t.searched) {
       this.bus.emit({ type: 'prompt', text: `Search ${t.name}`, sub: 'hold to salvage', key: 'E' });
     } else {
@@ -839,6 +899,7 @@ export class Game implements GameAPI {
           return;
         }
       }
+      if (t.kind === 'prop' && this.layout.props[t.id].kind === 'terminal' && this.terminalHook) return this.terminalHook(t.id);
       if (t.kind === 'prop' && PROP_SALVAGE[this.layout.props[t.id].kind]?.container && !this.searchedProps.has(t.id)) return this.searchProp(t.id);
     }
     if (!held || t.kind === 'drop') {
@@ -1368,7 +1429,7 @@ export class Game implements GameAPI {
   }
 
   private showOnboarding(): void {
-    if (!this.save || this.mode === 'menu' || !this.settings.hints || this.onbStep >= ONBOARDING.length) {
+    if (!this.save || this.mode === 'menu' || this.mode === 'cinematic' || !this.settings.hints || this.onbStep >= ONBOARDING.length) {
       this.bus.emit({ type: 'hint', text: null });
       return;
     }
@@ -1484,7 +1545,7 @@ export class Game implements GameAPI {
       this.playtime += dt;
       const w = this.save.world;
       w.hour += simDt * gameHoursPerRealSecond(this.settings.dayMinutes * 60);
-      w.weather = weatherAt(SEED, w.hour);
+      w.weather = dayOf(w.hour) === 0 ? 'clear' : weatherAt(SEED, w.hour);
       if (!blocked) {
         if (this.input.wasPressed('build') && this.mode === 'play') this.startBuild('foundation', 0);
         for (let q = 0; q < 4; q++) if (this.input.wasPressed(`q${q + 1}` as 'q1')) this.selectQuick(q);
@@ -1543,8 +1604,9 @@ export class Game implements GameAPI {
     this.fx.target.copy(this.player.pos);
     this.fx.update(simDt, (x, z) => this.view.surface(x, z));
     this.camera.update(dt, this.player.pos, this.input.sprinting && this.input.moveMag > 0.5 && this.player.canSprint, this.collision);
+    this.updateIntro(dt);
     const warmth = this.warmth();
-    this.atm.update(dt, this.save.world.hour, (this.save.world.weather as Weather) ?? 'clear', warmth, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar, this.time);
+    this.atm.update(dt, this.save.world.hour, (this.save.world.weather as Weather) ?? 'clear', warmth, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar * (this.introT >= 0 ? 2.6 - Math.min(1, this.introT / 7) * 1.6 : 1), this.time);
     const night = 1 - this.atm.daylight;
     for (const u of this.view.uniforms) {
       u.uWindow.value = 0.25 + night * 1.1;

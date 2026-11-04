@@ -67,6 +67,7 @@ async function start() {
   const { Enemies } = await import('./game/enemies');
   const { Grid } = await import('./game/grid');
   const { CoopView } = await import('./game/coopview');
+  const { Trader } = await import('./game/trader');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
@@ -92,6 +93,89 @@ async function start() {
   ui.setMapDraw((ctx, w, h) => drawMap(game, ctx, w, h));
   ui.setJournalSource(() => journal(game));
   new CoopView(game, svc.coop);
+  const trader = new Trader(game);
+  trader.onLore = (title, header, body) => {
+    const wrap = document.createElement('div');
+    const hd = document.createElement('div');
+    hd.className = 'code';
+    hd.style.fontSize = '12px';
+    hd.style.textAlign = 'left';
+    hd.textContent = header;
+    const p = document.createElement('p');
+    p.style.whiteSpace = 'pre-wrap';
+    p.textContent = body;
+    wrap.append(hd, p);
+    const close = document.createElement('button');
+    close.className = 'btn primary';
+    close.textContent = 'Close';
+    close.addEventListener('click', () => {
+      ui.closeDialog();
+      game.input.uiBlocking = !!ui.openScreen;
+    });
+    game.input.uiBlocking = true;
+    game.input.releaseAll();
+    ui.dialog(title, wrap, [close]);
+  };
+  trader.onOpen = () => openTrade();
+  const openTrade = () => {
+    const wrap = document.createElement('div');
+    wrap.style.maxHeight = '52vh';
+    wrap.style.overflow = 'auto';
+    const head = document.createElement('p');
+    head.textContent = `Guild chits: ${trader.chits()}  ·  Reputation: ${Math.round(trader.rep)}`;
+    wrap.append(head);
+    const list = document.createElement('div');
+    list.className = 'list';
+    for (const kind of ['buy', 'sell'] as const) {
+      const rows = trader.rows().filter((r) => r.kind === kind);
+      const h3 = document.createElement('h3');
+      h3.textContent = kind === 'buy' ? 'Odile sells' : 'Odile buys';
+      h3.style.margin = '10px 0 4px';
+      list.append(h3);
+      if (!rows.length) {
+        const e = document.createElement('small');
+        e.textContent = kind === 'buy' ? 'Nothing on offer at your reputation.' : 'Nothing she wants. Salvage more.';
+        list.append(e);
+      }
+      for (const r of rows) {
+        const li = document.createElement('div');
+        li.className = 'li';
+        const main = document.createElement('div');
+        main.className = 'main';
+        main.innerHTML = `<b></b><small></small>`;
+        (main.firstChild as HTMLElement).textContent = r.name;
+        (main.lastChild as HTMLElement).textContent = `${r.price} chits each · you have ${r.have}`;
+        const b1 = document.createElement('button');
+        b1.className = 'btn small';
+        b1.textContent = kind === 'buy' ? 'Buy 1' : 'Sell 1';
+        b1.addEventListener('click', () => {
+          if (trader.trade(r, 1)) openTrade();
+        });
+        li.append(main, b1);
+        if (kind === 'sell' && r.have > 1) {
+          const b2 = document.createElement('button');
+          b2.className = 'btn small';
+          b2.textContent = 'Sell all';
+          b2.addEventListener('click', () => {
+            if (trader.trade(r, r.have)) openTrade();
+          });
+          li.append(b2);
+        }
+        list.append(li);
+      }
+    }
+    wrap.append(list);
+    const close = document.createElement('button');
+    close.className = 'btn primary';
+    close.textContent = 'Done';
+    close.addEventListener('click', () => {
+      ui.closeDialog();
+      game.input.uiBlocking = !!ui.openScreen;
+    });
+    game.input.uiBlocking = true;
+    game.input.releaseAll();
+    ui.dialog('Meridian Guild — Odile', wrap, [close]);
+  };
   mountNetUI(game.bus, svc, { getSaveJSON: () => game.exportSave(), playerPos: () => ({ x: game.player.pos.x, z: game.player.pos.z }) });
   let hasSave = false;
   game.hasSaveHook = () => hasSave;
@@ -136,7 +220,10 @@ async function start() {
     town.seed();
     hasSave = true;
     ui.hideMenu();
-    if (!new URLSearchParams(location.search).has('autostart')) void svc.ensureAccount();
+    if (!new URLSearchParams(location.search).has('autostart')) {
+      const wait = () => (game.mode === 'cinematic' ? setTimeout(wait, 500) : void svc.ensureAccount());
+      setTimeout(wait, 500);
+    }
   };
   const origCont = game.continueGame.bind(game);
   game.continueGame = async () => {
