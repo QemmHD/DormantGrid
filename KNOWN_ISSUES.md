@@ -1,7 +1,6 @@
 # Known issues
 
 - **Not tested on a real iPhone.** All performance numbers are headless counters.
-- **CI cannot deploy to Cloudflare** until the `CLOUDFLARE_API_TOKEN` secret holds the real token (PROGRESS.md BLOCKERS). GitHub Pages (offline build) deploys on every push to main.
 - **Upper floors of enterable ruins are unreachable** (no stairs in ruins).
 - **Small props are hidden at low quality** (density 0.55), so they can't be salvaged on that tier.
 - **Worldgen runs twice at boot.** It runs on the main thread (~0.4 s on desktop) and again in the mesh worker. The duplication is deliberate but costs boot time.

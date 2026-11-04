@@ -3,19 +3,17 @@
 ## ☀️ Morning report
 
 ### Live URLs
-- **Offline build, current code (local saves only): https://qemmhd.github.io/DormantGrid/**
-  - Published by `pages-fallback.yml` from merge `c2e5d33` (worldgen v2, building close-ups, animation, GLB pipeline).
-  - `node tools/live-smoke-retry.mjs https://qemmhd.github.io/DormantGrid --offline` → **PASS on attempt 1/3**.
-- **Full game (accounts, cloud saves, co-op): https://dormant-grid.dg-server.workers.dev**, but on the **previous build** (deployed earlier on 2026-11-04 from a session, version `0653506e`).
-  - This round's CI deploy (run 41920700503): quality gates **passed** in CI. The Worker deploy then **failed at Cloudflare auth** ("Invalid format for Authorization header"), so the smoke and rollback steps were skipped. See BLOCKERS.
-  - The session token was no longer in this container's environment, so no direct deploy was made this round. The token was never written anywhere.
-  - `node tools/live-smoke-retry.mjs https://dormant-grid.dg-server.workers.dev` against the running (previous) build → **PASS on attempt 1/3**.
+- **Full game (accounts, cloud saves, co-op): https://dormant-grid.dg-server.workers.dev**, running the **current code**.
+  - Deployed by CI on 2026-11-04 after the secret was fixed. Run 17 (manual) deployed version `a3e3750e`; run 18 (push, LATEST_CLIENT fix) also succeeded. Gates → deploy → retrying live smoke passed on attempt 1/3 both times; no rollback.
+  - Full live smoke from the session: **14/14**.
+    - HTTP: shell, manifest, sw.js, all 46 referenced assets 200; claim, whoami, cloud save PUT→GET round trip; duplicate claim rejected (409); `/api/version` returns `minClient 0.2.0, latest 0.2.0`.
+    - Browser: SW registered, game boots, local save survives reload, zero console errors.
+  - In-browser: the live world is worldgen v2 (hash `ff749351`, 21,370 props, save schema 2).
+- **Offline build (local saves only): https://qemmhd.github.io/DormantGrid/**. `tools/live-smoke-retry.mjs --offline` → PASS on attempt 1/3.
 
 ### BLOCKERS (owner)
-1. **The `CLOUDFLARE_API_TOKEN` repo secret holds the wrong value.** The workflow's non-revealing check reports a 32-character value without the `cfut_` prefix, which matches the length of the account ID. Re-save the secret with the API token itself.
-   - Until then, the "Deploy (Cloudflare)" workflow fails at authentication.
-   - The live Worker above keeps running; it was deployed directly.
-2. **Rotate the Cloudflare API token** once the secret is fixed. It was shared in chat.
+- None for deploys: the Cloudflare secrets work and CI deploys on every push to `main`.
+- Reminder: rotate the Cloudflare API token that was pasted in chat earlier, if you haven't already, then re-save the secret.
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 
@@ -175,7 +173,7 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 4. Optional: the title decision (DECISIONS #15).
 
 ## NEXT ACTIONS
-1. **Owner:** fix the `CLOUDFLARE_API_TOKEN` secret (see BLOCKERS), then re-run "Deploy (Cloudflare)". It now retries the live smoke 3× and rolls back on a final failure.
+1. **Owner:** rotate the Cloudflare token that was pasted in chat (if not done) and re-save the secret. CI deploys on push to main and retries the live smoke 3× with rollback.
 2. **Owner:** an iPhone device report with **Settings → Show performance overlay → Copy device report** in downtown, on medium and on low. Decide whether medium keeps shadows and facade patterns.
 3. Wire GLB **buildings**: replace intact landmark buildings (lot + footprint match, scale ±25%) and drop back to procedural pieces on first damage.
 4. Drive **rigged GLB characters** with an AnimationMixer (clips from the registry), keeping the procedural rig as the fallback and for look-at layering.
