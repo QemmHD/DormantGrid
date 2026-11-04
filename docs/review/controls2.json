@@ -1,0 +1,366 @@
+{
+  "wallSpin": [
+    {
+      "district": "downtown",
+      "building": 226,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "downtown",
+      "building": 383,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "downtown",
+      "building": 317,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "downtown",
+      "building": 229,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "downtown",
+      "building": 495,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "residential",
+      "building": 167,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "residential",
+      "building": 189,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "residential",
+      "building": 179,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "residential",
+      "building": 180,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "residential",
+      "building": 95,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "market",
+      "building": 426,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "market",
+      "building": 533,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "market",
+      "building": 417,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "market",
+      "building": 444,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "market",
+      "building": 519,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "industrial",
+      "building": 762,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "industrial",
+      "building": 708,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "industrial",
+      "building": 615,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "industrial",
+      "building": 621,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "industrial",
+      "building": 758,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "haven",
+      "building": 134,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "haven",
+      "building": 133,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "haven",
+      "building": 61,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "haven",
+      "building": 54,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "haven",
+      "building": 56,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "hospital",
+      "building": 219,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "hospital",
+      "building": 1,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "hospital",
+      "building": 47,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "hospital",
+      "building": 198,
+      "framesBehindWall": 0,
+      "of": 36
+    },
+    {
+      "district": "hospital",
+      "building": 211,
+      "framesBehindWall": 0,
+      "of": 36
+    }
+  ],
+  "walkAlong": [
+    {
+      "district": "downtown",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "downtown",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "downtown",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "downtown",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "residential",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "residential",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "residential",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "residential",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "market",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "market",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "market",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "market",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "industrial",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "industrial",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "industrial",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "industrial",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "haven",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "haven",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "haven",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "haven",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "hospital",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "hospital",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "hospital",
+      "framesBehindWall": 0,
+      "of": 30
+    },
+    {
+      "district": "hospital",
+      "framesBehindWall": 0,
+      "of": 30
+    }
+  ],
+  "range": {
+    "crate": {
+      "reached": 3
+    },
+    "barrel": {
+      "reached": 3
+    },
+    "car": {
+      "reached": 4
+    },
+    "trashbag": {
+      "reached": 3
+    },
+    "bench": {
+      "reached": 3
+    },
+    "tire": {
+      "reached": 3
+    },
+    "cone": {
+      "reached": 3
+    },
+    "sign": {
+      "reached": 3
+    },
+    "bush": {
+      "reached": 3
+    },
+    "dumpster": {
+      "reached": 3
+    },
+    "weeds": {
+      "reached": 3
+    },
+    "barrier": {
+      "reached": 3
+    }
+  },
+  "ahead2m": {
+    "tests": 60,
+    "correct": 60,
+    "wrong": 0,
+    "none": 0,
+    "winners": {},
+    "examples": []
+  },
+  "summary": {
+    "wallSpin": {
+      "probes": 30,
+      "probesWithCameraBehindWall": 0,
+      "framesBehindWall": 0,
+      "framesTotal": 1080
+    },
+    "walkAlong": {
+      "probes": 24,
+      "probesWithCameraBehindWall": 0,
+      "framesBehindWall": 0,
+      "framesTotal": 720
+    }
+  }
+}

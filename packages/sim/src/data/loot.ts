@@ -37,7 +37,7 @@ export const PROP_SALVAGE: Record<PropKind, SalvageDef> = {
   rock: { tool: 'pickaxe', best: 'pickaxe', time: 5, weight: 0.8, sfx: 'stone', yields: [Y('mat.brick', 4, 7), Y('mat.scrap', 1, 1, 0.2)] },
   rubble: { tool: 'hands', best: 'pickaxe', time: 2.5, weight: 0.5, sfx: 'stone', yields: [Y('mat.brick', 2, 4), Y('mat.scrap', 0, 2), Y('mat.glass', 0, 1)] },
   barrel: { tool: 'hands', best: 'crowbar', time: 2, weight: 0.4, sfx: 'metal', yields: [Y('mat.scrap', 2, 3), Y('mat.chemicals', 1, 2, 0.5), Y('drink.dirty_water', 1, 2, 0.3)] },
-  crate: { tool: 'hands', best: 'crowbar', time: 1.5, weight: 0.3, sfx: 'wood', yields: [Y('mat.timber', 2, 3), Y('comp.nails', 2, 6)], container: true },
+  crate: { tool: 'hands', best: 'crowbar', time: 1.5, weight: 0.3, sfx: 'wood', yields: [Y('mat.timber', 2, 3), Y('mat.scrap', 2, 3), Y('comp.nails', 2, 6)], container: true },
   dumpster: { tool: 'crowbar', best: 'torch', time: 6, weight: 0.9, sfx: 'metal', yields: [Y('mat.scrap', 6, 9), Y('mat.plastic', 2, 4), Y('mat.organic', 1, 3)], container: true },
   bench: { tool: 'hands', best: 'saw', time: 2.5, weight: 0.4, sfx: 'wood', yields: [Y('mat.timber', 2, 4), Y('mat.scrap', 1, 2)] },
   streetlight: { tool: 'saw', best: 'torch', time: 5, weight: 0.8, sfx: 'metal', yields: [Y('mat.scrap', 4, 6), Y('mat.wiring', 2, 3), Y('mat.glass', 1, 2)] },

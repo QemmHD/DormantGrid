@@ -262,6 +262,9 @@ function craftScreen(c: ScreenCtx): () => void {
       list.append(h('p.empty-note', null, S.noRecipes));
       return;
     }
+    // the tutorial's recipe goes first; then craftable before blocked (queryRecipes order)
+    const pin = api.suggestedRecipe();
+    if (pin) rows.sort((a, b) => (a.recipe.id === pin ? -1 : b.recipe.id === pin ? 1 : 0));
     for (const { recipe: r, block } of rows) {
       const def = getItem(r.out);
       if (!def) continue;
@@ -284,7 +287,7 @@ function craftScreen(c: ScreenCtx): () => void {
       if (!block && def.stack > 1) actions.append(btn(S.craftFive, 'small ghost', () => craftN(5)));
       const ic = h('div.ic', null, iconImg(def.id, def.category));
       const name = h('b', null, r.count > 1 ? `${def.name} ×${r.count}` : def.name);
-      const row = h('div', { class: `li ${locked ? 'locked' : ''}` }, ic, h('div.main', null, name, h('small', { class: block ? 'blocked' : '' }, sub), req), actions);
+      const row = h('div', { class: `li ${locked ? 'locked' : ''} ${r.id === pin ? 'suggested' : ''}` }, ic, h('div.main', null, name, h('small', { class: block ? 'blocked' : '' }, sub), req), actions);
       list.append(row);
     }
   };

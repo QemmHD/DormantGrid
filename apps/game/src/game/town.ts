@@ -349,13 +349,16 @@ export class Town {
     this.lastHour = -1;
   }
 
-  /** survivor nearest to the player within r meters */
+  /** survivor nearest to the player within r meters, in front of the camera (never behind the player) */
   nearest(r: number): SurvivorSave | null {
     const g = this.game;
     let best: SurvivorSave | null = null;
     let bd = r;
+    const fx = Math.sin(g.camera.yaw), fz = Math.cos(g.camera.yaw);
     for (const n of this.near.values()) {
-      const d = n.pos.distanceTo(g.player.pos);
+      const dx = n.pos.x - g.player.pos.x, dz = n.pos.z - g.player.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 0.6 && (dx * fx + dz * fz) / d < 0.34) continue; // > 70° off the look direction
       if (d < bd) {
         bd = d;
         best = g.save.world.survivors.find((s) => s.id === n.id) ?? null;

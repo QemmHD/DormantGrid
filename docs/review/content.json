@@ -1,0 +1,182 @@
+{
+  "items": {
+    "total": 109,
+    "byCategory": {
+      "material": 17,
+      "tool": 10,
+      "weapon": 10,
+      "ammo": 4,
+      "medicine": 8,
+      "food": 23,
+      "drink": 5,
+      "seed": 7,
+      "trap": 4,
+      "defense": 4,
+      "misc": 7,
+      "blueprint": 10
+    }
+  },
+  "recipes": {
+    "total": 66,
+    "byStation": {
+      "hands": 11,
+      "workbench1": 20,
+      "campfire": 7,
+      "workbench2": 10,
+      "workbench3": 5,
+      "kitchen": 9,
+      "chemlab": 4
+    }
+  },
+  "buildPieces": {
+    "total": 30,
+    "byKind": {
+      "foundation": 1,
+      "wall": 3,
+      "floor": 1,
+      "roof": 1,
+      "stairs": 1,
+      "fence": 2,
+      "station": 13,
+      "defense": 4,
+      "trap": 4
+    }
+  },
+  "crops": 7,
+  "livestock": 3,
+  "perks": {
+    "total": 32,
+    "byTrack": {
+      "scavenger": 8,
+      "builder": 8,
+      "fighter": 8,
+      "provider": 8
+    }
+  },
+  "factions": 4,
+  "enemiesSim": [
+    "raider_grunt",
+    "raider_scout",
+    "raider_brute",
+    "raider_sniper",
+    "raider_leader",
+    "drone",
+    "guard_bot",
+    "crawler",
+    "custodian_heavy",
+    "hound",
+    "boar"
+  ],
+  "enemyKindsClient": "'drone' | 'crawler' | 'bot' | 'hound' | 'raider'",
+  "traits": 24,
+  "quests": {
+    "total": 10,
+    "byAct": {
+      "ember": 3,
+      "reboot": 3,
+      "contest": 3,
+      "core": 1
+    }
+  },
+  "endings": 6,
+  "jobs": [
+    "auto",
+    "farm",
+    "gather",
+    "guard",
+    "build",
+    "haul",
+    "cook",
+    "heal",
+    "scavenge",
+    "companion",
+    "idle"
+  ],
+  "survivorEventKinds": [
+    "starving",
+    "death",
+    "recovered",
+    "injury",
+    "blueprint",
+    "cooked",
+    "spoiled",
+    "harvest",
+    "friendship",
+    "conflict",
+    "arrival",
+    "left",
+    "livestock"
+  ],
+  "districts": [
+    "haven",
+    "downtown",
+    "residential",
+    "market",
+    "industrial",
+    "hospital",
+    "waterworks",
+    "rail",
+    "outskirts"
+  ],
+  "world": {
+    "buildings": 806,
+    "enterable": 272,
+    "props": 21370,
+    "nodes": 15,
+    "propKinds": 39
+  },
+  "audio": {
+    "synthesizedSfx": [
+      "step",
+      "stepHard",
+      "stepWet",
+      "stepGrass",
+      "stepWood",
+      "stepMetal",
+      "breath",
+      "swing",
+      "hitWood",
+      "hitMetal",
+      "hitStone",
+      "hitGlass",
+      "hitFlesh",
+      "break",
+      "breakBig",
+      "collapse",
+      "pickup",
+      "craft",
+      "place",
+      "deny",
+      "click",
+      "open",
+      "close",
+      "jump",
+      "land",
+      "hurt",
+      "eat",
+      "drink",
+      "thunder",
+      "powerUp",
+      "node",
+      "alarm",
+      "levelUp",
+      "drone",
+      "shot",
+      "bow"
+    ],
+    "sfxCount": 36,
+    "recordedAudioFiles": 0,
+    "musicIsGenerative": true
+  },
+  "tierBAssetsShipped": 0,
+  "vsGdd": {
+    "items 80-120": "109",
+    "workbench tiers 1-3 + campfire, kitchen, chem lab": "hands, workbench1, campfire, workbench2, workbench3, kitchen, chemlab",
+    "perks: 4 tracks x ~8": "32 ({\"scavenger\":8,\"builder\":8,\"fighter\":8,\"provider\":8})",
+    "raider types 5 (grunt, scout, brute, sniper, leader) + drones, bots, crawlers, heavies, hounds, boar": "sim: raider_grunt, raider_scout, raider_brute, raider_sniper, raider_leader, drone, guard_bot, crawler, custodian_heavy, hound, boar | client kinds: 'drone' | 'crawler' | 'bot' | 'hound' | 'raider'",
+    "survivors 12 early / 40 late": "see session.json (start count)",
+    "livestock chickens, goats, pigs": "3 defined in sim",
+    "districts 9": "9",
+    "endings 3": "6"
+  }
+}

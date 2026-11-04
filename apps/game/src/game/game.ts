@@ -157,6 +157,7 @@ export class Game implements GameAPI {
   readonly rng = new Rng(Date.now() & 0xffffffff);
   private target: Target | null = null;
   private readonly playerLook = new THREE.Vector3();
+  private readonly cutFocus = new THREE.Vector3();
   private targetTimer = 0;
   private holdT = 0;
   private holdHitT = 0;
@@ -290,6 +291,10 @@ export class Game implements GameAPI {
 
   private makeView(): WorldView {
     const v = new WorldView(this.layout, this.collision, this.renderer.quality.shadows);
+    this.camera.blocker = (x, y, z) => {
+      const b = v.buildingAt(x, y, z, 0.1);
+      return b >= 0 && b !== v.buildingAt(this.player.pos.x, this.player.pos.y + 1, this.player.pos.z, -0.4);
+    };
     v.radius = this.renderer.quality.detailRadius;
     v.propDensity = this.renderer.quality.propDensity;
     for (const u of v.uniforms) u.uPattern.value = this.renderer.quality.patterns ? 1 : 0;
@@ -328,6 +333,8 @@ export class Game implements GameAPI {
     addItem(inv, 'drink.clean_water', 2);
     addItem(inv, 'food.canned_beans', 2);
     addItem(inv, 'med.bandage', 1);
+    // pocket scrap: with the first crate (2-3 scrap, 2-3 timber) this always covers the crowbar (4 scrap + 1 timber)
+    addItem(inv, 'mat.scrap', 2);
     this.save.player.quick = ['drink.clean_water', 'food.canned_beans', null, null];
     this.save.world.flags['onb'] = 0;
     this.resetWorldView();
@@ -675,6 +682,12 @@ export class Game implements GameAPI {
     return out;
   }
 
+  /** Recipe the current tutorial step asks for (pinned to the top of the craft list). */
+  suggestedRecipe(): string | null {
+    const step = ONBOARDING[this.onbStep];
+    return step?.id === 'craft' ? 'r.tool.crowbar' : null;
+  }
+
   craftInfo(): CraftInfo {
     return { stations: this.nearbyStations(), blueprints: this.save.world.blueprints, rank: Number(this.save.world.flags['rank'] ?? 1) };
   }
@@ -825,11 +838,16 @@ export class Game implements GameAPI {
     const fx = Math.sin(this.camera.yaw), fz = Math.cos(this.camera.yaw);
     let best: Target | null = null;
     let bestScore = Infinity;
+    // Look direction first, distance second (review finding #4). Anything more than
+    // 70° off the camera's forward direction never wins, so nothing behind the player can.
+    const COS_MAX = Math.cos((70 * Math.PI) / 180);
     const score = (x: number, z: number, extra = 0) => {
       const dx = x - px, dz = z - pz;
       const d = Math.hypot(dx, dz);
-      const dot = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
-      return d * (1.6 - dot) + extra;
+      if (d < 0.35) return 0.6 + extra; // standing on it: neutral, never an automatic win
+      const dot = (dx * fx + dz * fz) / d;
+      if (dot < COS_MAX) return Infinity;
+      return Math.acos(Math.min(1, dot)) * 1.9 + d * 0.3 + extra;
     };
     this.save.world.drops.forEach((dp, i) => {
       if (Math.hypot(dp.x - px, dp.z - pz) > INTERACT_RANGE) return;
@@ -865,13 +883,16 @@ export class Game implements GameAPI {
     }
     const R = 2.2;
     const cy = py + 1.2;
+    // aim point 1.4 m ahead: the closest point of a piece to where the player is looking
+    const ax = px + fx * 1.4, az = pz + fz * 1.4;
     this.collision.query(px - R, pz - R, px + R, pz + R, (c: Collider) => {
       if (c.tag !== 'piece') return;
-      const cx = Math.max(c.minX, Math.min(px, c.maxX));
-      const czz = Math.max(c.minZ, Math.min(pz, c.maxZ));
+      const cx = Math.max(c.minX, Math.min(ax, c.maxX));
+      const czz = Math.max(c.minZ, Math.min(az, c.maxZ));
       const cyy = Math.max(c.minY, Math.min(cy, c.maxY));
       if (Math.hypot(cx - px, czz - pz) > R || Math.abs(cyy - cy) > 1.6) return;
-      const sc = score(cx, czz, 0.8 + Math.abs(cyy - cy) * 0.5);
+      const flat = c.maxY - c.minY < 0.6; // floors/roofs: only when nothing else is in view
+      const sc = score(cx, czz, 0.8 + Math.abs(cyy - cy) * 0.5 + (flat ? 1.2 : 0));
       if (sc < bestScore) {
         const bid = Math.floor(c.ref / 1000), index = c.ref % 1000;
         const info = this.view.pieces(bid)[index];
@@ -1840,12 +1861,20 @@ export class Game implements GameAPI {
     this.camera.bob = this.player.grounded ? Math.min(1, this.player.rig.speed / 6) : 0;
     this.camera.update(dt, this.player.pos, this.input.sprinting && this.input.moveMag > 0.5 && this.player.canSprint, this.collision);
     // fade the player out when the camera is pressed against them (walls behind)
-    this.player.rig.mesh.visible = this.camera.closeness < 0.75 || this.mode === 'cinematic';
+    // never lose the player: hidden only if the lens is literally inside the head
+    this.player.rig.mesh.visible = this.camera.lensToFocus > 0.4 || this.mode === 'cinematic';
     this.updateIntro(dt);
     const warmth = this.warmth();
     this.atm.update(dt, this.save.world.hour, (this.save.world.weather as Weather) ?? 'clear', warmth, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar * (this.introT >= 0 ? 2.6 - Math.min(1, this.introT / 7) * 1.6 : 1), this.time);
     const night = 1 - this.atm.daylight;
     this.renderer.post?.setWarmth(warmth);
+    // occluder cutout: world + props + base + camp dither away what sits between lens and player
+    this.cutFocus.set(this.player.pos.x, this.player.pos.y + 1.0, this.player.pos.z);
+    for (const u of [this.view.chunkMat.userData.u, this.view.propMat.userData.u, this.base.mat.userData.u, this.camp.mat.userData.u]) {
+      u.uCut.value = this.mode === 'cinematic' ? 0 : 1;
+      u.uCamPos.value.copy(this.camera.cam.position);
+      u.uFocus.value.copy(this.cutFocus);
+    }
     for (const u of this.view.uniforms) {
       u.uWindow.value = 0.25 + night * 1.1;
       u.uGrid.value = 0.8 + Math.sin(this.time * 2) * 0.1;

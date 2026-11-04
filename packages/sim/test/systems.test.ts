@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng, type PlacedPiece } from '@dg/shared';
 import { ITEMS } from '../src/data/items';
 import { RECIPE_MAP, RECIPES } from '../src/data/recipes';
+import { PROP_SALVAGE } from '../src/data/loot';
 import {
   addItem,
   countItem,
@@ -101,12 +102,24 @@ describe('crafting', () => {
   it('crafts a crowbar from scrap with hands', () => {
     const inv = createInventory();
     addItem(inv, 'mat.scrap', 10);
+    addItem(inv, 'mat.timber', 2);
     const r = RECIPE_MAP.get('r.tool.crowbar')!;
     expect(canCraft(r, inv, { ...ctx, stations: ['hands'] })).toBe(true);
     expect(craft(r, inv, { ...ctx, stations: ['hands'] })).toBe(true);
-    expect(countItem(inv, 'mat.scrap')).toBe(4);
+    expect(countItem(inv, 'mat.scrap')).toBe(6);
+    expect(countItem(inv, 'mat.timber')).toBe(1);
     expect(countItem(inv, 'tool.crowbar')).toBe(1);
     expect(inv.find((s) => s?.id === 'tool.crowbar')?.d).toBe(300);
+  });
+  it('the tutorial path never dead-ends: starting kit + the first crate always cover a crowbar', () => {
+    // starting kit gives 2 scrap (game.ts newGame); a crate yields at least 2 scrap and 2 timber
+    const crate = PROP_SALVAGE.crate.yields;
+    const minScrap = crate.filter((y) => y.item === 'mat.scrap' && !y.chance).reduce((a, y) => a + y.min, 0);
+    const minTimber = crate.filter((y) => y.item === 'mat.timber' && !y.chance).reduce((a, y) => a + y.min, 0);
+    const r = RECIPE_MAP.get('r.tool.crowbar')!;
+    const need = (id: string) => r.inputs.find((x) => x.item === id)?.count ?? 0;
+    expect(2 + minScrap).toBeGreaterThanOrEqual(need('mat.scrap'));
+    expect(minTimber).toBeGreaterThanOrEqual(need('mat.timber'));
   });
   it('gates by station, blueprint and rank', () => {
     const inv = createInventory(40);

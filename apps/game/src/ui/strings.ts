@@ -191,5 +191,12 @@ export const S = {
   meterShort: { health: 'Health', hunger: 'Food', thirst: 'Water', stamina: 'Stamina', sleep: 'Rest' },
   actLabels: { attack: 'Swing', dodge: 'Roll', jump: 'Jump', sprint: 'Run', zoom: 'Zoom' },
   acts: { attack: 'Attack', interact: 'Use', dodge: 'Dodge', jump: 'Jump', sprint: 'Run' },
+  opening: {
+    someone: 'Lookout',
+    droneWarn: 'Drone over the east fence! Just a scout. Knock it down before it reports in.',
+    droneToast: 'A Custodian scout drone is coming. Swing at it when it gets close.',
+    arrivalToast: '{name} walked in from the road. Haven has a new pair of hands.',
+    arrivalLine: 'Is this Haven? They said there were lights here. I can work for a bed.',
+  },
   topbar: { inventory: 'Inventory', craft: 'Craft', build: 'Build', map: 'Map', ledger: 'Ledger', journal: 'Journal', menu: 'Menu' },
 };
