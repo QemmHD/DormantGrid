@@ -26,6 +26,13 @@ export class MeshBuilder {
   private stack: THREE.Matrix4[] = [];
   private color = new THREE.Color(1, 1, 1);
   private emissive = 0;
+  /** surface pattern code (see materials.ts PATTERN); stored as -code in the emit channel when not emissive */
+  private pattern = 0;
+  /** vertical baked AO: factor lerps aoBot..aoTop between world y aoY0..aoY1 (1 = off) */
+  private aoY0 = 0;
+  private aoY1 = 1;
+  private aoBot = 1;
+  private aoTop = 1;
   private bone = 0;
   private seed = 1;
   /** when set (local space), triangles are auto-oriented to face away from it (convex shapes) */
@@ -44,6 +51,19 @@ export class MeshBuilder {
   }
   setEmissive(e: number): this {
     this.emissive = e;
+    return this;
+  }
+  /** Shader surface pattern for following faces (0 = none). */
+  setPattern(code: number): this {
+    this.pattern = code;
+    return this;
+  }
+  /** Baked vertical AO for following faces: color *= mix(bot, top, (y - y0) / (y1 - y0)). Call with no args to clear. */
+  setVAO(y0 = 0, y1 = 1, bot = 1, top = 1): this {
+    this.aoY0 = y0;
+    this.aoY1 = y1 > y0 ? y1 : y0 + 1e-3;
+    this.aoBot = bot;
+    this.aoTop = top;
     return this;
   }
   setBone(b: number): this {
@@ -100,13 +120,19 @@ export class MeshBuilder {
     const cr = this.color.r, cg = this.color.g, cb = this.color.b;
     const P = this.pos, N = this.nor, C = this.col, E = this.emit, S = this.skin;
     const nx = tmpN.x, ny = tmpN.y, nz = tmpN.z;
+    const e = this.emissive > 0 ? this.emissive : -this.pattern;
+    const vao = this.aoBot !== 1 || this.aoTop !== 1;
     for (let k = 0; k < 3; k++) {
       const p = k === 0 ? a : k === 1 ? b : c;
       P.push(p.x, p.y, p.z);
       N.push(nx, ny, nz);
-      const f = ao ? base * (0.55 + 0.45 * Math.min(1, Math.max(0, p.y / 1.6))) : base;
+      let f = ao ? base * (0.55 + 0.45 * Math.min(1, Math.max(0, p.y / 1.6))) : base;
+      if (vao) {
+        const t = Math.min(1, Math.max(0, (p.y - this.aoY0) / (this.aoY1 - this.aoY0)));
+        f *= this.aoBot + (this.aoTop - this.aoBot) * t;
+      }
       C.push(cr * f, cg * f, cb * f);
-      E.push(this.emissive);
+      E.push(e);
       S.push(this.bone);
     }
   }

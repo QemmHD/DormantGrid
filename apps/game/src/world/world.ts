@@ -472,7 +472,8 @@ export class WorldView {
 
   /** Permanently remove a prop (deconstructed). */
   destroyProp(pid: number): void {
-    if (this.removedProps.has(pid)) return;
+    // ids from a newer worldgen (e.g. a co-op peer on a later build) are ignored, not fatal
+    if (this.removedProps.has(pid) || !this.layout.props[pid]) return;
     this.removedProps.add(pid);
     this.removePropInstance(pid);
     const p = this.layout.props[pid];

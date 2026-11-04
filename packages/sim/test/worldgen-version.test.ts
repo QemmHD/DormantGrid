@@ -7,6 +7,9 @@ import { SAVE_SCHEMA_VERSION, TILES, TILE_SIZE, Tile, WORLDGEN_VERSION, type Pro
 import { buildingBounds, generateWorld, PROP_HALF, tileAt } from '../src/world/index';
 import { decodeSave, encodeSave, migrateSave, newGame, SaveError, upgradeWorldGen, validateSave } from '../src/save/index';
 
+declare const console: { log: (...a: unknown[]) => void };
+const bytesEqual = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+
 const SEED = 1337;
 const V1_HASH = '9cf52650';
 let v1: WorldLayout | null = null;
@@ -49,8 +52,8 @@ describe('worldgen versions', () => {
   it('v2 is a strict superset of v1: tiles, buildings, nodes identical; v1 props are an identical prefix', () => {
     const a = L1();
     const b = L2();
-    expect(Buffer.from(b.tiles).equals(Buffer.from(a.tiles))).toBe(true);
-    expect(Buffer.from(b.districtMap).equals(Buffer.from(a.districtMap))).toBe(true);
+    expect(bytesEqual(b.tiles, a.tiles)).toBe(true);
+    expect(bytesEqual(b.districtMap, a.districtMap)).toBe(true);
     expect(b.buildings).toEqual(a.buildings);
     expect(b.nodes).toEqual(a.nodes);
     expect(b.spawn).toEqual(a.spawn);
