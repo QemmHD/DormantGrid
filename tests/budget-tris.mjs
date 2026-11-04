@@ -27,10 +27,13 @@ for (const key of ['downtown', 'residential', 'market', 'industrial', 'haven']) 
   const r = await page.evaluate(async () => {
     const g = window.__dg;
     const i = g.renderer.gl.info.render;
+    // wait for real rendered frames, not wall-clock time (SwiftShader can run at ~3 fps)
+    const frames = (n) => new Promise((res) => { const f = () => (--n <= 0 ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+    await frames(3);
     const all = { calls: i.calls, tris: i.triangles };
     g.atm.setShadows(0);
     g.view.setShadows(false);
-    await new Promise((res) => setTimeout(res, 600));
+    await frames(4);
     const main = { calls: i.calls, tris: i.triangles };
     g.atm.setShadows(g.renderer.quality.shadows ? g.renderer.quality.shadowSize : 0);
     g.view.setShadows(g.renderer.quality.shadows);
