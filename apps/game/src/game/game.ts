@@ -25,6 +25,7 @@ import {
   hourOfDay,
   isNight,
   migrateSave,
+  tileAt,
   TIER_HP_MULT,
   plant as plantCrop,
   harvest as harvestCrop,
@@ -79,6 +80,29 @@ import { ONBOARDING, type OnboardingTrigger } from '../content/onboarding';
 import { ACTS, DISTRICT_INTROS } from '../content/campaign';
 
 export const SEED = 1337;
+
+export type InteractKind = 'loot' | 'break' | 'build' | 'talk' | 'door' | 'use' | 'farm' | 'node' | 'attack';
+export interface ProviderPrompt {
+  text: string;
+  sub?: string;
+  kind?: InteractKind;
+  verb?: string;
+  pos?: THREE.Vector3;
+  hold?: boolean;
+}
+
+export interface TargetInfo {
+  kind: InteractKind;
+  verb: string;
+  name: string;
+  sub: string | null;
+  /** true when the main action is hold-to-complete */
+  hold: boolean;
+  /** why it can't be done right now (needs tool, pack full...) */
+  blocked: string | null;
+  pos: THREE.Vector3 | null;
+  shape: { prop: number } | { box: [THREE.Vector3, THREE.Vector3] } | null;
+}
 const INTERACT_RANGE = 3.2;
 const tmpV = new THREE.Vector3();
 
@@ -209,8 +233,11 @@ export class Game implements GameAPI {
     this.player = new PlayerController(rig);
     this.player.terrain = (x, z) => this.view.surface(x, z);
     this.player.onStep = (run) => {
-      const wet = this.atm.wetness > 0.3;
-      audio.play(wet ? 'stepWet' : run ? 'stepHard' : 'step', { vol: run ? 0.5 : 0.35 });
+      const vol = run ? 0.5 : 0.35;
+      const surf = this.surfaceUnderPlayer();
+      if (this.atm.wetness > 0.3 && surf !== 'wood') audio.play('stepWet', { vol });
+      else audio.play(surf === 'grass' ? 'stepGrass' : surf === 'wood' ? 'stepWood' : surf === 'metal' ? 'stepMetal' : surf === 'hard' ? 'stepHard' : 'step', { vol });
+      if (surf === 'dirt' && run) this.fx.dust(this.player.pos.x, this.player.pos.y, this.player.pos.z, 1, 0x8a7a64);
     };
     this.player.onLand = (v) => {
       audio.play('land', { vol: Math.min(1, v / 10) });
@@ -851,37 +878,71 @@ export class Game implements GameAPI {
     return { tier: 'hands', speed: 1, slot: -1 };
   }
 
-  private updatePrompt(): void {
+  /** What the player would interact with right now (drives the primary button, marker, highlight, prompt). */
+  describeTarget(): TargetInfo | null {
+    if (this.mode !== 'play') return null;
     for (const p of this.interactProviders) {
-      const o = this.mode === 'play' ? p.prompt() : null;
-      if (o) {
-        this.bus.emit({ type: 'prompt', text: o.text, sub: o.sub, key: 'E' });
-        return;
-      }
+      const o = p.prompt();
+      if (o) return { kind: o.kind ?? 'use', verb: o.verb ?? o.text, name: o.text, sub: o.sub ?? null, hold: o.hold ?? false, blocked: null, pos: o.pos ?? null, shape: null };
     }
     const t = this.target;
-    if (!t || this.mode !== 'play') {
+    if (!t) return null;
+    if (t.kind === 'drop') return { kind: 'loot', verb: 'Pick up', name: 'Dropped pack', sub: null, hold: false, blocked: null, pos: t.pos, shape: null };
+    if (t.kind === 'placed') {
+      const def = getPiece(t.piece.piece);
+      const shape = { box: this.placedBox(t.piece) };
+      if (t.piece.piece === 'bed') return { kind: 'use', verb: 'Sleep', name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
+      if (t.piece.piece === 'farm_plot') {
+        const c = this.save.world.crops.find((x) => x.plot === t.piece.id);
+        const verb = !c || !c.crop ? 'Plant' : c.growth >= 1 ? 'Harvest' : c.water < 0.4 ? 'Water' : 'Check';
+        return { kind: 'farm', verb, name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
+      }
+      if (def?.storageSlots) return { kind: 'loot', verb: 'Open', name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
+      if (def?.station) return { kind: 'build', verb: 'Craft', name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
+      return { kind: 'break', verb: 'Dismantle', name: t.name, sub: 'refunds materials', hold: true, blocked: null, pos: t.pos, shape };
+    }
+    if (t.kind === 'prop') {
+      const kind = this.layout.props[t.id].kind;
+      const ok = toolCanBreak(this.toolTier().tier, t.def.tool);
+      const blocked = ok ? null : `Needs a ${toolName(t.def.tool)}`;
+      if (kind === 'terminal') return { kind: 'use', verb: 'Read', name: t.name, sub: 'hold: salvage', hold: false, blocked: null, pos: t.pos, shape: { prop: t.id } };
+      if (PROP_SALVAGE[kind]?.container && !t.searched) return { kind: 'loot', verb: 'Loot', name: t.name, sub: ok ? 'hold: break apart' : null, hold: false, blocked: null, pos: t.pos, shape: { prop: t.id } };
+      return { kind: 'break', verb: 'Break', name: t.name, sub: null, hold: true, blocked, pos: t.pos, shape: { prop: t.id } };
+    }
+    const ok = toolCanBreak(this.toolTier().tier, t.def.tool);
+    const box = this.pieceBox(t.bid, t.index);
+    return { kind: t.info.kind === 'door' ? 'door' : 'break', verb: 'Salvage', name: t.name, sub: null, hold: true, blocked: ok ? null : `Needs a ${toolName(t.def.tool)}`, pos: t.pos, shape: box ? { box } : null };
+  }
+
+  private placedBox(p: PlacedPiece): [THREE.Vector3, THREE.Vector3] {
+    const def = getPiece(p.piece);
+    const pos = this.base.pos.get(p.id) ?? new THREE.Vector3(p.x, 0, p.z);
+    const odd = p.rot % 2 === 1;
+    const hw = ((odd ? def?.size.d : def?.size.w) ?? 1) / 2, hd = ((odd ? def?.size.w : def?.size.d) ?? 1) / 2;
+    return [new THREE.Vector3(pos.x - hw, pos.y, pos.z - hd), new THREE.Vector3(pos.x + hw, pos.y + (def?.size.h ?? 1), pos.z + hd)];
+  }
+
+  private pieceBox(bid: number, index: number): [THREE.Vector3, THREE.Vector3] | null {
+    const b = this.layout.buildings[bid];
+    const pi = this.view.pieces(bid)[index];
+    if (!b || !pi) return null;
+    const ang = (b.rot * Math.PI) / 2;
+    const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
+    const xa = pi.min[0] * cs + pi.min[2] * sn, za = -pi.min[0] * sn + pi.min[2] * cs;
+    const xb = pi.max[0] * cs + pi.max[2] * sn, zb = -pi.max[0] * sn + pi.max[2] * cs;
+    return [new THREE.Vector3(b.x + Math.min(xa, xb), pi.min[1], b.z + Math.min(za, zb)), new THREE.Vector3(b.x + Math.max(xa, xb), pi.max[1], b.z + Math.max(za, zb))];
+  }
+
+  private updatePrompt(): void {
+    const info = this.describeTarget();
+    if (!info) {
       this.bus.emit({ type: 'prompt', text: null });
       return;
     }
-    if (t.kind === 'drop') {
-      this.bus.emit({ type: 'prompt', text: 'Pick up pack', key: 'E' });
-    } else if (t.kind === 'placed') {
-      const def = getPiece(t.piece.piece);
-      let verb = t.piece.piece === 'bed' ? 'Sleep in' : def?.storageSlots ? 'Open' : def?.station ? 'Use' : null;
-      if (t.piece.piece === 'farm_plot') {
-        const c = this.save.world.crops.find((x) => x.plot === t.piece.id);
-        verb = !c || !c.crop ? 'Plant in' : c.growth >= 1 ? 'Harvest' : c.water < 0.4 ? 'Water' : 'Check';
-      }
-      this.bus.emit({ type: 'prompt', text: verb ? `${verb} ${t.name}` : `Hold to dismantle ${t.name}`, sub: verb ? 'hold to dismantle' : undefined, key: 'E' });
-    } else if (t.kind === 'prop' && this.layout.props[t.id].kind === 'terminal') {
-      this.bus.emit({ type: 'prompt', text: 'Read Grid terminal', sub: 'hold to salvage', key: 'E' });
-    } else if (t.kind === 'prop' && PROP_SALVAGE[this.layout.props[t.id].kind]?.container && !t.searched) {
-      this.bus.emit({ type: 'prompt', text: `Search ${t.name}`, sub: 'hold to salvage', key: 'E' });
-    } else {
-      const ok = toolCanBreak(this.toolTier().tier, t.def.tool);
-      this.bus.emit({ type: 'prompt', text: ok ? `Hold to salvage ${t.name}` : t.name, sub: ok ? undefined : `needs ${toolName(t.def.tool)}`, key: 'E' });
-    }
+    const touch = this.input.usingTouch || document.documentElement.classList.contains('touch');
+    const text = info.blocked ? `${info.name}` : `${info.verb} ${info.name}`;
+    const sub = info.blocked ?? (info.hold ? (touch ? 'hold the action button' : 'hold E') : info.sub ?? undefined);
+    this.bus.emit({ type: 'prompt', text, sub: sub ?? undefined, key: touch ? undefined : 'E' });
   }
 
   get interactReady(): boolean {
@@ -889,8 +950,12 @@ export class Game implements GameAPI {
   }
 
   /** systems (grid nodes, survivors) can claim interaction before props/pieces */
-  readonly interactProviders: { prompt: () => { text: string; sub?: string } | null; handle: (held: boolean, pressed: boolean, tapped: boolean, dt: number) => boolean }[] = [];
+  readonly interactProviders: {
+    prompt: () => ProviderPrompt | null;
+    handle: (held: boolean, pressed: boolean, tapped: boolean, dt: number) => boolean;
+  }[] = [];
   private overrideTap = 0;
+  private primarySwing = false;
 
   private updateInteract(dt: number): void {
     const held = this.input.isHeld('interact');
@@ -902,7 +967,8 @@ export class Game implements GameAPI {
     const t = this.target;
     const tapped = this.input.wasReleased('interact') && this.holdT < 0.35;
     if (!t) {
-      if (this.input.wasPressed('interact')) audio.play('deny', { vol: 0.4 });
+      // one primary button on touch: with nothing to interact with, it swings
+      if (this.input.wasPressed('interact')) this.primarySwing = true;
       this.holdT = 0;
       return;
     }
@@ -1008,6 +1074,7 @@ export class Game implements GameAPI {
         this.addDrop(from.x, from.z, [{ id: item, n: left }]);
       }
       if (got <= 0) continue;
+      this.bus.emit({ type: 'float', text: `+${got} ${getItem(item)?.name ?? item}`, x: from.x, y: from.y, z: from.z, color: item.startsWith('mat.') ? 0xf0e6cc : 0xe8a65a });
       const chips = Math.min(5, got);
       for (let i = 0; i < chips; i++) {
         const last = i === chips - 1;
@@ -1334,7 +1401,8 @@ export class Game implements GameAPI {
   // ------------------------------------------------------------ swing at props
   private updateAttack(dt: number): void {
     this.attackT = Math.max(0, this.attackT - dt);
-    const want = this.input.consumeBuffered('attack') || (this.input.isHeld('attack') && this.attackT <= 0);
+    const want = this.input.consumeBuffered('attack') || (this.input.isHeld('attack') && this.attackT <= 0) || this.primarySwing;
+    this.primarySwing = false;
     if (!want || this.attackT > 0 || this.mode !== 'play') return;
     const p = this.save.player;
     if (p.stamina < 8) {
@@ -1493,13 +1561,44 @@ export class Game implements GameAPI {
   }
   onSleepHook: ((hours: number) => void) | null = null;
 
+  /** footstep surface under the player */
+  private surfaceUnderPlayer(): 'grass' | 'dirt' | 'hard' | 'wood' | 'metal' | 'soft' {
+    const p = this.player.pos;
+    const ground = this.view.surface(p.x, p.z);
+    if (p.y > ground + 0.15) {
+      // on a floor slab, foundation or prop
+      return p.y > ground + 0.6 ? 'metal' : 'wood';
+    }
+    const t = tileAt(this.layout, p.x, p.z);
+    if (t === 0 || t === 5 || t === 9) return 'grass';
+    if (t === 4 || t === 3) return 'dirt';
+    if (t === 1 || t === 2 || t === 8 || t === 10) return 'hard';
+    if (t === 7) return 'metal';
+    return 'soft';
+  }
+
+  private winded = false;
+  private breathT = 0;
+
   private updateSurvival(dt: number): void {
     const p = this.save.player;
     const moving = this.player.rig.speed > 0.5;
     const sprinting = this.input.sprinting && moving && this.player.canSprint;
     const mods = modifiers(p);
     tickStamina(p, dt, sprinting ? 14 : 0, mods);
-    this.player.canSprint = p.stamina > 4;
+    // hysteresis: once you run dry you must recover to 30% before sprinting again
+    if (!this.winded && p.stamina <= 3) {
+      this.winded = true;
+      this.toast("Out of breath — walk a moment to recover.", 'bad');
+      audio.play('breath', { vol: 0.8 });
+    } else if (this.winded && p.stamina >= 30) this.winded = false;
+    this.player.canSprint = !this.winded;
+    document.documentElement.classList.toggle('winded', this.winded || p.stamina < 15);
+    this.breathT -= dt;
+    if ((this.winded || p.stamina < 25) && this.breathT <= 0) {
+      this.breathT = 1.15;
+      audio.play('breath', { vol: 0.45 });
+    }
     const over = Math.max(0, totalWeight(this.inv) - 40);
     this.player.speedMul = (mods.speed ?? 1) * (over > 0 ? Math.max(0.45, 1 - over / 30) : 1);
     this.survivalAcc += dt;
@@ -1707,7 +1806,11 @@ export class Game implements GameAPI {
     this.view.update(this.player.pos.x, this.player.pos.z);
     this.fx.target.copy(this.player.pos);
     this.fx.update(simDt, (x, z) => this.view.surface(x, z));
+    if (!this.input.uiBlocking && this.input.zoom) this.camera.zoomBy(this.input.zoom);
+    this.camera.bob = this.player.grounded ? Math.min(1, this.player.rig.speed / 6) : 0;
     this.camera.update(dt, this.player.pos, this.input.sprinting && this.input.moveMag > 0.5 && this.player.canSprint, this.collision);
+    // fade the player out when the camera is pressed against them (walls behind)
+    this.player.rig.mesh.visible = this.camera.closeness < 0.75 || this.mode === 'cinematic';
     this.updateIntro(dt);
     const warmth = this.warmth();
     this.atm.update(dt, this.save.world.hour, (this.save.world.weather as Weather) ?? 'clear', warmth, this.player.pos, this.camera.cam.position, this.renderer.quality.fogFar * (this.introT >= 0 ? 2.6 - Math.min(1, this.introT / 7) * 1.6 : 1), this.time);

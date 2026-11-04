@@ -6,6 +6,10 @@ export type Sfx =
   | 'step'
   | 'stepHard'
   | 'stepWet'
+  | 'stepGrass'
+  | 'stepWood'
+  | 'stepMetal'
+  | 'breath'
   | 'hitWood'
   | 'hitMetal'
   | 'hitStone'
@@ -224,6 +228,22 @@ export class AudioEngine {
       case 'stepWet':
         nz('bandpass', 900 * p, 1, 0.004, 0.2, 0.09, 1, 2400 * p);
         return 0.13;
+      case 'stepGrass':
+        nz('highpass', 2200 * p, 0.7, 0.01, 0.1, 0.09);
+        nz('lowpass', 260 * p, 0.7, 0.004, 0.14, 0.06);
+        return 0.13;
+      case 'stepWood':
+        osc('sine', 140 * p, 90 * p, 0.002, 0.25, 0.07);
+        nz('bandpass', 700 * p, 2, 0.002, 0.14, 0.05);
+        return 0.11;
+      case 'stepMetal':
+        osc('triangle', 420 * p, 380 * p, 0.001, 0.06, 0.12);
+        nz('bandpass', 2600 * p, 3, 0.001, 0.1, 0.04);
+        return 0.15;
+      case 'breath':
+        nz('bandpass', 900 * p, 0.8, 0.18, 0.09, 0.35);
+        nz('bandpass', 1300 * p, 0.8, 0.12, 0.05, 0.3, 1, 700);
+        return 0.6;
       case 'swing':
         nz('bandpass', 600 * p, 1.6, 0.06, 0.18, 0.12, 1, 2200 * p);
         return 0.2;

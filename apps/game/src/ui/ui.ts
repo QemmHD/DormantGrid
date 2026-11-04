@@ -140,17 +140,29 @@ export class UI {
 
     // action cluster
     const acts = h('div.actions');
-    const act = (cls: string, a: Action, ic: keyof typeof SVG) => {
+    const act = (cls: string, a: Action, ic: keyof typeof SVG, label?: string) => {
       const el = h('div', { class: `act ${cls}`, role: 'button', 'aria-label': S.acts[cls as keyof typeof S.acts], html: SVG[ic] });
+      if (label) el.append(h('span.act-lbl', null, label));
       api.input.bindButton(el, a);
       acts.append(el);
       return el;
     };
-    act('attack', 'attack', 'attack');
+    act('attack', 'attack', 'attack', S.actLabels.attack);
     this.interactBtn = act('interact', 'interact', 'interact');
-    act('dodge', 'dodge', 'dodge');
-    act('jump', 'jump', 'jump');
-    this.sprintBtn = act('sprint', 'sprint', 'sprint');
+    act('dodge', 'dodge', 'dodge', S.actLabels.dodge);
+    act('jump', 'jump', 'jump', S.actLabels.jump);
+    this.sprintBtn = act('sprint', 'sprint', 'sprint', S.actLabels.sprint);
+    const zoom = h('div', { class: 'act zoom', role: 'button', 'aria-label': S.actLabels.zoom, html: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5M8.5 11h5"/></svg>' });
+    zoom.append(h('span.act-lbl', null, S.actLabels.zoom));
+    tap(zoom, () => {
+      const c = (api as unknown as { camera?: { distance: number; zoomBy: (d: number) => void } }).camera;
+      if (!c) return;
+      // cycle near → mid → far
+      const next = c.distance < 3.6 ? 4.6 - c.distance : c.distance < 5.8 ? 6.8 - c.distance : 3.0 - c.distance;
+      c.zoomBy(next);
+      api.audio.play('click');
+    });
+    acts.append(zoom);
     this.hud.append(acts);
 
     // quick slots

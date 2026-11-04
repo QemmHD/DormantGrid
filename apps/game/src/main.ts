@@ -69,6 +69,7 @@ async function start() {
   const { CoopView } = await import('./game/coopview');
   const { Trader } = await import('./game/trader');
   const { Raids } = await import('./game/raids');
+  const { Markers } = await import('./game/markers');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
@@ -102,6 +103,7 @@ async function start() {
   ui.setJournalSource(() => journal(game));
   new CoopView(game, svc.coop);
   const trader = new Trader(game);
+  new Markers(game);
   (window as unknown as { __raids: unknown }).__raids = new Raids(game, enemies);
   trader.onLore = (title, header, body) => {
     const wrap = document.createElement('div');

@@ -188,6 +188,7 @@ export const S = {
   meters: { health: 'Health', hunger: 'Food', thirst: 'Water', stamina: 'Stamina', sleep: 'Rest' },
   seasons: ['Spring', 'Summer', 'Autumn', 'Winter'],
   day: (d: number) => `Day ${d}`,
+  actLabels: { attack: 'Swing', dodge: 'Roll', jump: 'Jump', sprint: 'Run', zoom: 'Zoom' },
   acts: { attack: 'Attack', interact: 'Use', dodge: 'Dodge', jump: 'Jump', sprint: 'Run' },
   topbar: { inventory: 'Inventory', craft: 'Craft', build: 'Build', map: 'Map', ledger: 'Ledger', journal: 'Journal', menu: 'Menu' },
 };

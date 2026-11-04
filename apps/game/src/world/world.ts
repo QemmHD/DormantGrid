@@ -303,7 +303,8 @@ export class WorldView {
         // trees: trunk only
         const trunk = p.kind === 'tree' || p.kind === 'pine';
         const ax = trunk ? 0.3 : ex, az = trunk ? 0.3 : ez;
-        c.colliders.push(this.collision.add({ minX: p.x - ax, maxX: p.x + ax, minY: p.y, maxY: p.y + hy * 2 * p.scale, minZ: p.z - az, maxZ: p.z + az, tag: 'prop', ref: pid }));
+        const obb = !trunk && Math.abs(Math.sin(p.rotY * 2)) > 0.05 ? { cx: p.x, cz: p.z, hx: hx * p.scale, hz: hz * p.scale, c: Math.cos(p.rotY), s: -Math.sin(p.rotY) } : undefined;
+        c.colliders.push(this.collision.add({ minX: p.x - ax, maxX: p.x + ax, minY: p.y, maxY: p.y + hy * 2 * p.scale, minZ: p.z - az, maxZ: p.z + az, tag: 'prop', ref: pid, obb }));
       }
     }
     if (!async) {

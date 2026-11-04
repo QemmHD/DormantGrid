@@ -5,7 +5,7 @@ import { FACTION_MAP, addItem, buyPrice, changeRep, countItem, getItem, removeIt
 import { CharacterRig, randomLook } from '../render/character';
 import { LORE_TERMINALS } from '../content/lore';
 import { audio } from '../audio/audio';
-import type { Game } from './game';
+import type { Game, ProviderPrompt } from './game';
 
 const CHIT = 'misc.guild_chit';
 const FACTION = 'guild';
@@ -49,8 +49,8 @@ export class Trader {
     return this.game.player.pos.distanceTo(this.pos) < 2.6;
   }
 
-  private prompt(): { text: string; sub?: string } | null {
-    return this.near() ? { text: 'Trade with Odile', sub: 'Meridian Guild' } : null;
+  private prompt(): ProviderPrompt | null {
+    return this.near() ? { text: 'Odile', verb: 'Trade', kind: 'talk' as const, pos: this.pos.clone().setY(this.pos.y + 2.1), sub: 'Meridian Guild trader' } : null;
   }
 
   private handle(tapped: boolean): boolean {

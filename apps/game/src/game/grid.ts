@@ -8,7 +8,7 @@ import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
 import { audio } from '../audio/audio';
 import { NODE_LINES, RESTORATION_LINES, DISTRICT_INTROS } from '../content/campaign';
-import type { Game } from './game';
+import type { Game, ProviderPrompt } from './game';
 import type { Enemies } from './enemies';
 
 interface NodeView {
@@ -171,18 +171,19 @@ export class Grid {
     return -1;
   }
 
-  private prompt(): { text: string; sub?: string } | null {
+  private prompt(): ProviderPrompt | null {
     const r = this.nearRelay();
-    if (r >= 0) return { text: 'Hold to route power', sub: `relay ${r + 1} of ${RELAYS_PER_NODE}` };
+    if (r >= 0) return { text: 'Relay', verb: 'Route power', kind: 'node' as const, hold: true, pos: this.activeView!.relays[r].clone().setY(this.activeView!.relays[r].y + 1.2), sub: `relay ${r + 1} of ${RELAYS_PER_NODE}` };
     const n = this.nearNode(3.2);
     if (!n) return null;
-    if (this.isOnline(n.def)) return { text: 'Control node — online', sub: 'this district has power' };
+    const pos = n.group.position.clone().setY(n.group.position.y + 2.2);
+    if (this.isOnline(n.def)) return { text: 'Control node', verb: 'Online', kind: 'node' as const, pos, sub: 'this district has power' };
     if (this.active && this.active.node === n.def.id) {
-      if (this.active.phase === 'routing') return { text: 'Route power at the relays', sub: `${this.active.relays.filter(Boolean).length}/${RELAYS_PER_NODE} routed` };
-      if (this.active.phase === 'syncing') return { text: 'Hold to sync the node', sub: `${Math.round(this.active.sync * 100)}%` };
-      if (this.active.phase === 'defend') return { text: 'Hold the line', sub: 'stay close to the node' };
+      if (this.active.phase === 'routing') return { text: 'Control node', verb: 'Find the relays', kind: 'node' as const, pos, sub: `${this.active.relays.filter(Boolean).length}/${RELAYS_PER_NODE} routed` };
+      if (this.active.phase === 'syncing') return { text: 'Control node', verb: 'Sync', kind: 'node' as const, hold: true, pos, sub: `${Math.round(this.active.sync * 100)}% — keep holding` };
+      if (this.active.phase === 'defend') return { text: 'Control node', verb: 'Defend', kind: 'node' as const, pos, sub: 'stay close until the waves stop' };
     }
-    return { text: 'Reboot control node', sub: 'machines will notice' };
+    return { text: 'Control node', verb: 'Reboot', kind: 'node' as const, pos, sub: 'machines will notice' };
   }
 
   private handle(held: boolean, pressed: boolean, tapped: boolean, dt: number): boolean {

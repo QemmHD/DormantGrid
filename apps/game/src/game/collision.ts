@@ -13,6 +13,8 @@ export interface Collider {
   /** what this is: 'building' | 'prop' | 'piece' | 'wall' ... */
   tag: string;
   ref: number;
+  /** optional oriented box in XZ (rotated props); AABB above stays the broadphase bound */
+  obb?: { cx: number; cz: number; hx: number; hz: number; c: number; s: number };
   /** internal */
   _id?: number;
   _cells?: number[];
@@ -97,6 +99,42 @@ export class CollisionWorld {
       this.query(out.x - radius, out.z - radius, out.x + radius, out.z + radius, (c) => {
         const feet = out.y;
         if (c.maxY <= feet + step || c.minY >= feet + height) return; // below step or above head
+        if (c.obb) {
+          const o = c.obb;
+          const rx = out.x - o.cx, rz = out.z - o.cz;
+          const lx = rx * o.c + rz * o.s, lz = -rx * o.s + rz * o.c;
+          const qx = Math.max(-o.hx, Math.min(lx, o.hx)), qz = Math.max(-o.hz, Math.min(lz, o.hz));
+          let ex = lx - qx, ez = lz - qz;
+          let dd = ex * ex + ez * ez;
+          if (dd >= radius * radius) return;
+          if (dd < 1e-8) {
+            // inside: push out along the shallowest local axis
+            const px = o.hx - Math.abs(lx), pz = o.hz - Math.abs(lz);
+            if (px < pz) {
+              ex = Math.sign(lx) || 1;
+              ez = 0;
+              dd = 1;
+              const push = px + radius;
+              out.x += (ex * o.c - ez * o.s) * push;
+              out.z += (ex * o.s + ez * o.c) * push;
+            } else {
+              ex = 0;
+              ez = Math.sign(lz) || 1;
+              const push = pz + radius;
+              out.x += (ex * o.c - ez * o.s) * push;
+              out.z += (ex * o.s + ez * o.c) * push;
+            }
+          } else {
+            const d = Math.sqrt(dd);
+            const push = radius - d;
+            const nx = ex / d, nz = ez / d;
+            out.x += (nx * o.c - nz * o.s) * push;
+            out.z += (nx * o.s + nz * o.c) * push;
+          }
+          hitWall = true;
+          moved = true;
+          return;
+        }
         // closest point on box rect to circle center
         const px = Math.max(c.minX, Math.min(out.x, c.maxX));
         const pz = Math.max(c.minZ, Math.min(out.z, c.maxZ));

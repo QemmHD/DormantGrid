@@ -16,6 +16,7 @@ export type GameEvent =
   | { type: 'subtitle'; who: string; text: string }
   | { type: 'mode'; mode: GameMode } // play | build | menu | dead | sleeping | cinematic
   | { type: 'pickup'; item: string; n: number }
+  | { type: 'float'; text: string; x: number; y: number; z: number; color?: number }
   | { type: 'saved'; at: number; cloud: boolean }
   | { type: 'settings' }
   | { type: 'damage'; amount: number }
