@@ -1,7 +1,7 @@
 name: Deploy fallback (GitHub Pages)
 
-# Runs only when Cloudflare secrets are missing: ships an offline-only build
-# (local saves, no accounts/co-op) so the game is still playable from a URL.
+# Always publishes an offline-only build (local saves, no accounts/co-op) to
+# https://qemmhd.github.io/DormantGrid/ — a second, Cloudflare-independent URL.
 
 on:
   push:
@@ -32,7 +32,6 @@ jobs:
 
   build:
     needs: check
-    if: needs.check.outputs.has_cf != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
