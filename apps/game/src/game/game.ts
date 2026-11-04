@@ -25,6 +25,11 @@ import {
   hourOfDay,
   isNight,
   migrateSave,
+  activeQuests,
+  advanceQuests,
+  objectiveProgress,
+  QUESTS,
+  ACT_NAMES,
   modifiers,
   moveSlot as simMoveSlot,
   newGame as simNewGame,
@@ -141,6 +146,8 @@ export class Game implements GameAPI {
   hasSaveHook: (() => boolean) | null = null;
   /** UI hook to open screens */
   openScreenHook: ((id: ScreenId | null) => void) | null = null;
+  /** returns the UI's currently open screen */
+  screenProbe: (() => ScreenId | null) | null = null;
   /** per-frame hooks for other systems (survivors, grid, enemies, net) */
   readonly tickers: ((dt: number, simDt: number) => void)[] = [];
   playtime = 0;
@@ -152,7 +159,8 @@ export class Game implements GameAPI {
   // ------------------------------------------------------------ boot
   async boot(progress: (p: number) => void): Promise<void> {
     const auto: QualityTier = matchMedia('(pointer: coarse)').matches ? 'medium' : 'high';
-    const tier = this.settings.quality === 'auto' ? auto : this.settings.quality;
+    const forced = new URLSearchParams(location.search).get('quality') as QualityTier | null;
+    const tier = forced ?? (this.settings.quality === 'auto' ? auto : this.settings.quality);
     this.renderer = new Renderer(document.getElementById('view')!, tier);
     this.renderer.autoQuality = this.settings.quality === 'auto';
     this.perf = new PerfOverlay(this.renderer);
@@ -1227,7 +1235,7 @@ export class Game implements GameAPI {
     }
     const step = ONBOARDING[this.onbStep];
     const touch = this.input.usingTouch || document.documentElement.classList.contains('touch');
-    this.bus.emit({ type: 'hint', text: `<b>${step.title}</b> — ${touch ? step.touch : step.desktop}` });
+    this.bus.emit({ type: "hint", text: `**${step.title}** — ${touch ? step.touch : step.desktop}` });
     if (step.trigger === 'moved') this.onbStartPos.copy(this.player.pos);
     if (step.trigger === 'looked') this.onbYaw = this.camera.yaw;
   }
@@ -1238,7 +1246,7 @@ export class Game implements GameAPI {
     if (step.trigger === 'moved' && this.player.pos.distanceTo(this.onbStartPos) > 6) this.trigger('moved');
     if (step.trigger === 'looked' && Math.abs(this.camera.yaw - this.onbYaw) > 1.4) this.trigger('looked');
     if (step.trigger === 'nightfall' && isNight(this.save.world.hour)) this.trigger('nightfall');
-    if (step.trigger === 'openedInventory' && this.openScreenId === 'inventory') this.trigger('openedInventory');
+    if (step.trigger === 'openedInventory' && (this.screenProbe?.() ?? this.openScreenId) === 'inventory') this.trigger('openedInventory');
   }
 
   // ------------------------------------------------------------ helpers
@@ -1263,6 +1271,48 @@ export class Game implements GameAPI {
     const st = this.save.world.districts[d.index]?.state ?? 0;
     const base = d.key === 'haven' ? 0.55 : 0.2;
     return Math.min(1, base + st * 0.18);
+  }
+
+  private questCtx() {
+    return { inventory: this.inv, rank: Number(this.save.world.flags['rank'] ?? 1), districtKeys: this.layout.districts.map((d) => d.key) };
+  }
+
+  /** Journal lines: active quest steps with progress, plus completed ones. */
+  objectives(): { title: string; text: string; done: boolean }[] {
+    const w = this.save.world;
+    const out: { title: string; text: string; done: boolean }[] = [];
+    for (const q of activeQuests(w)) {
+      const stepIdx = w.quests[q.id] ?? 0;
+      const step = q.steps[stepIdx];
+      if (!step) continue;
+      const pr = objectiveProgress(w, step.obj, this.questCtx());
+      out.push({ title: `${ACT_NAMES[q.act]} · ${q.title}`, text: `${step.text}${pr.need > 1 ? ` (${Math.min(pr.have, pr.need)}/${pr.need})` : ''}`, done: false });
+    }
+    for (const q of QUESTS) if ((w.quests[q.id] ?? 0) >= q.steps.length) out.push({ title: q.title, text: q.steps[q.steps.length - 1]?.text ?? '', done: true });
+    return out;
+  }
+
+  private questT = 0;
+  private updateQuests(dt: number): void {
+    this.questT -= dt;
+    if (this.questT > 0) return;
+    this.questT = 1.5;
+    const w = this.save.world;
+    const ev = advanceQuests(w, this.questCtx());
+    for (const e of ev) {
+      const q = QUESTS.find((x) => x.id === e.quest);
+      if (!q) continue;
+      if (e.completedQuest) {
+        this.toast(`Done: ${q.title}`, 'warm');
+        audio.play('levelUp', { vol: 0.6 });
+        for (const it of q.reward.items ?? []) addItem(this.inv, it.item, it.count);
+        for (const bp of q.reward.blueprints ?? []) if (!w.blueprints.includes(bp)) w.blueprints.push(bp);
+        this.bus.emit({ type: 'inventory' });
+      } else {
+        const step = q.steps[e.step];
+        if (step) this.toast(`New objective: ${step.text}`, 'info');
+      }
+    }
   }
 
   clock(): { time: string; sub: string } {
@@ -1297,18 +1347,10 @@ export class Game implements GameAPI {
       w.hour += simDt * gameHoursPerRealSecond(this.settings.dayMinutes * 60);
       w.weather = weatherAt(SEED, w.hour);
       if (!blocked) {
-        if (this.input.wasPressed('build') && this.mode === 'play') this.openScreen('craft');
-        if (this.input.wasPressed('inventory')) this.openScreen('inventory');
-        if (this.input.wasPressed('craft')) this.openScreen('craft');
-        if (this.input.wasPressed('map')) this.openScreen('map');
-        if (this.input.wasPressed('ledger')) this.openScreen('ledger');
-        if (this.input.wasPressed('journal')) this.openScreen('journal');
+        if (this.input.wasPressed('build') && this.mode === 'play') this.startBuild('foundation', 0);
         for (let q = 0; q < 4; q++) if (this.input.wasPressed(`q${q + 1}` as 'q1')) this.selectQuick(q);
       }
-      if (this.input.wasPressed('menu')) {
-        if (this.mode === 'build') this.stopBuild();
-        else if (!this.openScreenId) this.openScreen('pause');
-      }
+      if (this.input.wasPressed('menu') && this.mode === 'build') this.stopBuild();
       this.player.locked = (this.input.uiBlocking || this.holdT > 0.18) && !this.player.dodging;
       if (!blocked && this.input.wasPressed('dodge') && this.save.player.stamina > 12) {
         if (this.player.startDodge({ x: this.input.moveX, y: this.input.moveY, mag: 1, sprint: false, jump: false, dodge: true, camYaw: this.camera.yaw })) {
@@ -1347,6 +1389,7 @@ export class Game implements GameAPI {
       this.updateSurvival(simDt);
       this.updateDistrict();
       this.checkOnboarding();
+      this.updateQuests(dt);
       this.autosaveT += dt;
       if (this.autosaveT > 60) {
         this.autosaveT = 0;

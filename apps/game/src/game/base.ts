@@ -366,7 +366,8 @@ export class BaseView {
       if (def.solid || def.kind === 'foundation' || def.kind === 'floor' || def.kind === 'roof') {
         const odd = p.rot % 2 === 1;
         const hw = (odd ? def.size.d : def.size.w) / 2, hd = (odd ? def.size.w : def.size.d) / 2;
-        let y0 = y, y1 = y + def.size.h;
+        let y0 = y;
+        const y1 = y + def.size.h;
         if (def.kind === 'foundation') y0 = y - 0.6;
         if (def.id === 'doorway' || def.id === 'gate') {
           // passable opening: collide only on the two side posts + lintel

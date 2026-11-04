@@ -57,12 +57,204 @@ async function start() {
     bootDone();
     return;
   }
-  const { Game } = await import('./game/game');
+  const [{ Game }, { UI }, { Services }, { mountNetUI }, { Town }] = await Promise.all([
+    import('./game/game'),
+    import('./ui/ui'),
+    import('./net/services'),
+    import('./net/ui'),
+    import('./game/town'),
+  ]);
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
-  await game.boot((p) => bootProgress(0.3 + p * 0.7));
+  await game.boot((p) => bootProgress(0.3 + p * 0.6));
+  const svc = new Services(game.bus);
+  const town = new Town(game);
+  (window as unknown as { __town: unknown }).__town = town;
+  const ui = new UI(game);
+  game.screenProbe = () => ui.openScreen;
+  ui.setJobAssign((id, job) => town.assign(id, job));
+  ui.setQuitHandler(() => {
+    game.quitToMenu();
+    svc.safeMoment();
+    ui.showMenu({ hasSave: true, username: svc.account.username ?? null });
+  });
+  ui.setRespawnHandler(() => undefined);
+  ui.setDeviceReport(() => game.perf.report());
+  ui.setMinimap((ctx, w, h) => drawMinimap(game, ctx, w, h, 0.9));
+  ui.setMapDraw((ctx, w, h) => drawMap(game, ctx, w, h));
+  ui.setJournalSource(() => journal(game));
+  mountNetUI(game.bus, svc, { getSaveJSON: () => game.exportSave(), playerPos: () => ({ x: game.player.pos.x, z: game.player.pos.z }) });
+  let hasSave = false;
+  game.hasSaveHook = () => hasSave;
+  const REASONS: Record<string, string> = { auto: 'autosave', build: 'build', dismantle: 'build', sleep: 'sleep', death: 'death', quit: 'quit', hidden: 'hidden', pagehide: 'hidden', new: 'manual', import: 'manual', craft: 'autosave' };
+  game.persistHook = (s, reason) => {
+    if (reason === 'export') return;
+    hasSave = true;
+    void svc.saveLocal(s, (REASONS[reason] ?? 'autosave') as Parameters<typeof svc.saveLocal>[1]);
+  };
+  svc.sync.onLoadSave = (s) => {
+    game.loadSave(s);
+    town.reset();
+    hasSave = true;
+  };
+  svc.attachLifecycle(() => (game.mode === 'menu' ? null : game.save));
+  const res = await svc.boot().catch((e) => {
+    console.warn('services boot failed', e);
+    return { username: null, local: null, offlineOnly: true };
+  });
+  if (res.local) {
+    hasSave = true;
+    game.loadSave(res.local);
+  }
+  // per-frame UI update
+  game.tickers.push((dt) => {
+    ui.update(dt);
+    if (game.mode !== 'menu') {
+      const c = game.clock();
+      ui.setClock(c.time, c.sub);
+      ui.setInteractReady(game.interactReady);
+    }
+  });
+  const origNew = game.newGame.bind(game);
+  game.newGame = async () => {
+    town.reset();
+    await origNew();
+    town.seed();
+    hasSave = true;
+    ui.hideMenu();
+    if (!new URLSearchParams(location.search).has('autostart')) void svc.ensureAccount();
+  };
+  const origCont = game.continueGame.bind(game);
+  game.continueGame = async () => {
+    await origCont();
+    if (!game.save.world.survivors.length) town.seed();
+    ui.hideMenu();
+    if (!new URLSearchParams(location.search).has('autostart')) void svc.ensureAccount();
+  };
+  bootProgress(1);
   bootDone();
+  const params = new URLSearchParams(location.search);
+  if (params.has('autostart')) {
+    await (hasSave && !params.has('fresh') ? game.continueGame() : game.newGame());
+  } else {
+    ui.showMenu({ hasSave, username: res.username });
+    svc.safeMoment();
+  }
+}
+
+import type { Game as GameT } from './game/game';
+import { PALETTES } from './content/palette';
+
+let mapImg: HTMLCanvasElement | null = null;
+function baseMap(game: GameT): HTMLCanvasElement {
+  if (mapImg) return mapImg;
+  const L = game.layout;
+  const c = document.createElement('canvas');
+  const N = 304;
+  c.width = N;
+  c.height = N;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(N, N);
+  for (let i = 0; i < N * N; i++) {
+    const t = L.tiles[i];
+    const d = L.districts[L.districtMap[i]];
+    const pal = PALETTES[d?.key ?? 'downtown'];
+    let col = pal.ground;
+    if (t === 1 || t === 10) col = 0x3a3c40;
+    else if (t === 2) col = 0x6a6a66;
+    else if (t === 6) col = 0x2a4a5a;
+    else if (t === 7) col = 0x5a4a3a;
+    else if (t === 9) col = 0x3a4a34;
+    else if (t === 5) col = 0x6e6a44;
+    img.data[i * 4] = (col >> 16) & 255;
+    img.data[i * 4 + 1] = (col >> 8) & 255;
+    img.data[i * 4 + 2] = col & 255;
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  ctx.fillStyle = '#8a8478';
+  for (const b of L.buildings) {
+    const odd = b.rot % 2 === 1;
+    const w = (odd ? b.d : b.w) / 4, h = (odd ? b.w : b.d) / 4;
+    ctx.fillRect(b.x / 4 - w / 2, b.z / 4 - h / 2, w, h);
+  }
+  mapImg = c;
+  return c;
+}
+
+function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, zoom: number): void {
+  const img = baseMap(game);
+  const px = game.player.pos.x / 4, pz = game.player.pos.z / 4;
+  const span = 40 / zoom;
+  ctx.fillStyle = '#0b0e11';
+  ctx.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(Math.PI - game.camera.yaw);
+  ctx.drawImage(img, px - span, pz - span, span * 2, span * 2, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  drawNodes(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
+  ctx.fillStyle = '#e8a65a';
+  ctx.beginPath();
+  ctx.moveTo(w / 2, h / 2 - 7);
+  ctx.lineTo(w / 2 + 5, h / 2 + 5);
+  ctx.lineTo(w / 2 - 5, h / 2 + 5);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawNodes(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {
+  const k = w / (span * 2);
+  for (const n of game.layout.nodes) {
+    let dx = n.x / 4 - px, dz = n.z / 4 - pz;
+    const cs = Math.cos(rot), sn = Math.sin(rot);
+    const rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+    dx = rx;
+    dz = rz;
+    if (Math.abs(dx) > span || Math.abs(dz) > span) continue;
+    const online = game.save.world.districts[n.district]?.nodesOnline.includes(n.id);
+    ctx.fillStyle = online ? '#39e6d0' : '#e2574c';
+    ctx.beginPath();
+    ctx.arc(w / 2 + dx * k, h / 2 + dz * k, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawMap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  const img = baseMap(game);
+  const s = Math.min(w, h);
+  const ox = (w - s) / 2, oy = (h - s) / 2;
+  ctx.fillStyle = '#0b0e11';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, ox, oy, s, s);
+  const k = s / game.layout.size;
+  // fog of war: districts never reached are dimmed
+  ctx.font = '600 12px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  for (const d of game.layout.districts) {
+    const reached = !!game.save.world.flags[`reached:${d.key}`];
+    const st = game.save.world.districts[d.index]?.state ?? 0;
+    ctx.fillStyle = reached ? 'rgba(231,228,220,0.9)' : 'rgba(231,228,220,0.35)';
+    ctx.fillText(d.name.toUpperCase(), ox + d.cx * k, oy + d.cz * k);
+    ctx.fillStyle = st >= 2 ? '#39e6d0' : 'rgba(154,163,168,0.8)';
+    ctx.fillText(['Ruin', 'Stabilized', 'Powered', 'Inhabited', 'Thriving'][st], ox + d.cx * k, oy + d.cz * k + 14);
+  }
+  for (const n of game.layout.nodes) {
+    const online = game.save.world.districts[n.district]?.nodesOnline.includes(n.id);
+    ctx.fillStyle = online ? '#39e6d0' : '#e2574c';
+    ctx.beginPath();
+    ctx.arc(ox + n.x * k, oy + n.z * k, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#e8a65a';
+  ctx.beginPath();
+  ctx.arc(ox + game.player.pos.x * k, oy + game.player.pos.z * k, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function journal(game: GameT): { title: string; text: string; done: boolean }[] {
+  return game.objectives();
 }
 
 start().catch((e) => {
