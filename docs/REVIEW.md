@@ -33,6 +33,22 @@ Branch: `review/2026-11-04`. Review only: no game code, asset or deploy changes.
    - Progression has no visible spine: perks and endings exist in data but cannot be reached.
 3. **The first ten minutes stall.** The tutorial's first salvage (a crate) gives no scrap, but the next step (crowbar) needs 6 scrap (`data/loot.ts:40`, `data/recipes.ts:25`).
 
+## Scores at a glance
+
+| | Area | Score | Feel part: headless / device |
+|---|---|---|---|
+| A | Visual quality and art direction | 3.5 | — / needs device |
+| B | Atmosphere | 4 | — / needs device (sound) |
+| C | Controls and game feel | 6 | 6 / needs device |
+| D | Clarity | 5 | 5 / needs device |
+| E | Core loop | 4 | 4 / needs device |
+| F | Retention hooks | 3 | — / needs device |
+| G | Player motivation | 4 | |
+| H | Systems coherence | 4 | |
+| I | Content volume | 5 | |
+| J | Technical | 6.5 | — / needs device (iPhone) |
+| | **Average** | **4.5** | |
+
 ## Rubric
 
 Feel-based items get two scores: **measured headless** / **needs real device**. "—" means I could not measure it.
@@ -46,7 +62,7 @@ Feel-based items get two scores: **measured headless** / **needs real device**. 
 **Materials**
 - Everything is flat vertex color on Lambert, so props and characters look like smooth plastic.
 - Saturated orange cones and a bright red car sit on an otherwise muted palette (`shots/desktop-05`, `desktop-09`).
-- The new facade patterns help at 5–15 m: brick, siding, corrugated (`shots/desktop-08-building-closeup-apartment.png`, `iphone-…-industrial`).
+- The new facade patterns help at 5–15 m: brick, siding, corrugated (`shots/desktop-08-building-closeup-apartment.png`; corrugated: `docs/quality/buildings-v2/industrial.png`).
 - Doorways and unlit windows are flat black voids with no depth or frame shading (`shots/desktop-08`, `desktop-10`).
 
 **Art direction ("muted, gritty, stylized; restored warmer")**
@@ -126,9 +142,40 @@ Feel-based items get two scores: **measured headless** / **needs real device**. 
 
 **What a 9 looks like**: every label readable at arm's length, every "can't" saying what to do next, and threats always located on screen.
 
-### E. Core loop — see the session section (measured)
+### E. Core loop — 4 / 10 measured headless · — needs real device
 
-<!-- SESSION -->
+**The loops as built**
+- **30 seconds:** walk to a prop, hold to break it (2.1–7.1 s per prop), and 2–6 items fly in (`session.json` → `log`, 18 salvages). The action → reward part is tight, with hitstop, shake, sound and chips. The "progress" part is weak: most props give materials you don't need yet.
+- **5 minutes:** gather toward the next craft or piece, craft or build, then the objective advances. In practice this is a materials hunt. The crowbar needs 6 scrap (`data/recipes.ts:25`), but the tutorial's crate gives 0 scrap (`data/loot.ts:40`). By hand, scrap comes mainly from barrels (2–3 each), signs and rubble. The bot needed **3 barrels and 198 s of gathering** for one crowbar (`session.json`).
+- **1 hour:** reach a district node, reboot it, defend it, and watch the district warm up, then repeat. The payoff is real at night (`shots/desktop-15`), but it is mostly a tint plus window glow (`shots/desktop-06`). Nothing new to do opens up, because powered stations are not wired (H).
+
+**First-session milestones (bot, sim seconds)**
+- The bot plays with real inputs: it holds W toward targets, holds E to salvage, and crafts and builds through the game API.
+- Its walking is poor: 0.4 efficiency, with 19 "could not reach" failures. **Walk-heavy times are upper bounds.**
+
+| Milestone | Bot time | Note |
+|---|---|---|
+| First move | 1 s | |
+| First gather (crate) | 121 s | Two crates 14 m and 39 m away were "not reached" first, so a human is likely 10–30 s (estimate) |
+| First craft (crowbar) | 320 s | Bottleneck: 6 scrap, and crates give none |
+| First reward (quest step) | 321 s | Crafting the crowbar advanced "First Light" |
+| First build | **not reached** | 6/6 placement attempts failed at Haven with enough scrap; cause unconfirmed (see Findings 29) |
+| First survivor | 3 at start; talked at 1061 s | **No new survivor arrived in 30 min** (`end.survivors: 3`) |
+| First threat | 1347 s (~22 min) | A drone at 30 m, only after walking toward the residential node. Haven has none by design |
+| First damage | 1579 s | Inventory went 49 → 0 shortly after: the bot almost certainly died near the node (drop pile) |
+
+**Gaps over 60 s with nothing meaningful to do**
+- 10 gaps, all walking (`session.json` → `gapsOver60s`): 116, 121, 62, 174, 95, 144, 63, 72, 241 and 324 s.
+- Discounting the bot's 0.4 walking efficiency, a human would still face **3–4 gaps of 60–120 s** of pure traversal or searching: finding scrap after the crowbar, the trip to the first node, and the post-death recovery (estimate).
+- The bigger gap is structural: at 30 min the objective was "Build a campfire in Haven Lot" and the town had not changed.
+
+**Meaningful decisions per 5 minutes: about 1 (estimate).** I counted choices whose outcome differs: what to craft, where to build, which district to push, survivor jobs. Picking the next prop to break doesn't count. In 30 minutes the bot faced 1 craft choice (crowbar), 3 objective changes, 1 travel choice, and no survivor-job or build trade-offs that mattered. The game does offer job assignment (`shots/iphone-24`), but nothing in the first 30 min makes it matter.
+
+**What a 9 looks like**
+- The first crowbar within 60 s, from a guaranteed-scrap first target.
+- The first shelter by minute 5.
+- The first survivor arrival by minute 10.
+- The first node reboot, with something new to do, by minute 30.
 
 ### F. Retention hooks — 3 / 10 (feel part: — / needs device)
 
@@ -197,6 +244,17 @@ Feel-based items get two scores: **measured headless** / **needs real device**. 
 | Audio | **36 synthesized SFX + generative music, 0 recorded files** |
 | Tier B art | **0 assets** shipped |
 
+**Exists in code or tests but not reachable in play** (verified by grep or reading the code):
+- **Perks** (32): `packages/sim/src/data/perks.ts:15`, no client references.
+- **Endings** (6): `content/campaign.ts:63`, never imported.
+- **Raider subtypes and the heavy:** `game/raids.ts:22-25` map scout, brute, sniper, leader and heavy onto 2 kinds.
+- **Boar:** rendered as a hound (`raids.ts:24`).
+- **Irrigation from Grid water:** `survivors.ts:85,691`, not passed by `town.ts:118-123`.
+- **Powered stations:** `needsPower` is never checked (`data/pieces.ts:74,88`).
+- **Livestock animals, breeding and hunting:** sim data exists (`data/livestock.ts:15,22`); the client only has coop/pen dawn output.
+- **Survivor events** (13 kinds, `content.json` → `survivorEventKinds`): they reach the player only as toasts or Town Board lines. *Not verified* whether every kind can trigger in play.
+- **Fog of war on the map:** not implemented (`grep -rni "explored\|revealed" apps/game/src` → 0).
+
 **What a 9 looks like**: every promised system reachable in play, about 2× enemy behaviors, a full Act IV, and recorded audio.
 
 ### J. Technical — 6.5 / 10 (iPhone: — / needs device)
@@ -231,4 +289,76 @@ Feel-based items get two scores: **measured headless** / **needs real device**. 
 
 ## Findings (unfiltered, then ranked)
 
-<!-- FINDINGS -->
+Every issue found, unfiltered. Columns: **Impact** = on a new player (Blocker / Major / Minor). **Effort** = S (≤1 day) / M (≤1 week) / L (more).
+
+| # | Where | What is wrong | How to see / reproduce | Impact | Effort |
+|---|---|---|---|---|---|
+| 1 | `render/character.ts:69-140` | Characters are about 24 bevelled boxes with slit eyes and no hands or face. Reads as a blocky avatar ("looks like Roblox") | `shots/desktop-03-spawn-after-intro.png` | Major | L |
+| 2 | `render/fx.ts:55-57,157` | Smoke uses opaque, lit 0.35–0.6 m boxes, so grey cubes tumble above every fire | `shots/iphone-02`, `iphone-03`, `iphone-20` (cubes near the tent and barrels) | Major | S |
+| 3 | `data/loot.ts:40`, `data/recipes.ts:25` | The tutorial's first salvage (crate) gives no scrap, but the next step (crowbar) needs 6, and there is no hint where scrap comes from | `node tools/review/session.mjs 10` → first craft at 320 s after 198 s of gathering | Major | S |
+| 4 | `game/game.ts:832` | Target score `d*(1.6-dot)` picks the wrong object 28% of the time; something 0.6 m behind beats something 3 m ahead | `node tools/review/controls2.mjs` → `ahead2m.wrong 17/60` | Major | S |
+| 5 | `game/camera.ts:109`, near-fade | With the player within about 1 m of a wall, the camera goes inside it (min 0.9 m) and the player model fades out completely | `controls2.json` wallSpin 24/30; `shots/desktop-28-camera-wall-side.png` | Major | M |
+| 6 | Camera collision ignores props without colliders | Bushes, and in one case a car, between camera and player hide the player | `shots/iphone-04-haven-overview.png`, `desktop-09` | Major | M |
+| 7 | Restoration visuals | A restored district only changes facade tint, lit windows and planters. No people, props, plants or street lights, against GDD pillar 1 | `shots/desktop-05` vs `desktop-06`; `desktop-14` vs `desktop-15` | Major | L |
+| 8 | `packages/sim/src/data/perks.ts:15` | 32 perks are defined; no client screen or code references them, so they are unreachable | `grep -rni perk apps/game/src` → 0 | Major | M |
+| 9 | `content/campaign.ts:63` | 6 endings are defined and never referenced. Act IV has 1 quest | `grep -rn "ENDINGS" apps/game/src`; `content.json` quests.byAct | Major | L |
+| 10 | `game/raids.ts:22-25`, `game/enemies.ts:13` | 11 sim enemy types collapse to 5 client kinds: scout/brute/sniper/leader all become 'raider', heavy becomes 'bot', boar becomes 'hound' | Read the KIND map; `content.json` | Major | M |
+| 11 | `data/pieces.ts:46,74,88` | `needsPower` is never checked, so the Grid doesn't gate the Grid Workshop or turrets ("powered stations unlock" is missing) | `grep -rn needsPower apps packages` → data only | Major | S |
+| 12 | Raid spawn (`game/raids.ts:104-128`, radius at :121) | Raiders spawn 45–60 m out; 14 s after arrival none were on screen and nothing pointed to them | `shots/iphone-20-raid.png` (`shots.json`: raiders 3) | Major | S |
+| 13 | iPhone map (`shots/iphone-23`) | The map image is about 240 CSS px, district labels about 6 CSS px; unreadable. No fog of war (GDD §15) | Open Map on iPhone | Major | S |
+| 14 | Survivors | No new survivor arrived in 30 min; the town doesn't grow early | `session.json` `end.survivors: 3` | Major | M |
+| 15 | First threat | About 22 min before any threat (`session.json`), so there's no tension in the first act | Session milestones | Major | S |
+| 16 | `game/town.ts:118-123` | Grid water → irrigation is supported by the sim (`survivors.ts:85,691`) but never passed by the client | Read `ctx()` | Minor | S |
+| 17 | Doorways and unlit windows | Flat black voids with no depth, frame shading or interior hint | `shots/desktop-08`, `desktop-10` | Minor | S |
+| 18 | Interiors | No ceiling from the 3rd-person camera; exterior brick continues inside; lit like outdoors | `shots/desktop-10-interior.png` | Major | M |
+| 19 | Menu on iPhone landscape | The "DORMANT" title is cut off at the top | `shots/iphone-01-menu.png` | Minor | S |
+| 20 | HUD clock | "Day N · Season" is grey on grey and unreadable | Any `shots/iphone-*` | Minor | S |
+| 21 | Build mode | Invalid reason is just "materials"; one cube icon for all 9 pieces; dim cost text; the bar covers about 30% of the screen | `shots/iphone-19-build-mode.png` | Minor | S |
+| 22 | Craft screen on iPhone | 2 recipes per screen; opens on unaffordable items; the crowbar isn't surfaced during the crowbar step | `shots/iphone-22-screen-craft.png` | Minor | S |
+| 23 | Weather: rain | Road stays dry; hard sun shadows stay (sun 45% at full cloud, `render/sky.ts:224`) | `shots/desktop-w-rain.png` | Minor | S |
+| 24 | Weather: storm on medium | No rain streaks visible (unconfirmed, single frame) | `shots/iphone-w-storm.png` | Minor | S |
+| 25 | Lit windows in daylight | Read as flat beige boards | `shots/desktop-06`, `desktop-09` | Minor | S |
+| 26 | Haven sign | Text renders mirrored from behind ("H3UAH") | `shots/iphone-04` | Minor | S |
+| 27 | Survivors vs player | A survivor walks through the player's body (no avoidance) | `shots/iphone-03-spawn-after-intro.png` | Minor | M |
+| 28 | Audio content | 0 recorded files; all 36 SFX synthesized, music generative | `content.json` → audio | Major (atmosphere) | M |
+| 29 | Build placement in camp | The bot's 6/6 placements at spawn+8 m failed with enough scrap; earlier the build shot showed a red ghost near camp props. Cause unconfirmed | `session.json` log "place … now 0"; `shots/iphone-19` | Major if real for humans (unconfirmed) | S to diagnose |
+| 30 | Livestock and hunting | Livestock is only coop/pen dawn eggs and milk (`game/town.ts:142-165`); no animals, feeding or breeding; no hunting | Read the code; `content.json` | Minor | L |
+| 31 | Stealth | Not implemented (GDD §13) | `grep -rni "stealth\|takedown" apps/game/src` → 0 | Minor | L |
+| 32 | Shadow pass on medium | Downtown 290k main-pass tris become 487k with shadows | `node tests/budget-tris.mjs` | Major risk on device (unconfirmed) | M |
+| 33 | Touch latency | 5–8 frames versus keyboard 2 (part is CDP harness overhead; unconfirmed) | `controls.json` touch vs keyboard | Unknown, needs device | — |
+| 34 | `game/game.ts:1798`, `scanTargets` | Targets rescan every 0.1 s and allocate a new Vector3 per candidate in the hot path (CLAUDE.md: no per-frame allocations) | Read `scanTargets` (`game.ts:823-880`) | Minor | S |
+| 35 | Mouse look | Does nothing until you click for pointer lock (`input/input.ts:373`); fine, but the first second feels dead | Desktop: move the mouse before clicking | Minor | S |
+| 36 | Tutorial panel on iPhone | Covers about 25% of the screen at top-left | `shots/iphone-02` | Minor | S |
+| 37 | Toast contrast | "Soaked to the skin…" is low-contrast at the right edge | `shots/desktop-w-rain.png` | Minor | S |
+| 38 | Weather shown on day 0 | Day 0 is forced clear (`game.ts:1768`), so a first session never sees weather (by design; noted) | `node tools/review/weather-hours.mjs` | Minor | S |
+| 39 | Tier B art | 0 assets shipped; the pipeline is unused | `content.json` | Minor (pipeline ready) | — |
+| 40 | Co-op | Never verified with two live clients | PROGRESS / KNOWN_ISSUES | Unknown | M |
+
+### Ranked (by impact on a new player × how cheaply it moves the score)
+
+1. **#3 tutorial scrap gap**: Major, S. The first 5 minutes stall on it.
+2. **#2 cube smoke**: Major, S. Visible in the first frame of every session.
+3. **#4 wrong target**: Major, S. It undermines the core verb (salvage).
+4. **#12 + #15 raid and threat legibility, and threat timing**: Major, S.
+5. **#5 + #6 camera loses the player**: Major, M.
+6. **#1 characters read as blocky toys**: Major, L. The single biggest "looks like Roblox" cause.
+7. **#7 restoration payoff is only a tint**: Major, L. The game's core promise.
+8. **#8 + #9 + #11 + #10 unreachable progression and systems** (perks, endings, power gating, enemy variety): Major, M–L.
+9. **#13 + #21 + #22 + #19 + #20 iPhone legibility**: Major/Minor, S each.
+10. **#14 town doesn't grow early**: Major, M.
+11. **#18 interiors**, **#28 audio**, **#23–25 weather and lighting**: Major/Minor, M.
+12. Everything else (Minor).
+
+## What I could not confirm
+
+- **Anything on a real iPhone:**
+  - fps, thermals, memory kills
+  - touch feel and latency
+  - audio unlock and quality
+  - PWA install and resume
+  - These are covered in `docs/review/DEVICE_FEEL_TEST.md`.
+- **Why the bot's build placements failed** (#29): I didn't confirm whether a human hits it. Looked at: `session.json` log, `shots/iphone-19`.
+- **Human time-to-milestone:** the bot walks at 0.4 efficiency, so its walk-heavy times are upper bounds.
+- **Rain on the medium tier** (#24): a single frame.
+- **The reboot payoff in motion** (beam, banner, light ripple): not re-walked in this review. `tests/grid-flow.mjs` passed earlier the same day.
+- **Co-op**: WebSockets are blocked from this sandbox.
