@@ -42,6 +42,9 @@ export class PlayerController {
   onLand: ((speed: number) => void) | null = null;
   onStep: ((run: boolean) => void) | null = null;
   private stepPhase = 0;
+  private tf = new THREE.Vector3();
+  private tr = new THREE.Vector3();
+  private tw = new THREE.Vector3();
 
   constructor(readonly rig: CharacterRig) {}
 
@@ -64,9 +67,9 @@ export class PlayerController {
 
   update(dt: number, intent: MoveIntent, world: CollisionWorld | null): void {
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
-    const f = new THREE.Vector3(Math.sin(intent.camYaw), 0, Math.cos(intent.camYaw));
-    const r = new THREE.Vector3(-f.z, 0, f.x);
-    const want = new THREE.Vector3().addScaledVector(f, intent.y).addScaledVector(r, intent.x);
+    const f = this.tf.set(Math.sin(intent.camYaw), 0, Math.cos(intent.camYaw));
+    const r = this.tr.set(-f.z, 0, f.x);
+    const want = this.tw.set(0, 0, 0).addScaledVector(f, intent.y).addScaledVector(r, intent.x);
     const sprint = intent.sprint && this.canSprint && intent.mag > 0.5;
     const speed = (sprint ? this.runSpeed : this.walkSpeed) * this.speedMul * (this.locked ? 0 : 1);
     if (want.lengthSq() > 1) want.normalize();

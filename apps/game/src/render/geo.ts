@@ -3,8 +3,10 @@
 import * as THREE from 'three';
 
 const tmpV = new THREE.Vector3();
+const TA = new THREE.Vector3();
+const TB = new THREE.Vector3();
+const TC = new THREE.Vector3();
 const tmpN = new THREE.Vector3();
-const tmpC = new THREE.Color();
 const tmpM3 = new THREE.Matrix3();
 
 export interface BuildOpts {
@@ -78,30 +80,34 @@ export class MeshBuilder {
 
   /** Add a flat-shaded triangle in local space. */
   tri(ax: number, ay: number, az: number, bx: number, by: number, bz: number, cx: number, cy: number, cz: number, shade = 1): void {
-    const a = new THREE.Vector3(ax, ay, az).applyMatrix4(this.m);
-    const b = new THREE.Vector3(bx, by, bz).applyMatrix4(this.m);
-    const c = new THREE.Vector3(cx, cy, cz).applyMatrix4(this.m);
+    const a = TA.set(ax, ay, az).applyMatrix4(this.m);
+    let b = TB.set(bx, by, bz).applyMatrix4(this.m);
+    let c = TC.set(cx, cy, cz).applyMatrix4(this.m);
     tmpN.subVectors(c, b).cross(tmpV.subVectors(a, b)).normalize();
     if (this.convex) {
       tmpV.copy(a).add(b).add(c).multiplyScalar(1 / 3).sub(this.convexW);
       if (tmpV.dot(tmpN) < 0) {
-        const t = b.clone();
-        b.copy(c);
-        c.copy(t);
+        const t = b;
+        b = c;
+        c = t;
         tmpN.negate();
       }
     }
     const j = this.opts.jitter ?? 0;
     const jit = j > 0 ? 1 + (this.rnd() - 0.5) * j : 1;
-    for (const p of [a, b, c]) {
-      this.pos.push(p.x, p.y, p.z);
-      this.nor.push(tmpN.x, tmpN.y, tmpN.z);
-      let ao = 1;
-      if (this.opts.groundAO) ao = 0.55 + 0.45 * Math.min(1, Math.max(0, p.y / 1.6));
-      tmpC.copy(this.color).multiplyScalar(shade * jit * ao);
-      this.col.push(tmpC.r, tmpC.g, tmpC.b);
-      this.emit.push(this.emissive);
-      this.skin.push(this.bone);
+    const base = shade * jit;
+    const ao = this.opts.groundAO;
+    const cr = this.color.r, cg = this.color.g, cb = this.color.b;
+    const P = this.pos, N = this.nor, C = this.col, E = this.emit, S = this.skin;
+    const nx = tmpN.x, ny = tmpN.y, nz = tmpN.z;
+    for (let k = 0; k < 3; k++) {
+      const p = k === 0 ? a : k === 1 ? b : c;
+      P.push(p.x, p.y, p.z);
+      N.push(nx, ny, nz);
+      const f = ao ? base * (0.55 + 0.45 * Math.min(1, Math.max(0, p.y / 1.6))) : base;
+      C.push(cr * f, cg * f, cb * f);
+      E.push(this.emissive);
+      S.push(this.bone);
     }
   }
 

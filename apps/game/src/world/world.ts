@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import { CELLS, CELL_SIZE, cellKey, type CellIndex, type PropDef, type PropKind, type WorldLayout } from '@dg/shared';
 import { buildCellIndex, buildingPieces, heightAt, initialRuinedPieces, type PieceInfo } from '@dg/sim';
-import { MeshBuilder } from '../render/geo';
+import { MeshBuilder, arraysToGeometry } from '../render/geo';
+import type { ChunkResult } from './mesh.worker';
 import { makeChunkMaterial, type ChunkUniforms } from '../render/materials';
 import { propShape, PROP_KINDS } from '../render/props';
 import type { Collider, CollisionWorld } from '../game/collision';
@@ -18,6 +19,8 @@ interface Chunk {
   props: number[];
   buildings: number[];
   dirty: boolean;
+  gen: number;
+  meshed: boolean;
 }
 
 interface PropBatch {
@@ -31,6 +34,8 @@ const v = new THREE.Vector3();
 const s = new THREE.Vector3();
 const col = new THREE.Color();
 const UP = new THREE.Vector3(0, 1, 0);
+const FOL = new THREE.Color();
+const POKE: PropDef = { id: 0, kind: 'crate', x: 0, y: 0, z: 0, rotY: 0, scale: 1, district: 0, building: -1 };
 
 export class WorldView {
   readonly group = new THREE.Group();
@@ -54,9 +59,26 @@ export class WorldView {
   /** extra lit factor for windows (habitation) per district index */
   windowLit: number[] = [];
   onChunkLoaded: ((cx: number, cz: number) => void) | null = null;
+  /** off-thread mesher (null = build on the main thread) */
+  private worker: Worker | null = null;
+  private workerReady = false;
+  private inflight = 0;
+  /** force synchronous building (boot / teleports) */
+  syncBuild = false;
 
   constructor(readonly layout: WorldLayout, private collision: CollisionWorld, private castShadows: boolean) {
     this.cells = buildCellIndex(layout);
+    try {
+      this.worker = new Worker(new URL('./mesh.worker.ts', import.meta.url), { type: 'module' });
+      this.worker.onmessage = (e) => this.onWorker(e.data);
+      this.worker.onerror = () => {
+        this.worker = null;
+        this.workerReady = false;
+      };
+      this.worker.postMessage({ t: 'init', seed: layout.seed });
+    } catch {
+      this.worker = null;
+    }
     this.windowLit = layout.districts.map((d) => (d.key === 'haven' ? 0.35 : 0.04));
     // loaded-cell texture used by the far mesh to collapse geometry inside detail chunks
     this.loadedData = new Uint8Array(CELLS * CELLS * 4);
@@ -91,8 +113,9 @@ export class WorldView {
     return this.chunks.size;
   }
 
+  private _uniforms: ChunkUniforms[] | null = null;
   get uniforms(): ChunkUniforms[] {
-    return [this.chunkMat.userData.u, this.propMat.userData.u, this.groundMat.userData.u, this.farMat.userData.u as ChunkUniforms];
+    return (this._uniforms ??= [this.chunkMat.userData.u, this.propMat.userData.u, this.groundMat.userData.u, this.farMat.userData.u as ChunkUniforms]);
   }
 
   private makeFarMaterial(): THREE.MeshLambertMaterial & { userData: { u: ChunkUniforms } } {
@@ -157,6 +180,7 @@ export class WorldView {
     for (const [k, c] of this.chunks) {
       if (Math.max(Math.abs(c.cx - pcx), Math.abs(c.cz - pcz)) > R + 1) this.unload(k, c);
     }
+    if (this.useWorker && this.inflight > 2) return;
     // rebuild dirty chunks first (deconstruction)
     for (const c of this.chunks.values()) {
       if (c.dirty) {
@@ -189,11 +213,63 @@ export class WorldView {
 
   /** Synchronously load everything around a point (spawn / teleport). */
   loadAround(x: number, z: number): void {
+    const prev = this.syncBuild;
+    this.syncBuild = true;
     for (let i = 0; i < 64; i++) {
       const before = this.chunks.size;
       this.update(x, z);
       if (this.chunks.size === before) break;
     }
+    this.syncBuild = prev;
+  }
+
+  private get useWorker(): boolean {
+    return !!this.worker && this.workerReady && !this.syncBuild;
+  }
+
+  private onWorker(m: { t: string }): void {
+    if (m.t === 'ready') {
+      this.workerReady = true;
+      return;
+    }
+    if (m.t !== 'chunk') return;
+    this.inflight = Math.max(0, this.inflight - 1);
+    const r = m as unknown as ChunkResult;
+    const c = this.chunks.get(r.key);
+    if (!c || c.gen !== r.gen) return; // unloaded or superseded
+    this.lastBuildMs = r.ms;
+    if (r.ground) {
+      c.ground.geometry.dispose();
+      c.ground.geometry = arraysToGeometry(r.ground);
+      c.ground.visible = true;
+    }
+    if (c.bld) {
+      c.bld.geometry.dispose();
+      this.group.remove(c.bld);
+      c.bld = null;
+    }
+    if (r.bld) this.attachBld(c, arraysToGeometry(r.bld));
+    if (!c.meshed) {
+      c.meshed = true;
+      this.loadedData[(c.cz * CELLS + c.cx) * 4] = 255;
+      this.loadedTex.needsUpdate = true;
+    }
+  }
+
+  private attachBld(c: Chunk, geo: THREE.BufferGeometry): void {
+    c.bld = new THREE.Mesh(geo, this.chunkMat);
+    c.bld.castShadow = this.castShadows;
+    c.bld.receiveShadow = true;
+    c.bld.matrixAutoUpdate = false;
+    this.group.add(c.bld);
+  }
+
+  private requestMesh(c: Chunk, ground: boolean): void {
+    c.gen++;
+    const removed: Record<number, number[]> = {};
+    for (const bid of c.buildings) removed[bid] = [...this.removed(bid)];
+    this.inflight++;
+    this.worker!.postMessage({ t: 'chunk', key: cellKey(c.cx, c.cz), gen: c.gen, cx: c.cx, cz: c.cz, ground, bids: c.buildings, removed, windowLit: this.windowLit });
   }
 
   isLoaded(x: number, z: number): boolean {
@@ -203,14 +279,15 @@ export class WorldView {
   private load(cx: number, cz: number): void {
     const key = cellKey(cx, cz);
     const idx = this.cells[key];
-    const gb = buildGround(this.layout, cx, cz, (x, z) => heightAt(this.layout, x, z));
-    const ground = new THREE.Mesh(gb.toGeometry(true), this.groundMat);
+    const async = this.useWorker;
+    const ground = new THREE.Mesh(async ? new THREE.BufferGeometry() : buildGround(this.layout, cx, cz, (x, z) => heightAt(this.layout, x, z)).toGeometry(true), this.groundMat);
     ground.receiveShadow = true;
     ground.matrixAutoUpdate = false;
+    ground.visible = !async;
     this.group.add(ground);
-    const c: Chunk = { cx, cz, ground, bld: null, colliders: [], props: [], buildings: idx?.buildings ?? [], dirty: false };
+    const c: Chunk = { cx, cz, ground, bld: null, colliders: [], props: [], buildings: idx?.buildings ?? [], dirty: false, gen: 0, meshed: !async };
     this.chunks.set(key, c);
-    this.rebuildBuildings(c);
+    this.rebuildBuildings(c, async);
     // props
     for (const pid of idx?.props ?? []) {
       if (this.removedProps.has(pid)) continue;
@@ -229,8 +306,10 @@ export class WorldView {
         c.colliders.push(this.collision.add({ minX: p.x - ax, maxX: p.x + ax, minY: p.y, maxY: p.y + hy * 2 * p.scale, minZ: p.z - az, maxZ: p.z + az, tag: 'prop', ref: pid }));
       }
     }
-    this.loadedData[(cz * CELLS + cx) * 4] = 255;
-    this.loadedTex.needsUpdate = true;
+    if (!async) {
+      this.loadedData[(cz * CELLS + cx) * 4] = 255;
+      this.loadedTex.needsUpdate = true;
+    }
     this.onChunkLoaded?.(cx, cz);
   }
 
@@ -248,8 +327,9 @@ export class WorldView {
     this.loadedTex.needsUpdate = true;
   }
 
-  private rebuildBuildings(c: Chunk): void {
+  private rebuildBuildings(c: Chunk, groundToo = false): void {
     c.dirty = false;
+    const async = this.useWorker;
     // drop old building colliders (keep prop colliders)
     c.colliders = c.colliders.filter((cl) => {
       if (cl.tag === 'piece') {
@@ -258,18 +338,19 @@ export class WorldView {
       }
       return true;
     });
-    if (c.bld) {
+    if (!async && c.bld) {
       c.bld.geometry.dispose();
       this.group.remove(c.bld);
       c.bld = null;
     }
+    if (async) this.requestMesh(c, groundToo);
     if (c.buildings.length === 0) return;
-    const mb = new MeshBuilder({ groundAO: true });
+    const mb = async ? null : new MeshBuilder({ groundAO: true });
     for (const bid of c.buildings) {
       const b = this.layout.buildings[bid];
       const pieces = this.pieces(bid);
       const removed = this.removed(bid);
-      meshBuilding(mb, b, pieces, removed, paletteOf(this.layout, b.district), this.windowLit[b.district] ?? 0.05);
+      if (mb) meshBuilding(mb, b, pieces, removed, paletteOf(this.layout, b.district), this.windowLit[b.district] ?? 0.05);
       // colliders per remaining piece
       const ang = (b.rot * Math.PI) / 2;
       const cs = Math.round(Math.cos(ang)), sn = Math.round(Math.sin(ang));
@@ -288,12 +369,7 @@ export class WorldView {
         );
       }
     }
-    const geo = mb.toGeometry(true);
-    c.bld = new THREE.Mesh(geo, this.chunkMat);
-    c.bld.castShadow = this.castShadows;
-    c.bld.receiveShadow = true;
-    c.bld.matrixAutoUpdate = false;
-    this.group.add(c.bld);
+    if (mb) this.attachBld(c, mb.toGeometry(true));
   }
 
   markBuildingDirty(bid: number): void {
@@ -333,7 +409,7 @@ export class WorldView {
     const tint = shape.tints[((p.id * 2654435761) >>> 0) % shape.tints.length];
     col.setHex(tint);
     // district foliage for vegetation
-    if (p.kind === 'tree' || p.kind === 'bush' || p.kind === 'pine') col.lerp(new THREE.Color(paletteOf(this.layout, p.district).foliage), 0.5);
+    if (p.kind === 'tree' || p.kind === 'bush' || p.kind === 'pine') col.lerp(FOL.setHex(paletteOf(this.layout, p.district).foliage), 0.5);
     batch.mesh.setColorAt(slot, col);
     batch.mesh.instanceMatrix.needsUpdate = true;
     if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true;
@@ -345,8 +421,11 @@ export class WorldView {
     const batch = this.batches.get(p.kind);
     const slot = this.propSlot.get(pid);
     if (!batch || slot === undefined) return;
-    const pp = offset ? { ...p, x: p.x + offset, z: p.z + offset * 0.5 } : p;
-    this.writeInstance(batch, slot, pp, scaleMul);
+    if (offset) {
+      POKE.id = p.id; POKE.kind = p.kind; POKE.x = p.x + offset; POKE.y = p.y; POKE.z = p.z + offset * 0.5;
+      POKE.rotY = p.rotY; POKE.scale = p.scale; POKE.district = p.district; POKE.building = p.building;
+      this.writeInstance(batch, slot, POKE, scaleMul);
+    } else this.writeInstance(batch, slot, p, scaleMul);
   }
 
   private removePropInstance(pid: number): void {
@@ -421,5 +500,8 @@ export class WorldView {
     this.far.geometry.dispose();
     for (const b of this.batches.values()) b.mesh.dispose();
     this.loadedTex.dispose();
+    this.worker?.terminate();
+    for (const m of [this.chunkMat, this.groundMat, this.propMat, this.farMat]) m.dispose();
+    this.worker = null;
   }
 }

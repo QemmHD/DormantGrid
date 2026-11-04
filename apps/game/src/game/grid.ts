@@ -342,6 +342,19 @@ export class Grid {
     if (this.active && this.active.phase === 'syncing' && !holding && g.input.wasReleased('interact')) g.bus.emit({ type: 'progress', value: null });
   }
 
+  /** A teammate brought a node online: recompute restoration and refresh visuals. */
+  remoteOnline(_node: number, district: number): void {
+    const w = this.game.save.world;
+    const ds = w.districts[district];
+    const d = this.game.layout.districts[district];
+    if (!ds || !d) return;
+    const total = this.game.layout.nodes.filter((n) => n.district === district).length;
+    const st = restorationFor({ nodesOnline: ds.nodesOnline.length, nodesTotal: total, residents: w.survivors.filter((s) => s.alive).length, rank: Number(w.flags['rank'] ?? 1), key: d.key });
+    ds.state = Math.max(ds.state, st) as RestorationState;
+    this.refresh();
+    for (const b of this.game.layout.buildings) if (b.district === district) this.game.view.markBuildingDirty(b.id);
+  }
+
   /** Cancel any in-progress reboot (death, load). */
   reset(): void {
     if (this.activeView) for (const m of this.activeView.relayMeshes) m.visible = false;
