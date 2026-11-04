@@ -25,7 +25,7 @@
   ],
   "vars": {
     "MIN_CLIENT": "0.2.0",
-    "LATEST_CLIENT": "0.1.0",
+    "LATEST_CLIENT": "0.2.0",
     "ALLOWED_ORIGINS": "https://dormant-grid.pages.dev,https://*.dormant-grid.pages.dev,http://localhost:*,http://127.0.0.1:*"
   },
   "observability": { "enabled": true }
