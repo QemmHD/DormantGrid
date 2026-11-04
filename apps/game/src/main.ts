@@ -64,12 +64,18 @@ async function start() {
     import('./net/ui'),
     import('./game/town'),
   ]);
+  const { Enemies } = await import('./game/enemies');
+  const { Grid } = await import('./game/grid');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
   await game.boot((p) => bootProgress(0.3 + p * 0.6));
   const svc = new Services(game.bus);
   const town = new Town(game);
+  const enemies = new Enemies(game);
+  const grid = new Grid(game, enemies);
+  (window as unknown as { __grid: unknown; __enemies: unknown }).__grid = grid;
+  (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
   const ui = new UI(game);
   game.screenProbe = () => ui.openScreen;
@@ -96,6 +102,8 @@ async function start() {
   svc.sync.onLoadSave = (s) => {
     game.loadSave(s);
     town.reset();
+    enemies.clear();
+    grid.reset();
     hasSave = true;
   };
   svc.attachLifecycle(() => (game.mode === 'menu' ? null : game.save));
@@ -106,6 +114,7 @@ async function start() {
   if (res.local) {
     hasSave = true;
     game.loadSave(res.local);
+    grid.refresh();
   }
   // per-frame UI update
   game.tickers.push((dt) => {
@@ -119,7 +128,9 @@ async function start() {
   const origNew = game.newGame.bind(game);
   game.newGame = async () => {
     town.reset();
+    enemies.clear();
     await origNew();
+    grid.reset();
     town.seed();
     hasSave = true;
     ui.hideMenu();

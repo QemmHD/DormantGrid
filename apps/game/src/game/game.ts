@@ -758,6 +758,13 @@ export class Game implements GameAPI {
   }
 
   private updatePrompt(): void {
+    for (const p of this.interactProviders) {
+      const o = this.mode === 'play' ? p.prompt() : null;
+      if (o) {
+        this.bus.emit({ type: 'prompt', text: o.text, sub: o.sub, key: 'E' });
+        return;
+      }
+    }
     const t = this.target;
     if (!t || this.mode !== 'play') {
       this.bus.emit({ type: 'prompt', text: null });
@@ -778,12 +785,21 @@ export class Game implements GameAPI {
   }
 
   get interactReady(): boolean {
-    return !!this.target;
+    return !!this.target || this.interactProviders.some((p) => !!p.prompt());
   }
 
+  /** systems (grid nodes, survivors) can claim interaction before props/pieces */
+  readonly interactProviders: { prompt: () => { text: string; sub?: string } | null; handle: (held: boolean, pressed: boolean, tapped: boolean, dt: number) => boolean }[] = [];
+  private overrideTap = 0;
+
   private updateInteract(dt: number): void {
-    const t = this.target;
     const held = this.input.isHeld('interact');
+    const pressedNow = this.input.wasPressed('interact');
+    if (pressedNow) this.overrideTap = 0;
+    if (held) this.overrideTap += dt;
+    const tappedNow = this.input.wasReleased('interact') && this.overrideTap < 0.35;
+    for (const p of this.interactProviders) if (p.prompt() && p.handle(held, pressedNow, tappedNow, dt)) return;
+    const t = this.target;
     const tapped = this.input.wasReleased('interact') && this.holdT < 0.35;
     if (!t) {
       if (this.input.wasPressed('interact')) audio.play('deny', { vol: 0.4 });
