@@ -17,7 +17,7 @@ document.addEventListener(
   },
   { passive: false },
 );
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.documentElement.classList.add('touch');
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || location.search.includes('touch=1')) document.documentElement.classList.add('touch');
 
 const fill = document.getElementById('boot-fill') as HTMLElement;
 const tip = document.getElementById('boot-tip') as HTMLElement;
@@ -64,12 +64,19 @@ async function start() {
     import('./net/ui'),
     import('./game/town'),
   ]);
+  const { Enemies } = await import('./game/enemies');
+  const { Grid } = await import('./game/grid');
+  const { CoopView } = await import('./game/coopview');
   bootProgress(0.3);
   const game = new Game();
   (window as unknown as { __dg: unknown }).__dg = game;
   await game.boot((p) => bootProgress(0.3 + p * 0.6));
   const svc = new Services(game.bus);
   const town = new Town(game);
+  const enemies = new Enemies(game);
+  const grid = new Grid(game, enemies);
+  (window as unknown as { __grid: unknown; __enemies: unknown }).__grid = grid;
+  (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
   const ui = new UI(game);
   game.screenProbe = () => ui.openScreen;
@@ -84,6 +91,7 @@ async function start() {
   ui.setMinimap((ctx, w, h) => drawMinimap(game, ctx, w, h, 0.9));
   ui.setMapDraw((ctx, w, h) => drawMap(game, ctx, w, h));
   ui.setJournalSource(() => journal(game));
+  new CoopView(game, svc.coop);
   mountNetUI(game.bus, svc, { getSaveJSON: () => game.exportSave(), playerPos: () => ({ x: game.player.pos.x, z: game.player.pos.z }) });
   let hasSave = false;
   game.hasSaveHook = () => hasSave;
@@ -96,6 +104,8 @@ async function start() {
   svc.sync.onLoadSave = (s) => {
     game.loadSave(s);
     town.reset();
+    enemies.clear();
+    grid.reset();
     hasSave = true;
   };
   svc.attachLifecycle(() => (game.mode === 'menu' ? null : game.save));
@@ -106,6 +116,7 @@ async function start() {
   if (res.local) {
     hasSave = true;
     game.loadSave(res.local);
+    grid.refresh();
   }
   // per-frame UI update
   game.tickers.push((dt) => {
@@ -119,7 +130,9 @@ async function start() {
   const origNew = game.newGame.bind(game);
   game.newGame = async () => {
     town.reset();
+    enemies.clear();
     await origNew();
+    grid.reset();
     town.seed();
     hasSave = true;
     ui.hideMenu();
@@ -137,6 +150,13 @@ async function start() {
   const params = new URLSearchParams(location.search);
   if (params.has('autostart')) {
     await (hasSave && !params.has('fresh') ? game.continueGame() : game.newGame());
+    if (params.has('h')) game.save.world.hour = Number(params.get('h'));
+    if (params.has('x') && params.has('z')) {
+      const x = Number(params.get('x')), z = Number(params.get('z'));
+      game.player.pos.set(x, game.view.surface(x, z), z);
+      game.view.loadAround(x, z);
+    }
+    if (params.has('yaw')) game.camera.yaw = Number(params.get('yaw'));
   } else {
     ui.showMenu({ hasSave, username: res.username });
     svc.safeMoment();

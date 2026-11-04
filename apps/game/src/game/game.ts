@@ -1,6 +1,6 @@
 // Game orchestrator: owns the world, player, systems and implements GameAPI for the UI.
 import * as THREE from 'three';
-import { GAME_VERSION, RESTORATION_NAMES, Rng, type GameSave, type ItemStack, type PlacedPiece, type StationId, type ToolTier, type WorldLayout } from '@dg/shared';
+import { GAME_VERSION, RESTORATION_NAMES, Rng, type WorldEvent, type GameSave, type ItemStack, type PlacedPiece, type StationId, type ToolTier, type WorldLayout } from '@dg/shared';
 import {
   BUILDING_SALVAGE,
   CONTAINER_LOOT,
@@ -25,6 +25,12 @@ import {
   hourOfDay,
   isNight,
   migrateSave,
+  plant as plantCrop,
+  harvest as harvestCrop,
+  waterCrop,
+  fertilize,
+  cropStage,
+  canPlant,
   activeQuests,
   advanceQuests,
   objectiveProgress,
@@ -66,6 +72,7 @@ import { WorldView } from '../world/world';
 import { FX } from '../render/fx';
 import { MeshBuilder } from '../render/geo';
 import { BaseView, levelFromY, STOREY_H } from './base';
+import { HavenCamp } from '../world/haven';
 import { Bus, loadSettings, storeSettings, type CraftInfo, type GameAPI, type GameMode, type ScreenId, type Settings } from './api';
 import { ONBOARDING, type OnboardingTrigger } from '../content/onboarding';
 import { DISTRICT_INTROS } from '../content/campaign';
@@ -111,6 +118,7 @@ export class Game implements GameAPI {
   view!: WorldView;
   base!: BaseView;
   fx!: FX;
+  camp!: HavenCamp;
   layout!: WorldLayout;
   readonly audio = audio;
   settings: Settings = loadSettings();
@@ -146,6 +154,8 @@ export class Game implements GameAPI {
   hasSaveHook: (() => boolean) | null = null;
   /** UI hook to open screens */
   openScreenHook: ((id: ScreenId | null) => void) | null = null;
+  /** co-op: local world actions to broadcast */
+  onWorldAction: ((ev: WorldEvent) => void) | null = null;
   /** returns the UI's currently open screen */
   screenProbe: (() => ScreenId | null) | null = null;
   /** per-frame hooks for other systems (survivors, grid, enemies, net) */
@@ -185,6 +195,8 @@ export class Game implements GameAPI {
     this.view = this.makeView();
     this.base = new BaseView(this.collision, (x, z) => this.view.surface(x, z));
     this.scene.add(this.base.group);
+    this.camp = new HavenCamp(this.layout.spawn.x, this.layout.spawn.z, (x, z) => this.view.surface(x, z), this.collision);
+    this.scene.add(this.camp.group);
     const rig = new CharacterRig(randomLook(7, { backpack: true, hairStyle: 1, shirt: 0x46535c, accent: 0xe8a65a }));
     this.scene.add(rig.root);
     this.player = new PlayerController(rig);
@@ -653,6 +665,7 @@ export class Game implements GameAPI {
       const placed: PlacedPiece = { id, piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot, hp: def.hp };
       if (def.storageSlots) placed.store = new Array(def.storageSlots).fill(null);
       this.save.world.pieces.push(placed);
+      this.onWorldAction?.({ type: 'piecePlaced', piece: placed });
       this.base.rebuild(this.save.world.pieces, this.save.world.crops, this.save.world.hour);
       audio.play('place');
       this.fx.dust(cand.x, y, cand.z, 6);
@@ -758,6 +771,13 @@ export class Game implements GameAPI {
   }
 
   private updatePrompt(): void {
+    for (const p of this.interactProviders) {
+      const o = this.mode === 'play' ? p.prompt() : null;
+      if (o) {
+        this.bus.emit({ type: 'prompt', text: o.text, sub: o.sub, key: 'E' });
+        return;
+      }
+    }
     const t = this.target;
     if (!t || this.mode !== 'play') {
       this.bus.emit({ type: 'prompt', text: null });
@@ -767,7 +787,11 @@ export class Game implements GameAPI {
       this.bus.emit({ type: 'prompt', text: 'Pick up pack', key: 'E' });
     } else if (t.kind === 'placed') {
       const def = getPiece(t.piece.piece);
-      const verb = t.piece.piece === 'bed' ? 'Sleep in' : def?.storageSlots ? 'Open' : def?.station ? 'Use' : null;
+      let verb = t.piece.piece === 'bed' ? 'Sleep in' : def?.storageSlots ? 'Open' : def?.station ? 'Use' : null;
+      if (t.piece.piece === 'farm_plot') {
+        const c = this.save.world.crops.find((x) => x.plot === t.piece.id);
+        verb = !c || !c.crop ? 'Plant in' : c.growth >= 1 ? 'Harvest' : c.water < 0.4 ? 'Water' : 'Check';
+      }
       this.bus.emit({ type: 'prompt', text: verb ? `${verb} ${t.name}` : `Hold to dismantle ${t.name}`, sub: verb ? 'hold to dismantle' : undefined, key: 'E' });
     } else if (t.kind === 'prop' && PROP_SALVAGE[this.layout.props[t.id].kind]?.container && !t.searched) {
       this.bus.emit({ type: 'prompt', text: `Search ${t.name}`, sub: 'hold to salvage', key: 'E' });
@@ -778,12 +802,21 @@ export class Game implements GameAPI {
   }
 
   get interactReady(): boolean {
-    return !!this.target;
+    return !!this.target || this.interactProviders.some((p) => !!p.prompt());
   }
 
+  /** systems (grid nodes, survivors) can claim interaction before props/pieces */
+  readonly interactProviders: { prompt: () => { text: string; sub?: string } | null; handle: (held: boolean, pressed: boolean, tapped: boolean, dt: number) => boolean }[] = [];
+  private overrideTap = 0;
+
   private updateInteract(dt: number): void {
-    const t = this.target;
     const held = this.input.isHeld('interact');
+    const pressedNow = this.input.wasPressed('interact');
+    if (pressedNow) this.overrideTap = 0;
+    if (held) this.overrideTap += dt;
+    const tappedNow = this.input.wasReleased('interact') && this.overrideTap < 0.35;
+    for (const p of this.interactProviders) if (p.prompt() && p.handle(held, pressedNow, tappedNow, dt)) return;
+    const t = this.target;
     const tapped = this.input.wasReleased('interact') && this.holdT < 0.35;
     if (!t) {
       if (this.input.wasPressed('interact')) audio.play('deny', { vol: 0.4 });
@@ -795,6 +828,7 @@ export class Game implements GameAPI {
       if (t.kind === 'placed') {
         const def = getPiece(t.piece.piece);
         if (t.piece.piece === 'bed') return this.trySleep();
+        if (t.piece.piece === 'farm_plot') return this.tendPlot(t.piece);
         if (def?.storageSlots) {
           this.storageTarget = t.piece;
           this.openScreen('storage');
@@ -924,6 +958,7 @@ export class Game implements GameAPI {
     const pos = new THREE.Vector3(p.x, this.view.height(p.x, p.z) + p.y + 0.5, p.z);
     const items = this.rollYields(def.yields, this.districtMult(p.x, p.z) * Math.max(0.6, p.scale));
     this.view.destroyProp(pid);
+    this.onWorldAction?.({ type: 'propRemoved', id: pid });
     this.fx.debris(pos.x, pos.y, pos.z, def.sfx, def.weight);
     audio.play(def.weight > 0.7 ? 'breakBig' : 'break', { pos, vol: 0.9 });
     this.hitstop = 0.035 + def.weight * 0.035;
@@ -958,6 +993,7 @@ export class Game implements GameAPI {
     const b = this.layout.buildings[bid];
     const def = BUILDING_SALVAGE[info.kind];
     const fallen = collapseAfterRemoval(pieces, removed, [index]);
+    this.onWorldAction?.({ type: 'buildingPieceRemoved', building: bid, piece: index });
     const ang = (b.rot * Math.PI) / 2;
     const cs = Math.cos(ang), sn = Math.sin(ang);
     const toWorld = (pi: PieceInfo) => {
@@ -994,6 +1030,108 @@ export class Game implements GameAPI {
     if (this.rng.chance(0.05)) this.discoverBlueprint(pos);
   }
 
+  /** Apply a world event from another co-op player (idempotent). */
+  applyRemote(ev: WorldEvent): void {
+    const w = this.save.world;
+    switch (ev.type) {
+      case 'propRemoved':
+        if (this.view.removedProps.has(ev.id)) return;
+        {
+          const p = this.layout.props[ev.id];
+          if (!p) return;
+          this.view.destroyProp(ev.id);
+          if (this.view.isLoaded(p.x, p.z)) {
+            const d = PROP_SALVAGE[p.kind];
+            this.fx.debris(p.x, this.view.height(p.x, p.z) + 0.5, p.z, d.sfx, d.weight);
+            audio.play('break', { pos: p });
+          }
+        }
+        return;
+      case 'buildingPieceRemoved': {
+        const b = this.layout.buildings[ev.building];
+        if (!b) return;
+        const removed = this.view.removed(ev.building);
+        if (removed.has(ev.piece)) return;
+        collapseAfterRemoval(this.view.pieces(ev.building), removed, [ev.piece]);
+        w.removedPieces[ev.building] = [...removed].sort((a, c) => a - c);
+        this.view.markBuildingDirty(ev.building);
+        if (this.view.isLoaded(b.x, b.z)) audio.play('collapse', { pos: b, vol: 0.5 });
+        return;
+      }
+      case 'piecePlaced':
+        if (w.pieces.some((p) => p.id === ev.piece.id && p.x === ev.piece.x && p.z === ev.piece.z)) return;
+        if (w.pieces.some((p) => p.id === ev.piece.id)) ev.piece.id = w.nextPieceId++;
+        w.nextPieceId = Math.max(w.nextPieceId, ev.piece.id + 1);
+        w.pieces.push(ev.piece);
+        this.base.rebuild(w.pieces, w.crops, w.hour);
+        return;
+      case 'pieceRemoved':
+        if (!w.pieces.some((p) => p.id === ev.id)) return;
+        w.pieces = w.pieces.filter((p) => p.id !== ev.id);
+        this.base.rebuild(w.pieces, w.crops, w.hour);
+        return;
+      case 'nodeOnline': {
+        const d = w.districts[ev.district];
+        if (d && !d.nodesOnline.includes(ev.node)) {
+          d.nodesOnline.push(ev.node);
+          d.state = Math.max(d.state, 1) as typeof d.state;
+          this.toast('A teammate brought a node online.', 'warm');
+        }
+        return;
+      }
+      case 'time':
+        if (Math.abs(w.hour - ev.hour) > 0.25) w.hour = ev.hour;
+        return;
+    }
+  }
+
+  private tendPlot(p: PlacedPiece): void {
+    const w = this.save.world;
+    let c = w.crops.find((x) => x.plot === p.id);
+    const pos = (this.base.pos.get(p.id) ?? this.player.pos).clone().setY(this.player.pos.y + 0.5);
+    if (c && c.crop && c.growth >= 1) {
+      const got = harvestCrop(c, this.rng);
+      this.grant(got.map((g) => ({ item: g.item, n: g.count })), pos);
+      audio.play('pickup');
+      this.fx.debris(pos.x, pos.y, pos.z, 'foliage', 0.3, 6);
+      w.flags['harvested'] = Number(w.flags['harvested'] ?? 0) + 1;
+    } else if (!c || !c.crop) {
+      const seed = this.inv.find((s) => s && s.id.startsWith('seed.') && canPlant(s.id, w.hour));
+      if (!seed) {
+        const any = this.inv.some((s) => s?.id.startsWith('seed.'));
+        this.toast(any ? "None of your seeds will grow this season." : 'You need seeds. Bushes and gardens sometimes have them.', 'bad');
+        audio.play('deny');
+        return;
+      }
+      const planted = plantCrop(p.id, seed.id, w.hour, c);
+      if (!planted) return;
+      removeItem(this.inv, seed.id, 1);
+      if (c) Object.assign(c, planted);
+      else w.crops.push((c = planted));
+      audio.play('place', { vol: 0.5 });
+      this.fx.dust(pos.x, pos.y - 0.4, pos.z, 4, 0x5a4a36);
+      this.toast(`Planted ${getItem(seed.id)?.name.replace(' Seeds', '') ?? seed.id}.`, 'warm');
+    } else {
+      const water = this.inv.findIndex((s) => s && (s.id === 'drink.dirty_water' || s.id === 'drink.clean_water' || s.id === 'tool.watering_can'));
+      const fert = this.inv.findIndex((s) => s?.id === 'misc.fertilizer');
+      if (c.water < 0.6 && water >= 0) {
+        if (this.inv[water]!.id !== 'tool.watering_can') removeItem(this.inv, this.inv[water]!.id, 1);
+        waterCrop(c);
+        audio.play('drink', { pitch: 0.7 });
+        this.toast('Watered.', 'warm');
+      } else if (c.nutrients < 0.5 && fert >= 0) {
+        removeItem(this.inv, 'misc.fertilizer', 1);
+        fertilize(c);
+        this.toast('Fertilized.', 'warm');
+      } else {
+        const stages = ['Seedlings', 'Growing', 'Nearly there', 'Ripe'];
+        this.toast(`${stages[cropStage(c.growth)]} — ${Math.round(c.growth * 100)}% grown, soil ${c.water < 0.4 ? 'dry' : 'moist'}.`);
+      }
+    }
+    this.base.rebuild(w.pieces, w.crops, w.hour);
+    this.bus.emit({ type: 'inventory' });
+  }
+
   private dismantlePlaced(p: PlacedPiece): void {
     const w = this.save.world;
     const fallen = collapsePlacedAfterRemoval(w.pieces, p.id);
@@ -1006,6 +1144,7 @@ export class Game implements GameAPI {
       if (pc.store) for (const st of pc.store) if (st) refunds.push({ item: st.id, n: st.n });
     }
     const pos = (this.base.pos.get(p.id) ?? this.player.pos).clone();
+    this.onWorldAction?.({ type: 'pieceRemoved', id: p.id });
     w.pieces = w.pieces.filter((x) => !all.includes(x.id));
     w.crops = w.crops.filter((c) => !all.includes(c.plot));
     this.base.rebuild(w.pieces, w.crops, w.hour);
@@ -1413,6 +1552,8 @@ export class Game implements GameAPI {
     }
     this.base.mat.userData.u.uWindow.value = 0.4 + night;
     this.base.mat.userData.u.uGrid.value = 1;
+    this.camp.update(dt, night);
+    this.camp.mat.userData.u.uWindow.value = 0.4 + night;
     audio.listener.x = this.player.pos.x;
     audio.listener.z = this.player.pos.z;
     audio.listener.yaw = this.camera.yaw;

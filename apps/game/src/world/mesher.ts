@@ -100,6 +100,31 @@ export function buildGround(layout: WorldLayout, cx: number, cz: number, height:
       } else {
         b.quad([x0, h01, z1], [x1, h11, z1], [x1, h10, z0], [x0, h00, z0]);
       }
+      // ground clutter: grass tufts and pebbles (static, merged)
+      if (t === Tile.Grass || t === Tile.Forest || t === Tile.Lot || t === Tile.Field) {
+        const pal = paletteOf(layout, d);
+        const nTufts = t === Tile.Lot ? 1 : 3;
+        for (let k = 0; k < nTufts; k++) {
+          const hsh = hash2(hash2(tx, tz), k);
+          if (t === Tile.Lot && hsh % 3 !== 0) continue;
+          const ox = x0 + ((hsh & 255) / 255) * 4, oz = z0 + (((hsh >> 8) & 255) / 255) * 4;
+          const oy = height(ox, oz) + l;
+          const hh = 0.25 + ((hsh >> 16) & 15) / 40;
+          const a = ((hsh >> 20) & 63) / 10;
+          b.setColor(c2.setHex(pal.foliage).multiplyScalar(0.75 + ((hsh >> 4) & 7) / 20));
+          for (let bl = 0; bl < 3; bl++) {
+            const ang = a + bl * 2.1;
+            const dx = Math.cos(ang) * 0.14, dz = Math.sin(ang) * 0.14;
+            const tipx = ox + Math.cos(ang + 0.5) * 0.12, tipz = oz + Math.sin(ang + 0.5) * 0.12;
+            b.tri(ox - dx, oy, oz - dz, ox + dx, oy, oz + dz, tipx, oy + hh, tipz, 1.1);
+            b.tri(ox + dx, oy, oz + dz, ox - dx, oy, oz - dz, tipx, oy + hh, tipz, 0.9);
+          }
+          if ((hsh & 7) === 0) {
+            b.setColor(0x7a766c);
+            b.box(ox + 0.4, oy + 0.04, oz - 0.3, 0.09, 0.05, 0.07);
+          }
+        }
+      }
       // curbs / banks: vertical faces where neighbor is lower
       const edges: [number, number, number[], number[]][] = [
         [1, 0, [x1, 0, z1], [x1, 0, z0]],
