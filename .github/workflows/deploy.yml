@@ -32,7 +32,25 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then
+          # Normalize pasted secrets (stray whitespace/newlines, quotes, "Bearer " or NAME= prefixes)
+          # without ever printing them. Cleaned values are masked before being exported.
+          clean() {
+            local v="$1"
+            v="${v//$'\r'/}"; v="${v//$'\n'/}"
+            v="$(printf '%s' "$v" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+            v="${v#CLOUDFLARE_API_TOKEN=}"; v="${v#CLOUDFLARE_ACCOUNT_ID=}"; v="${v#Bearer }"
+            v="${v#\"}"; v="${v%\"}"; v="${v#\'}"; v="${v%\'}"
+            printf '%s' "$v"
+          }
+          TOKEN="$(clean "$CF_TOKEN")"
+          ACCOUNT="$(clean "$CF_ACCOUNT")"
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "::add-mask::$TOKEN"
+            echo "::add-mask::$ACCOUNT"
+            [ "$TOKEN" != "$CF_TOKEN" ] && echo "::notice::CLOUDFLARE_API_TOKEN secret contained extra characters (whitespace/quotes/prefix); they were stripped. Consider re-saving the secret."
+            [ "$ACCOUNT" != "$CF_ACCOUNT" ] && echo "::notice::CLOUDFLARE_ACCOUNT_ID secret contained extra characters; they were stripped."
+            printf '%s' "$ACCOUNT" | grep -Eq '^[0-9a-f]{32}$' || echo "::warning::CLOUDFLARE_ACCOUNT_ID does not look like a 32-hex account id."
+            { echo "CLOUDFLARE_API_TOKEN=$TOKEN"; echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT"; } >> "$GITHUB_ENV"
             echo "has_cf=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_cf=false" >> "$GITHUB_OUTPUT"
@@ -46,8 +64,8 @@ jobs:
         if: steps.cf.outputs.has_cf == 'true'
         uses: cloudflare/wrangler-action@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/server
           wranglerVersion: '4.157.0'
           command: deploy
@@ -77,8 +95,6 @@ jobs:
         if: failure() && steps.deploy.outcome == 'success' && steps.smoke.outcome == 'failure'
         working-directory: apps/server
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler rollback -y -m "auto rollback - post-deploy smoke test failed"
 
       # Optional: also publish the static game to Cloudflare Pages (set repo variable DEPLOY_PAGES=true).
@@ -86,8 +102,6 @@ jobs:
       - name: Deploy to Cloudflare Pages (optional)
         if: steps.cf.outputs.has_cf == 'true' && vars.DEPLOY_PAGES == 'true'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler pages project create dormant-grid --production-branch main || echo "Pages project already exists"
           npx wrangler pages deploy apps/game/dist --project-name dormant-grid --branch main
