@@ -45,7 +45,7 @@ jobs:
       - name: Build offline-only game
         env:
           VITE_OFFLINE_ONLY: '1'
-          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BASE: /DormantGrid/
         run: npm run build
       - name: Enable Pages
         uses: actions/configure-pages@v6

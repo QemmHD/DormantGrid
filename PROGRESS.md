@@ -10,7 +10,7 @@
 
 To get a URL, do either one (details in `docs/TEST_PLAN_IPHONE.md` §0):
 1. **Full game.** Add both Cloudflare secrets (the token needs *Workers Scripts: Edit*; the account needs a workers.dev subdomain), then re-run **Deploy (Cloudflare)**. The URL will be `https://dormant-grid.<your-subdomain>.workers.dev`.
-2. **Offline-only quick look.** Settings → Pages → Source: **GitHub Actions**, then re-run **Deploy fallback (GitHub Pages)**. The URL will be `https://qemmhd.github.io/Random-stuff-/`.
+2. **Offline-only quick look.** Settings → Pages → Source: **GitHub Actions**, then re-run **Deploy fallback (GitHub Pages)**. The URL will be `https://qemmhd.github.io/DormantGrid/`.
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 

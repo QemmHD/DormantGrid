@@ -12,7 +12,7 @@ Do one of these two:
 - **GitHub Pages (offline-only fallback).**
   1. In the repo, go to Settings → Pages → Source and choose **GitHub Actions**.
   2. Re-run "Deploy fallback (GitHub Pages)".
-  3. The URL is `https://qemmhd.github.io/Random-stuff-/`.
+  3. The URL is `https://qemmhd.github.io/DormantGrid/`.
   4. Saves stay on the phone; no accounts or co-op.
 
 ## 1. Install
