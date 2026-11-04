@@ -104,6 +104,7 @@ async function start() {
   ui.setJournalSource(() => journal(game));
   new CoopView(game, svc.coop);
   const trader = new Trader(game);
+  (window as unknown as { __trader: unknown }).__trader = trader;
   new Markers(game);
   new Guide(game, ui);
   town.onTalk = (s) => {
@@ -174,6 +175,24 @@ async function start() {
     const head = document.createElement('p');
     head.textContent = `Guild chits: ${trader.chits()}  ·  Reputation: ${Math.round(trader.rep)}`;
     wrap.append(head);
+    const ct = trader.contract();
+    if (ct?.item && ct.count) {
+      const box = document.createElement('div');
+      box.className = 'li';
+      const main = document.createElement('div');
+      main.className = 'main';
+      main.innerHTML = '<b></b><small></small>';
+      (main.firstChild as HTMLElement).textContent = `Contract: ${ct.title}`;
+      (main.lastChild as HTMLElement).textContent = `Bring ${ct.count}× ${trader.itemName(ct.item)} → ${ct.rewardChits} chits`;
+      const b = document.createElement('button');
+      b.className = 'btn small primary';
+      b.textContent = 'Deliver';
+      b.addEventListener('click', () => {
+        if (trader.deliverContract()) openTrade();
+      });
+      box.append(main, b);
+      wrap.append(box);
+    }
     const list = document.createElement('div');
     list.className = 'list';
     for (const kind of ['buy', 'sell'] as const) {
@@ -271,8 +290,9 @@ async function start() {
     hasSave = true;
     ui.hideMenu();
     if (!new URLSearchParams(location.search).has('autostart')) {
-      const wait = () => (game.mode === 'cinematic' ? setTimeout(wait, 500) : void svc.ensureAccount());
-      setTimeout(wait, 500);
+      // ask for a name once the player has done something worth saving (crafted a tool) or after 4 minutes
+      const wait = () => (game.mode !== 'play' || (game.onbStep < 6 && game.playtime + game.save.playtime < 240) ? setTimeout(wait, 1500) : void svc.ensureAccount());
+      setTimeout(wait, 1500);
     }
   };
   const origCont = game.continueGame.bind(game);

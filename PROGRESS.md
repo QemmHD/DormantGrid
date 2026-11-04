@@ -19,6 +19,18 @@
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 
+### Rework pass (from the owner's iPhone test) — status
+Full before/after write-up: `docs/quality/REPORT.md`. The audit is in `docs/QUALITY_AUDIT.md`; screenshots are in `docs/quality/{before,phase1,phase3,phase4,after}/`.
+- **Feel:** smoothed touch look with an acceleration curve and dead zone, pinch/button/wheel zoom, labelled thumb-sized controls, jump moved out of the look path, oriented colliders, thick camera collision with near-fade, stamina cues, surface footsteps. Verified by `tests/feel.mjs`.
+- **Interaction:** type-coloured highlight, world marker, off-screen arrow, contextual primary button, floating pickups, blocked reasons.
+- **Guidance:** objective tracker, beacon, Next?, Help, skippable and replayable tutorial, first-use tips, labelled meters, toast de-dup. Verified by `tests/guide.mjs`.
+- **Graphics:** lighting rebalance, facade and ground detail, restoration-driven meshing, smoke.
+- **Systems:**
+  - Fixed the **runaway clock** (critical).
+  - Town Stockpile, survivor talk and jobs, livestock output, Guild contracts, deferred name claim.
+  - Two-client co-op verified against local `wrangler dev`.
+  - Verified by `tests/systems-flow.mjs` and `tests/coop-live.mjs`.
+
 ### What's playable now — a 5-minute tour
 1. **Main menu** sits over a live, slowly orbiting town. Tap **New Game**.
    - A cinematic swoop runs from high above the dead city down to Haven Lot, with the Act I card.

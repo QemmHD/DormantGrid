@@ -77,3 +77,14 @@ Severity: **S1** breaks the experience, **S2** clearly hurts, **S3** polish.
 3. **Guidance.** Objective tracker with a world marker, a "Next?" button, help screen, meter labels, notification queue and dedupe, skippable and re-readable tutorial covering the full loop.
 4. **Graphics.** Lighting balance, facade detail and AO, street dressing, ground variety, restored-area transformation, ambient particles.
 5. **Systems.** Town stockpile, food balance, livestock/hunting/cooking hooks, survivor talk and assignment, contracts, first-hour signposting, claim timing, a real two-client co-op run (local `wrangler dev`).
+
+
+## Status after the rework pass
+Items 1.1–1.11, 2.1–2.7, 3.1–3.7, 4.1–4.5, 4.7, 5.1–5.3, 5.5–5.8 are addressed. See `docs/quality/REPORT.md`.
+
+Partially addressed or still open:
+- 2.8: searched containers are not marked.
+- 4.6: character animation.
+- 4.8: no true bloom.
+- 5.4: stealth, hunting loop, cooking quality, faction events and endings.
+- 5.9: owner-side CI secret.

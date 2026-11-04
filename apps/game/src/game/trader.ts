@@ -1,7 +1,8 @@
 // Meridian Guild trader at the Haven camp (barter in Guild chits) and
 // readable lore terminals scattered through the ruins.
 import * as THREE from 'three';
-import { FACTION_MAP, addItem, buyPrice, changeRep, countItem, getItem, removeItem, sellPrice } from '@dg/sim';
+import { FACTION_MAP, addItem, buyPrice, changeRep, countItem, generateContract, getItem, removeItem, sellPrice, type Contract } from '@dg/sim';
+import { Rng } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import { LORE_TERMINALS } from '../content/lore';
 import { audio } from '../audio/audio';
@@ -81,6 +82,10 @@ export class Trader {
     return out;
   }
 
+  itemName(id: string): string {
+    return getItem(id)?.name ?? id;
+  }
+
   chits(): number {
     return countItem(this.game.save.player.inventory, CHIT);
   }
@@ -116,6 +121,54 @@ export class Trader {
     const w = this.game.save.world;
     w.factions[FACTION] = changeRep(w.factions, FACTION, 0.5);
     audio.play('craft');
+    this.game.bus.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /** Current Guild delivery contract (one at a time, stored in world flags). */
+  contract(): Contract | null {
+    const w = this.game.save.world;
+    const raw = w.flags['contract'];
+    let c: Contract | null = null;
+    if (typeof raw === 'string') {
+      try {
+        c = JSON.parse(raw) as Contract;
+      } catch {
+        c = null;
+      }
+    }
+    if (!c || c.expiresHour < w.hour) {
+      // only deliveries can be completed at the counter; reroll until we get one
+      const rng = new Rng(Math.floor(w.hour) * 7919 + 13);
+      for (let i = 0; i < 8; i++) {
+        const g = generateContract(rng, 'guild', Number(w.flags['rank'] ?? 1), w.hour);
+        if (g.kind === 'deliver' && g.item && g.count && getItem(g.item)) {
+          c = g;
+          break;
+        }
+      }
+      w.flags['contract'] = c ? JSON.stringify(c) : '';
+    }
+    return c;
+  }
+
+  deliverContract(): boolean {
+    const c = this.contract();
+    const inv = this.game.save.player.inventory;
+    if (!c?.item || !c.count) return false;
+    if (countItem(inv, c.item) < c.count) {
+      audio.play('deny');
+      this.game.toast(`You need ${c.count}× ${getItem(c.item)?.name ?? c.item} for this contract.`, 'bad');
+      return false;
+    }
+    removeItem(inv, c.item, c.count);
+    addItem(inv, CHIT, c.rewardChits);
+    const w = this.game.save.world;
+    w.factions[FACTION] = changeRep(w.factions, FACTION, c.rep);
+    w.flags['contract'] = '';
+    w.flags['contractsDone'] = Number(w.flags['contractsDone'] ?? 0) + 1;
+    audio.play('levelUp', { vol: 0.6 });
+    this.game.toast(`Contract done: +${c.rewardChits} Guild chits, Guild reputation up.`, 'warm');
     this.game.bus.emit({ type: 'inventory' });
     return true;
   }

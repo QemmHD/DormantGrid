@@ -104,11 +104,21 @@ export class CoopView {
         this.coop.sendAction({ type: 'time', hour: g.save.world.hour, weather: String(g.save.world.weather) });
       }
     }
-    if (this.rigs.size !== Math.max(0, this.coop.playerIds.length - 1)) this.syncRigs();
+    if (this.rigs.size !== this.coop.playerIds.length) this.syncRigs(); // playerIds = remote players only
     for (const [id, r] of this.rigs) {
       const s = this.coop.sample(id);
-      if (!s) continue;
+      // (0,0,0) is the server's placeholder before a player's first state message — never draw it
+      if (!s || (s.x === 0 && s.z === 0)) {
+        r.root.visible = false;
+        continue;
+      }
+      r.root.visible = true;
       const ox = r.root.position.x, oz = r.root.position.z;
+      // first real sample or a teleport: snap instead of sliding across the map
+      if (Math.hypot(s.x - ox, s.z - oz) > 25) {
+        r.root.position.set(s.x, s.y, s.z);
+        continue;
+      }
       r.root.position.set(s.x, s.y, s.z);
       r.root.rotation.y = s.yaw;
       const sp = dt > 0 ? Math.hypot(s.x - ox, s.z - oz) / dt : 0;
