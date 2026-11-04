@@ -71,6 +71,7 @@ export const INTEREST_RADIUS = 200;
 export const HELLO_TIMEOUT_MS = 10_000;
 export const STALE_MS = 30_000;
 export const ALARM_INTERVAL_MS = 15_000;
+export const META_FLUSH_MS = 30_000;
 export const ROOM_IDLE_WIPE_MS = 7 * 24 * 3600_000;
 const SNAPSHOT_MS = 1000 / NET_TICK_HZ;
 
@@ -91,6 +92,8 @@ export class RoomCore {
   private players = new Map<string, PlayerRecord>(); // key = lowercase user
   private loaded = false;
   private lastSnapshot = 0;
+  private lastMetaFlush = 0;
+  private metaDirty = false;
   /** count of successful fast resumes (for tests/metrics) */
   resumes = 0;
   private stateBuckets = new TokenBucket(NET_TICK_HZ * 2, NET_TICK_HZ * 1.5);
@@ -107,6 +110,17 @@ export class RoomCore {
   async load(): Promise<void> {
     if (this.loaded) return;
     this.meta = (await this.d.store.get<RoomMeta>('meta')) ?? null;
+    if (this.meta) {
+      // meta is flushed lazily, so eventCount may lag: recount from the chunk keys.
+      let idx = Math.floor(this.meta.eventCount / EVENT_CHUNK);
+      for (;;) {
+        const chunk = await this.d.store.get<StoredEvent[]>(`ev:${idx}`);
+        if (!chunk) break;
+        this.meta.eventCount = idx * EVENT_CHUNK + chunk.length;
+        if (chunk.length < EVENT_CHUNK) break;
+        idx++;
+      }
+    }
     const players = (await this.d.store.get<PlayerRecord[]>('players')) ?? [];
     this.players = new Map(players.map((p) => [p.user.toLowerCase(), p]));
     // Merge latest positions from socket attachments (survive hibernation).
@@ -193,12 +207,23 @@ export class RoomCore {
     await this.d.store.put('players', [...this.players.values()]);
   }
 
-  private async touch(): Promise<void> {
+  /**
+   * Persist meta at most every META_FLUSH_MS (SQLite row writes are the scarcest
+   * free-tier resource). eventCount is recoverable from chunk keys on load.
+   */
+  private async touch(force = false): Promise<void> {
     if (!this.meta) return;
+    this.meta.lastActive = this.d.now();
+    this.metaDirty = true;
+    await this.flushMeta(force);
+  }
+
+  private async flushMeta(force: boolean): Promise<void> {
+    if (!this.meta || !this.metaDirty) return;
     const t = this.d.now();
-    // persist lastActive at most once per minute
-    if (t - this.meta.lastActive > 60_000) {
-      this.meta.lastActive = t;
+    if (force || t - this.lastMetaFlush >= META_FLUSH_MS) {
+      this.lastMetaFlush = t;
+      this.metaDirty = false;
       await this.d.store.put('meta', this.meta);
     }
   }
@@ -390,7 +415,6 @@ export class RoomCore {
     if (oldest >= 0 && (this.meta.eventCount - 1) % EVENT_CHUNK === 0) {
       await this.d.store.delete(`ev:${oldest}`);
     }
-    await this.d.store.put('meta', this.meta);
   }
 
   async events(): Promise<StoredEvent[]> {
@@ -446,6 +470,7 @@ export class RoomCore {
       const t = this.d.now();
       p.graceUntil = t + RECONNECT_GRACE_MS;
       await this.savePlayers();
+      await this.touch(true);
       this.broadcast({ t: 'leave', id: p.user, grace: true }, key);
       await this.d.setAlarm(t + Math.min(ALARM_INTERVAL_MS, RECONNECT_GRACE_MS));
     } catch (e) {
@@ -477,6 +502,7 @@ export class RoomCore {
       }
     }
     if (changed) await this.savePlayers();
+    await this.flushMeta(true);
     // 3. Reschedule.
     const pending =
       this.d.sockets().length > 0 || [...this.players.values()].some((p) => p.graceUntil !== null);

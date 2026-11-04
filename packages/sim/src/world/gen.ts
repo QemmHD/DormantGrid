@@ -400,7 +400,6 @@ class Gen {
     if (cands.length > 0) picks.push(cands[Math.floor(cands.length * 0.3)]);
     if (cands.length > 1) picks.push(cands[Math.floor(cands.length * 0.8)]);
     for (const p of picks) {
-      if (picks.length > 1 && p === picks[0] && picks[1] === p) continue;
       p.arterial = true;
       p.bridged = true;
     }
@@ -670,8 +669,7 @@ class Gen {
     this.spawn = { x: x + 2, z: z + 6 };
     // open yard around spawn
     this.reserveRect(x - 12, z - 8, x + 12, z + 16, Tile.Lot);
-    // two shelters on the north side, facing the yard
-    const rule = RULES.haven;
+    // shelters on the north side, facing the yard
     let cursor = c.rect.x0 + 4;
     let placed = 0;
     while (placed < 3 && cursor + 12 <= c.rect.x1) {
@@ -684,7 +682,6 @@ class Gen {
         cursor += w + 8;
       } else cursor += 4;
     }
-    void rule;
     this.havenYard = c.rect;
   }
 
@@ -817,8 +814,7 @@ class Gen {
         const off = 16;
         if (road.vertical) {
           const bx0 = sideSign > 0 ? road.c + off : road.c - off - 16;
-          const ok = this.tryFarm(bx0, along, true, sideSign, outskirts, r);
-          void ok;
+          this.tryFarm(bx0, along, true, sideSign, outskirts, r);
         } else {
           const bz0 = sideSign > 0 ? road.c + off : road.c - off - 16;
           this.tryFarm(along, bz0, false, sideSign, outskirts, r);
@@ -1064,7 +1060,7 @@ class Gen {
         kinds = RULES.haven.yardKinds;
         density = 0.35;
       }
-      const attempts = Math.round((area / 100) * density * 1.4);
+      const attempts = Math.round((area / 100) * density * 1.7);
       for (let a = 0; a < attempts; a++) {
         const kind = weighted(r, kinds);
         const x = r.range(c.rect.x0 + 1, c.rect.x1 - 1);
@@ -1142,7 +1138,7 @@ class Gen {
         const z = tz * TILE_SIZE + r.range(0.5, 3.5);
         let kind: PropKind | null = null;
         if (t === Tile.Forest) {
-          if (r.chance(0.56)) kind = weighted<PropKind>(r, [['pine', 8], ['tree', 6], ['rock', 2], ['stump', 2], ['bush', 2]]);
+          if (r.chance(0.66)) kind = weighted<PropKind>(r, [['pine', 8], ['tree', 6], ['rock', 2], ['stump', 2], ['bush', 2]]);
         } else if (t === Tile.Field) {
           if (r.chance(0.025)) kind = 'haybale';
         } else if (t === Tile.Grass) {

@@ -248,6 +248,22 @@ describe('RoomCore', () => {
     expect((await core.alarm()).wipe).toBe(true);
   });
 
+  it('recovers the event count after hibernation even though meta is flushed lazily', async () => {
+    const { room, sockets, clock } = setup();
+    const core = room();
+    await core.init('ABCDE', 1, 'Ash');
+    const a = await join(core, sockets, 'ash');
+    for (let i = 0; i < 73; i++) {
+      clock.advance(200);
+      await core.onMessage(a, JSON.stringify({ t: 'action', seq: i, ev: { type: 'propRemoved', id: i } }));
+    }
+    const fresh = room();
+    await fresh.load();
+    const evs = await fresh.events();
+    expect(evs.length).toBe(73);
+    expect(fresh.getMeta()?.eventCount).toBe(73);
+  });
+
   it('fuzz: random frames never throw out of the handler', async () => {
     const { room, sockets } = setup();
     const core = room();

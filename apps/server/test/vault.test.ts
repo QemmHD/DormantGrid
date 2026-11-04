@@ -97,3 +97,15 @@ describe('VaultCore saves', () => {
     await v.putSave(put(99, SAVE_PUTS_PER_MINUTE));
   });
 });
+
+describe('VaultCore quota safety', () => {
+  it('failed auth/recovery against a nonexistent account writes nothing', async () => {
+    const store = new MemoryStore();
+    const v = new VaultCore(store);
+    for (let i = 0; i < 50; i++) {
+      await expect(v.auth('1'.repeat(64), `ip${i}`)).rejects.toMatchObject({ status: 401 });
+      await expect(v.recover('AAAAA-AAAAA-AAAAA-AAAAA')).rejects.toMatchObject({ status: 401 });
+    }
+    expect(store.data.size).toBe(0);
+  });
+});

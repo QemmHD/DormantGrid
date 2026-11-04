@@ -108,7 +108,9 @@ export class VaultCore {
       }
     }
     if (!acc || match < 0) {
-      await this.countFail(failKey, AUTH_FAILS_PER_IP_PER_HOUR);
+      // Don't write rows for accounts that don't exist: random-username spraying would
+      // otherwise burn the free-tier daily row-write quota.
+      if (acc) await this.countFail(failKey, AUTH_FAILS_PER_IP_PER_HOUR);
       throw new HttpError(401, 'unauthorized', 'This device is not signed in to that account.');
     }
     const t = this.now();
@@ -144,7 +146,7 @@ export class VaultCore {
     const acc = await this.account();
     const h = await sha256Hex(acc?.salt ?? '00', 'recovery', normalizeCode(code));
     if (!acc || !timingSafeEqual(acc.recovery, h)) {
-      await this.countFail(failKey, RECOVERY_FAILS_PER_HOUR);
+      if (acc) await this.countFail(failKey, RECOVERY_FAILS_PER_HOUR);
       throw new HttpError(401, 'invalid_recovery', 'That recovery code does not match this username.');
     }
     return this.issueDevice(acc);
