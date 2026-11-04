@@ -27,7 +27,8 @@
 | 15 | 8:00 | Settings → set the day to 2 minutes. Wait for dusk and night (about 1 minute). | Night | Can you still see where to walk at night? Do the lit windows look warm or like flat stickers? |
 | 16 | 9:00 | Lock the phone for 20 s, then unlock and return to the game. | Resume | Did it come back exactly where you were, without a reload? Any audio glitch? |
 | 17 | 9:30 | Force-quit, relaunch, tap **Continue**. | Save | Is your crowbar and progress there? How many seconds from tap to playing? |
-| 18 | 10:00 | Overall. | Would you play again tomorrow? | One sentence: what would make you open it tomorrow? |
+| 18 | 9:50 | Look at your character and a survivor up close. | Style | Does it read as a gritty survivor game, or as a blocky toy ("looks like Roblox")? What gives it away most: characters, props, ground, or lighting? |
+| 19 | 10:00 | Overall. | Would you play again tomorrow? | One sentence: what would make you open it tomorrow? |
 
 **Also send back**
 - **Settings → Copy device report**: paste it here.
