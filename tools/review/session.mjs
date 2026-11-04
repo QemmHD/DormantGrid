@@ -19,7 +19,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
-await page.goto(`http://localhost:${port}/?autostart&fresh&quality=low`);
+await page.goto(`http://localhost:${port}/?autostart&fresh&quality=high`); // high = prop density 1 (low hides 45% of small props); rendering is disabled below
 await page.waitForFunction(() => window.__dg?.mode === 'play', null, { timeout: 90000 });
 
 const result = await page.evaluate(async (SIM_MIN) => {
@@ -47,6 +47,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   let actStart = 0, actKind = 'start';
   const act = (k) => { if (k !== actKind) { activity.push([actStart, now(), actKind]); actStart = now(); actKind = k; } };
   const timeline = [];
+  const walked = []; // [straight-line m, sim s]
   const hpStart = g.save.player.health;
   let lastQuest = JSON.stringify(g.save.world.quests);
   let lastBp = g.save.world.blueprints.length;
@@ -93,7 +94,9 @@ const result = await page.evaluate(async (SIM_MIN) => {
     const cands = L.props.filter((p) => kinds.includes(p.kind) && p.building < 0 && !g.view.removedProps.has(p.id) && Math.hypot(p.x - P().x, p.z - P().z) < maxDist)
       .sort((a, b) => Math.hypot(a.x - P().x, a.z - P().z) - Math.hypot(b.x - P().x, b.z - P().z));
     for (const p of cands.slice(0, 4)) {
-      if (!(await walkTo(p.x, p.z, 1.6))) continue;
+      const dist0 = Math.hypot(p.x - P().x, p.z - P().z), tw = T();
+      if (!(await walkTo(p.x, p.z, 1.6))) { note(`could not reach ${p.kind} ${dist0.toFixed(0)} m away`); continue; }
+      walked.push([dist0, T() - tw]);
       g.camera.yaw = Math.atan2(p.x - P().x, p.z - P().z); g.camera.syncTargets?.();
       await frames(6);
       const t = g.describeTarget();
@@ -151,12 +154,14 @@ const result = await page.evaluate(async (SIM_MIN) => {
     await frames(4);
     return ok;
   }
+  // an informed player hunting scrap by hand: these yield mat.scrap without tools (data/loot.ts)
+  const scrapByHand = ['barrel', 'sign', 'bench', 'mailbox', 'rubble', 'shelf', 'debris', 'tire'];
   const scrapKinds = ['crate', 'barrel', 'trashbag', 'tire', 'pallet', 'debris', 'cone', 'sign', 'mailbox', 'bench', 'chair', 'table', 'shelf', 'rubble', 'weeds', 'bush'];
-  async function gatherUntil(pred, label, maxS = 300) {
+  async function gatherUntil(pred, label, maxS = 300, kinds = scrapKinds) {
     act('grind:' + label);
     const s = T();
-    while (!pred() && T() - s < maxS) {
-      const ok = await salvageNearest(scrapKinds, 90);
+    while (!pred() && T() - s < maxS && now() < SIM_MIN * 60) {
+      const ok = await salvageNearest(kinds, 90);
       if (!ok) await salvagePiece();
     }
     note(`gathered for ${label} for ${(T() - s).toFixed(0)} s (${pred() ? 'done' : 'gave up'})`);
@@ -174,7 +179,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   // 3 inventory
   await tap('Tab'); await frames(10); g.openScreen(null); await frames(5);
   // 4 crowbar
-  if (!(await craft('r.tool.crowbar'))) { await gatherUntil(() => count('mat.scrap') >= 6, 'crowbar scrap'); await craft('r.tool.crowbar'); }
+  if (!(await craft('r.tool.crowbar'))) { await gatherUntil(() => count('mat.scrap') >= 6, 'crowbar scrap', 300, scrapByHand); await craft('r.tool.crowbar'); }
   await tap('Digit1'); await tap('Digit2'); await tap('Digit3');
   sample();
   // 5 deconstruct a building piece
@@ -184,7 +189,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   const s0 = g.layout.spawn;
   await walkTo(s0.x + 8, s0.z + 8, 1.0);
   for (const [piece, need] of [['foundation', 8], ['wall', 6], ['wall', 6], ['wall', 6], ['roof', 6], ['bed', 4]]) {
-    if (count('mat.scrap') < need) await gatherUntil(() => count('mat.scrap') >= need + 2, `${piece} scrap`, 240);
+    if (count('mat.scrap') < need) await gatherUntil(() => count('mat.scrap') >= need + 2, `${piece} scrap`, 240, scrapByHand);
     await walkTo(s0.x + 8, s0.z + 8, 1.5);
     const n = await place(piece);
     note(`place ${piece}: now ${n}`);
@@ -230,14 +235,15 @@ const result = await page.evaluate(async (SIM_MIN) => {
     hour: g.save.world.hour,
     health: g.save.player.health,
   };
-  return { milestones: ms, log, activity, timeline, end };
+  const wd = walked.reduce((a, w) => a + w[0], 0), wt = walked.reduce((a, w) => a + w[1], 0);
+  return { milestones: ms, log, activity, timeline, end, walking: { trips: walked.length, straightLineMeters: +wd.toFixed(0), simSeconds: +wt.toFixed(0), efficiency: +(wd / 3.4 / Math.max(1, wt)).toFixed(2) } };
 }, SIM_MIN);
 
 result.pageErrors = errs;
 // idle / grind gaps over 60 s
 result.gapsOver60s = result.activity.filter(([a, b, k]) => b - a > 60).map(([a, b, k]) => ({ from: a, to: b, seconds: +(b - a).toFixed(0), doing: k }));
 writeFileSync('docs/review/session.json', JSON.stringify(result, null, 2) + '\n');
-console.log(JSON.stringify({ milestones: result.milestones, gaps: result.gapsOver60s, end: result.end }, null, 2));
+console.log(JSON.stringify({ milestones: result.milestones, gaps: result.gapsOver60s, walking: result.walking, end: result.end }, null, 2));
 console.log(result.log.join('\n'));
 await browser.close();
 srv.kill();

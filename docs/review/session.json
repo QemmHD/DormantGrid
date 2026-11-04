@@ -1,0 +1,249 @@
+{
+  "milestones": {
+    "move": 1,
+    "gather": 120.8,
+    "deconstruct": 473.1
+  },
+  "log": [
+    "1s FIRST move ",
+    "120.8s FIRST gather crate",
+    "120.8s salvaged crate (+6 items) in 3.5 s",
+    "176.6s cannot salvage tire: no target",
+    "184.2s salvaged sign (+2 items) in 3.9 s",
+    "190.4s salvaged pallet (+5 items) in 3.5 s",
+    "287.5s salvaged weeds (+2 items) in 2.1 s",
+    "289.5s cannot salvage weeds: no target",
+    "332.3s cannot salvage bush: no target",
+    "473.1s FIRST deconstruct Bush",
+    "473.1s deconstructed Bush in 2.8 s",
+    "473.1s gathered for crowbar scrap for 351 s (gave up)",
+    "474.3s facade target: break Floor Needs a saw",
+    "589.3s facade target: break Floor Needs a saw",
+    "657.4s salvaged crate (+6 items) in 3.5 s",
+    "674s salvaged weeds (+2 items) in 2.1 s",
+    "735.1s cannot salvage weeds: Needs a saw",
+    "737.5s cannot salvage tire: no target",
+    "939.6s gathered for foundation scrap for 310 s (gave up)",
+    "984s place foundation: now 0"
+  ],
+  "activity": [
+    [
+      0,
+      0,
+      "start"
+    ],
+    [
+      0,
+      1.5,
+      "tutorial"
+    ],
+    [
+      1.5,
+      117.3,
+      "walk"
+    ],
+    [
+      117.3,
+      121.7,
+      "salvage"
+    ],
+    [
+      121.7,
+      121.7,
+      "grind:crowbar scrap"
+    ],
+    [
+      121.7,
+      180.3,
+      "walk"
+    ],
+    [
+      180.3,
+      184.2,
+      "salvage"
+    ],
+    [
+      184.2,
+      186.9,
+      "walk"
+    ],
+    [
+      186.9,
+      190.4,
+      "salvage"
+    ],
+    [
+      190.4,
+      285.4,
+      "walk"
+    ],
+    [
+      285.4,
+      287.5,
+      "salvage"
+    ],
+    [
+      287.5,
+      470.3,
+      "walk"
+    ],
+    [
+      470.3,
+      473.7,
+      "deconstruct"
+    ],
+    [
+      473.7,
+      629.6,
+      "walk"
+    ],
+    [
+      629.6,
+      629.6,
+      "grind:foundation scrap"
+    ],
+    [
+      629.6,
+      653.9,
+      "walk"
+    ],
+    [
+      653.9,
+      657.4,
+      "salvage"
+    ],
+    [
+      657.4,
+      671.9,
+      "walk"
+    ],
+    [
+      671.9,
+      674,
+      "salvage"
+    ],
+    [
+      674,
+      979.9,
+      "walk"
+    ],
+    [
+      979.9,
+      984.4,
+      "build"
+    ],
+    [
+      984.4,
+      1025.1,
+      "walk"
+    ]
+  ],
+  "timeline": [
+    {
+      "t": 0,
+      "onb": 0,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (0/6)",
+      "inv": 5,
+      "pieces": 0,
+      "hour": 8
+    },
+    {
+      "t": 120.8,
+      "onb": 3,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (0/6)",
+      "inv": 11,
+      "pieces": 0,
+      "hour": 10.01
+    },
+    {
+      "t": 473.7,
+      "onb": 4,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
+      "inv": 21,
+      "pieces": 0,
+      "hour": 15.88
+    },
+    {
+      "t": 589.3,
+      "onb": 4,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
+      "inv": 21,
+      "pieces": 0,
+      "hour": 17.81
+    },
+    {
+      "t": 984,
+      "onb": 4,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
+      "inv": 29,
+      "pieces": 0,
+      "hour": 24.38
+    },
+    {
+      "t": 1025.1,
+      "onb": 4,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
+      "inv": 27,
+      "pieces": 0,
+      "hour": 25.06
+    },
+    {
+      "t": 1025.1,
+      "onb": 4,
+      "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
+      "inv": 27,
+      "pieces": 0,
+      "hour": 25.06
+    }
+  ],
+  "end": {
+    "onbStep": 4,
+    "objectives": [
+      "[ ] Act I — Ember · First Light: Strip something for parts. Anything. The city won’t mind. (2/6)"
+    ],
+    "inventory": [
+      "med.bandagex1",
+      "mat.timberx6",
+      "comp.nailsx11",
+      "mat.scrapx2",
+      "mat.organicx7"
+    ],
+    "pieces": [],
+    "survivors": 3,
+    "hour": 25.064458333317816,
+    "health": 100
+  },
+  "pageErrors": [],
+  "gapsOver60s": [
+    {
+      "from": 1.5,
+      "to": 117.3,
+      "seconds": 116,
+      "doing": "walk"
+    },
+    {
+      "from": 190.4,
+      "to": 285.4,
+      "seconds": 95,
+      "doing": "walk"
+    },
+    {
+      "from": 287.5,
+      "to": 470.3,
+      "seconds": 183,
+      "doing": "walk"
+    },
+    {
+      "from": 473.7,
+      "to": 629.6,
+      "seconds": 156,
+      "doing": "walk"
+    },
+    {
+      "from": 674,
+      "to": 979.9,
+      "seconds": 306,
+      "doing": "walk"
+    }
+  ]
+}
