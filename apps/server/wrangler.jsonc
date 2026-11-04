@@ -1,0 +1,32 @@
+{
+  // DORMANT GRID: one Worker serves the game (static assets) and the API on the same origin.
+  // No account_id or secrets here: CI passes CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN as env.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "dormant-grid",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../game/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Only API + WebSocket paths invoke the Worker; all other asset requests are free and unlimited.
+    "run_worker_first": ["/api/*", "/ws/*"]
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ACCOUNT_REGISTRY", "class_name": "AccountRegistry" },
+      { "name": "PLAYER_VAULT", "class_name": "PlayerVault" },
+      { "name": "WORLD_ROOM", "class_name": "WorldRoom" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AccountRegistry", "PlayerVault", "WorldRoom"] }
+  ],
+  "vars": {
+    "MIN_CLIENT": "0.1.0",
+    "LATEST_CLIENT": "0.1.0",
+    "ALLOWED_ORIGINS": "https://dormant-grid.pages.dev,https://*.dormant-grid.pages.dev,http://localhost:*,http://127.0.0.1:*"
+  },
+  "observability": { "enabled": true }
+}
