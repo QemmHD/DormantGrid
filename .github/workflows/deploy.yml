@@ -94,14 +94,12 @@ jobs:
       - name: Roll back on failed smoke test
         if: failure() && steps.deploy.outcome == 'success' && steps.smoke.outcome == 'failure'
         working-directory: apps/server
-        env:
         run: npx wrangler rollback -y -m "auto rollback - post-deploy smoke test failed"
 
       # Optional: also publish the static game to Cloudflare Pages (set repo variable DEPLOY_PAGES=true).
       # The Pages copy has no same-origin API, so it is offline-only unless VITE_API_URL is set.
       - name: Deploy to Cloudflare Pages (optional)
         if: steps.cf.outputs.has_cf == 'true' && vars.DEPLOY_PAGES == 'true'
-        env:
         run: |
           npx wrangler pages project create dormant-grid --production-branch main || echo "Pages project already exists"
           npx wrangler pages deploy apps/game/dist --project-name dormant-grid --branch main
