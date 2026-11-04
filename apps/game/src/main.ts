@@ -74,6 +74,7 @@ async function start() {
   (window as unknown as { __dg: unknown }).__dg = game;
   await game.boot((p) => bootProgress(0.3 + p * 0.6));
   const svc = new Services(game.bus);
+  (window as unknown as { __svc: unknown }).__svc = svc;
   const town = new Town(game);
   const enemies = new Enemies(game);
   const grid = new Grid(game, enemies);
