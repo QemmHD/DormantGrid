@@ -1,0 +1,14 @@
+{
+  "name": "@dg/game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": { "@dg/shared": "0.1.0", "@dg/sim": "0.1.0", "three": "^0.187.0", "idb": "^8.0.4", "fflate": "^0.8.3" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  }
+}
