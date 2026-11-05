@@ -10,11 +10,12 @@ Evidence refresh: `npm run build && node tools/review/session.mjs 30 && node too
 - [x] 3. Camera: never lose the player (wall min distance, fade occluding props/bushes/cars)
 - [x] 4. Building placement at camp: diagnose finding 29 (game bug or bot?) and fix
 - [x] 5. Visuals: character rebuild (hands, face, clothing, silhouette), billboard smoke, desaturate props, roughness variation, contact shadows; within budgets
-- [ ] 6. After shots (same 6 points) → docs/review/after/ WebP
-- [ ] 7. Gates green, budgets, CI deploy, live smoke both URLs
-- [ ] 8. PLAN.md updated; final reply
+- [x] 6. After shots (same 6 points) → docs/review/after/ WebP
+- [x] 7. Gates green, budgets, CI deploy, live smoke both URLs
+- [x] 8. PLAN.md updated; final reply
 
 ## Notes
 - Before shots (6 points for item 5): desktop-03 spawn-after-intro, desktop-04 haven-overview, desktop-05 downtown-street-dormant, desktop-08 building-closeup, desktop-11 prop-closeup-car, desktop-13 night-haven.
 - Status: accept.mjs 7/13 PASS (P1–P7). Session (bot) milestones: craft 10.5 s, build 57.6 s, threat 265 s, survivor 517 s. Finding 29 = bot issue (fixed bot).
 - Next: after shots (running) → docs/review/after/*.webp (6 points), gates (check, smoke, feel, guide, systems, grid, raid, defense, walk, models-flow, budget-tris), merge to main, CI deploy, live smoke both URLs, final reply.
+- Round 3 complete: merged to main 9d6a258, CI deploy + live smoke green on both URLs.

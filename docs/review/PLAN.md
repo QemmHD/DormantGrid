@@ -98,6 +98,28 @@ FAIL P13-recorded-audio: recorded audio files: 0 (target ≥ 10 ambience/SFX bed
    - Soft contact shadows sit under characters and props, one draw call.
    - Budgets: medium downtown 292k main-pass tris / 57 calls (was 290k / 55).
 
+### Verification on the merged build (main `9d6a258`)
+
+- **Before/after shots** at the same 6 points: `docs/review/before/` vs `docs/review/after/` (WebP, 205 KB + 131 KB).
+- **Gates:**
+  - `npm run check` green.
+  - smoke, feel, guide, systems, grid, raid, defense, walk, models-flow: no failures.
+  - `tests/budget-tris.mjs`: all districts within budget; medium downtown 292k main-pass tris / 57 calls.
+  - P3/P4 re-measured on the final build: 0/60, 0/1080.
+- **Deploy:** CI "Deploy (Cloudflare)" run 41941545945 succeeded, and its live smoke passed on attempt 1 (no rollback). Pages run 41941546023 succeeded.
+- **Live smoke:**
+  - Worker: 14/14.
+  - Pages (`--offline`): PASS attempt 1/3.
+  - Both URLs run the new code: opening director present, starting scrap 2, puff smoke, world `ff749351`.
+
+### Still weak visually (honest)
+
+- The fire-barrel flames are more translucent but still read as cones.
+- The ground at Haven is still a flat grey plane: no decals or grime (PLAN 9).
+- Contact shadows are subtle on the high tier, where real shadows also render.
+- The Haven sign text is still mirrored from behind (PLAN 19).
+- No iPhone device check this round; budgets are headless counters only.
+
 ### Bugs found this round
 
 - **Fixed:** `camera.syncTargets()` applied a direct yaw change twice (`camera.update` also follows direct writes).
