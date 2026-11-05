@@ -97,7 +97,8 @@ const scenes = [
 ];
 
 const meta = [];
-for (const prof of profiles) {
+// PROFILE=desktop|iphone limits the run to one profile
+for (const prof of profiles.filter((p) => !process.env.PROFILE || p.name === process.env.PROFILE)) {
   const ctx = await browser.newContext(prof.ctx);
   const page = await ctx.newPage();
   page.q = prof.q;
