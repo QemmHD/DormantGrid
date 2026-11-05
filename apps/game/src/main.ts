@@ -180,6 +180,12 @@ async function start() {
   const { Story } = await import('./game/story');
   const story = new Story(game, ui);
   ui.storySource = () => story.info();
+  const { rankOf } = await import('./game/town');
+  const { rankProgress, nextUnlocks } = await import('@dg/sim');
+  ui.rankSource = () => {
+    const r = rankOf(game.save.world);
+    return { rank: r.rank, ...rankProgress(r.rank, r.points), next: nextUnlocks(r.rank, 3) };
+  };
   ui.decideHandler = (key) => story.decide(key);
   (window as unknown as { __story: unknown }).__story = story;
   let lastPts = -1;

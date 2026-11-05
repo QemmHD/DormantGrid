@@ -201,6 +201,17 @@ export const S = {
   },
   topbar: { inventory: 'Inventory', craft: 'Craft', build: 'Build', map: 'Map', ledger: 'Ledger', journal: 'Journal', perks: 'Perks', menu: 'Menu' },
 
+  // Town Rank bar (HUD + Journal)
+  rankbar: {
+    label: (r: number) => `Rank ${r}`,
+    pts: (a: number, b: number) => `${a}/${b}`,
+    next: (list: string) => `Next: ${list}`,
+    max: 'Top rank reached',
+    title: 'Town Rank',
+    at: (r: number) => `Rank ${r}`,
+    how: 'Rank points: 10 per resident, 60 per fully restored district, 6 per station, and up to 200 for defenses.',
+  },
+
   // progression (XP, perk points, perks screen)
   prog: {
     title: 'Perks',

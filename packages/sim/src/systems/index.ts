@@ -12,3 +12,4 @@ export * from './survivors';
 export * from './townboard';
 export * from './progression';
 export * from './campaign';
+export * from './townrank';

@@ -442,6 +442,15 @@ function journalScreen(c: ScreenCtx): () => void {
       } else if (!st.ending) next.append(h('b', null, S.camp.allDone));
       body.append(next);
     }
+    const rk = c.ui.rankSource?.();
+    if (rk) {
+      const fill = h('i');
+      fill.style.width = `${Math.round(rk.frac * 100)}%`;
+      const box = h('div.rank-card', { 'data-rank-journal': '' }, h('div.rtop', null, h('b', null, S.rankbar.label(rk.rank)), h('div.rbar', null, fill), h('small', null, rk.max ? S.rankbar.max : S.rankbar.pts(rk.into, rk.need))), h('small.how', null, S.rankbar.how));
+      const ul = h('div.list.rank-unlocks');
+      for (const u of rk.next) ul.append(h('div', { class: 'li obj' }, h('span.check', null, String(u.rank)), h('div.main', null, h('b', null, u.label), h('small', null, S.rankbar.at(u.rank)))));
+      body.append(h('h3.section', null, S.rankbar.title), box, ul);
+    }
     body.append(h('h3.section', null, S.objectives));
     const entries = c.ui.journalSource();
     if (!entries.length) body.append(h('p.empty-note', null, S.noObjectives));
