@@ -569,6 +569,28 @@ Times are in-game minutes at the default 24-minute day. **Every bot number is an
   - budget-tris: worst main pass 246k tris / 60 calls at medium (market).
   - Review checks: perks, rank, pack-step, smoke-check, restore, progress, enemies.
   - The six new round-6 checks.
-- **`tests/smoke.mjs` fails "salvage a crate" in this container.** The live round-5 build fails it the same way here: this container's software GPU now renders ~2 fps at 1280×720, so a 20 s hold never finishes. All its other steps pass: load, move, clock, inventory, save/reload, draw calls, zero console errors. The CI runner and live smoke are the gate for salvage; the CI run is in "Deploy" below.
+- **`tests/smoke.mjs` fails "salvage a crate" in this container.** The live round-5 build fails it the same way here: this container's software GPU now renders ~2 fps at 1280×720, so a 20 s hold never finishes. All its other steps pass: load, move, clock, inventory, save/reload, draw calls, zero console errors. **The salvage step is unverified this round.** CI's live smoke does not salvage, and salvage is unchanged code (the six new checks salvage and hold E through the same input path in fast-sim time).
 - The review checks' screenshot wait went from 30 s to 120 s for the same reason. Their assertions are unchanged.
 - **Saves:** schema 4 with a v3 → v4 migration. Test: a frozen round-5 (v3) save loads; the tutorial index shifts only at or past the new step. Difficulty and the new crop fields are optional or already stored, so they need no migration.
+
+### Deploy (main `1ced14f`)
+- CI: "Deploy (Cloudflare)" run 27 succeeded: quality gates; Worker deploy; live smoke attempt 1/3 PASS. "Deploy fallback (GitHub Pages)" run 25 succeeded.
+- Live smoke from this container:
+  - Worker `https://dormant-grid.dg-server.workers.dev`: 14/14 pass, serving `index-LEydreZC.js`, the same as the local build.
+  - Pages `https://qemmhd.github.io/DormantGrid` (`--offline`, no API there): 8/8 pass. Its strings bundle contains the round-6 text ("Reboot node", "Welcome trade").
+- Saves: schema 4. Round-5 (v3) saves migrate, and the test loads the frozen v3 fixture.
+
+### Remaining (ranked, after round 6)
+1. **Device test** (`DEVICE_FEEL_TEST.md`, plus these):
+   - Act I time for a person (target 25–45 min).
+   - The first node defence vs drones with starter gear.
+   - The first raid with a pipe.
+   - Layout and legibility of the raid card, recap and crop line on SE / 13 / 15 Pro Max.
+2. **First harvest timing:** the tutorial carrot ripens after ~1.7 h of play (target 45–75 min). Options: a quicker tutorial crop, or a tended-plot bonus.
+3. **First node defence:** if the device test confirms it is too hard, use a smaller first wave or no drones in wave 1.
+4. **P13 recorded audio:** files per `docs/asset-requests/`.
+5. **Two-device co-op run** (`docs/review/COOP_TEST.md`).
+6. **Bot quality** (review tooling only):
+   - Attack drones in their dip.
+   - Drink and boil water.
+   - Build without re-pathing per piece.

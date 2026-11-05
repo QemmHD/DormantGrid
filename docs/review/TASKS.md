@@ -10,7 +10,7 @@ Rule: do NOT tune difficulty to the bot; bot = dead ends / stalls / unclear step
 - [x] 5. Trader → `tools/review/trader-check.mjs` PASS (bot minute of contact comes from pacing.mjs)
 - [x] 6. Act I pacing: population 3 → 4; pacing-r6.json (bot Act I 62.4 min upper bound; Odile 6.0 min; first raid repelled 61.5 min; 15 deaths, 10 drones); PLAN.md table + death audit written
 - [x] 7. iPhone layout → `tools/review/layout-check.mjs` PASS on all three
-- [~] 8. Saves v4 + test DONE; npm run check GREEN; Playwright suites: all green except smoke salvage (environmental: round-5 live build fails identically here, ~2 fps SwiftShader) and restore/progress/enemies screenshot timeouts (retrying); then accept.mjs, merge, CI, live smoke both URLs, final reply
+- [x] 8. Saves v4 + test; npm run check green; accept 12/13; merged main 1ced14f; CI deploy run 27 + Pages run 25 green; live smoke Worker 14/14, Pages 8/8. Unverified: tests/smoke.mjs salvage step (container renders ~2 fps; round-5 build fails it identically here)
 
 ## Findings (round 6)
 - Reboot "never started" = bot navigation (straight-line walking stuck on props) + a game gap: after the tutorial, quest objectives had no world beacon and no minimap marker. Fixed (objective target system); bot now walks nav paths.
