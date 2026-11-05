@@ -198,13 +198,13 @@ async function start() {
   const story = new Story(game, ui);
   ui.storySource = () => story.info();
   // a raid warning or a recovery objective outranks the story step: lead the player home
-  const THREE = await import('three');
+  // (Vector3s come from clone(): a dynamic import('three') here would pull the whole library into the bundle)
   const { S } = await import('./ui/strings');
   const { isNight } = await import('@dg/sim');
   const { HAVEN_SAFE_R } = await import('./game/enemies');
   const havenTarget = (label: string) => {
     const sp = game.layout.spawn;
-    return { pos: new THREE.Vector3(sp.x, game.view.surface(sp.x, sp.z) + 1.5, sp.z), label, kind: 'haven' };
+    return { pos: game.player.pos.clone().set(sp.x, game.view.surface(sp.x, sp.z) + 1.5, sp.z), label, kind: 'haven' };
   };
   const { FarmGuide } = await import('./game/farmguide');
   const farm = new FarmGuide(game, ui);
@@ -228,7 +228,7 @@ async function start() {
       delete game.save.world.flags['satchel'];
       return null;
     }
-    return { pos: new THREE.Vector3(x, game.view.surface(x, z) + 1, z), label: S.death.satchelTarget, kind: 'satchel' };
+    return { pos: game.player.pos.clone().set(x, game.view.surface(x, z) + 1, z), label: S.death.satchelTarget, kind: 'satchel' };
   };
   // one-time note the first time the player walks back into the Haven safe zone
   let wasOut = false;
