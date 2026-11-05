@@ -5,32 +5,28 @@
         "text": "Rank 130/40Next: Brick building tier · Machinist’s Bench · Kitchen",
         "box": [
           25,
-          239,
-          189,
-          292
+          221,
+          139,
+          289
         ],
         "onScreen": true,
         "visible": true,
         "minFont": 11,
-        "overlaps": [
-          "slot"
-        ],
+        "overlaps": [],
         "fill": "75%"
       },
       "after": {
         "text": "Rank 226/60Next: Chem Station · Livestock Pen · Cutting Torch",
         "box": [
           25,
-          239,
-          189,
-          292
+          221,
+          139,
+          289
         ],
         "onScreen": true,
         "visible": true,
         "minFont": 11,
-        "overlaps": [
-          "slot"
-        ],
+        "overlaps": [],
         "fill": "43%"
       },
       "journal": {
@@ -39,7 +35,7 @@
         "minFont": 11.5
       },
       "nextListed": 3,
-      "pass": false,
+      "pass": true,
       "pageErrors": []
     },
     "iPhone 13": {
@@ -81,5 +77,5 @@
       "pageErrors": []
     }
   },
-  "pass": false
+  "pass": true
 }

@@ -6,11 +6,11 @@ Rule: do NOT tune difficulty to the bot; bot = dead ends / stalls / unclear step
 - [x] 1. Reboot flow → `tools/review/reboot-check.mjs` PASS (docs/review/reboot.json)
 - [x] 2. First raid fairness + difficulty → `tools/review/raid-check.mjs` PASS (docs/review/raid.json)
 - [x] 3. Deaths: safe zone, gear kept, satchel, recap → `tools/review/death-check.mjs` PASS (audit: from the pacing re-run's deathLog)
-- [~] 4. Farming → `tools/review/farm-check.mjs` (fixes in: season card on game tick, priority beacon in tutorial, farmers wait 6 h on the player's crop) — re-running
+- [x] 4. Farming → `tools/review/farm-check.mjs` PASS
 - [x] 5. Trader → `tools/review/trader-check.mjs` PASS (bot minute of contact comes from pacing.mjs)
-- [~] 6. Act I pacing: population 3 → 4 (three are seeded, so the step completed itself); re-run pacing.mjs (frozen dist via PACING_DIST); PLAN.md table
-- [~] 7. iPhone layout → `tools/review/layout-check.mjs` (PWA full-screen 667×375 / 844×390 / 932×430 + insets) — SE passing after CSS block; 13 / 15 PM re-running
-- [ ] 8. Saves: schema v4 migration (tutorial index) + test DONE; gates; budgets; merge; CI; live smoke both URLs; PLAN.md; final reply
+- [x] 6. Act I pacing: population 3 → 4; pacing-r6.json (bot Act I 62.4 min upper bound; Odile 6.0 min; first raid repelled 61.5 min; 15 deaths, 10 drones); PLAN.md table + death audit written
+- [x] 7. iPhone layout → `tools/review/layout-check.mjs` PASS on all three
+- [~] 8. Saves v4 + test DONE; npm run check GREEN; Playwright suites: all green except smoke salvage (environmental: round-5 live build fails identically here, ~2 fps SwiftShader) and restore/progress/enemies screenshot timeouts (retrying); then accept.mjs, merge, CI, live smoke both URLs, final reply
 
 ## Findings (round 6)
 - Reboot "never started" = bot navigation (straight-line walking stuck on props) + a game gap: after the tutorial, quest objectives had no world beacon and no minimap marker. Fixed (objective target system); bot now walks nav paths.
