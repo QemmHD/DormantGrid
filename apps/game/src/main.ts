@@ -170,6 +170,11 @@ async function start() {
     if (ui.openScreen === 'ledger' && game.save) game.save.world.flags['ledgerOpened'] = true;
   });
   (window as unknown as { __raids: unknown }).__raids = new Raids(game, enemies);
+  const { Restoration } = await import('./game/restoration');
+  const restoration = new Restoration(game);
+  game.restorationAt = (x, z) => restoration.stateAt(x, z);
+  grid.onOnline = (x, y, z) => restoration.beat(x, y, z);
+  (window as unknown as { __restore: unknown }).__restore = restoration;
   const { Opening } = await import('./game/opening');
   (window as unknown as { __opening: unknown }).__opening = new Opening(game, enemies);
   trader.onLore = (title, header, body) => {

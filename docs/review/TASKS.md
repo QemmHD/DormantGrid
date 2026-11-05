@@ -1,21 +1,20 @@
-# Round 3 tasks — first hour playable, readable, good-looking (survives compaction)
+# Round 4 tasks — make progress pay off (survives compaction)
 
-Source of truth: docs/REVIEW.md + docs/review/PLAN.md. Work on build/main-line, merge to main after each green step.
-Acceptance: `node tools/review/accept.mjs` (13 checks). Scope 1-4 checks must pass: P1, P3, P4, P5, P6, P7. Item 5: P2 + after shots.
-Evidence refresh: `npm run build && node tools/review/session.mjs 30 && node tools/review/controls2.mjs`.
+Source: docs/REVIEW.md + docs/review/PLAN.md. Work on build/main-line, merge to main after each green step.
+Acceptance: `node tools/review/accept.mjs` — must pass this round: P2 (pixel-based), P8, P9, P10, P12, plus new P15 restoration before/after.
+Out of scope: P11 enemy variety, P13 recorded audio, co-op.
 
-- [x] 0. Setup: review docs + tools/review into main; 10 before shots as WebP (205 KB) in docs/review/before/; raw PNGs stay on review/2026-11-04 (docs/review/shots/ gitignored)
-- [x] 1. First 10 min: crate gives scrap / hint / craft list surfaces tutorial recipe; telegraphed early threat ≤10 min; first survivor arrival/rescue ≤15 min; no idle gap
-- [x] 2. Targeting: look-direction first, nothing behind wins (game.ts scanTargets)
-- [x] 3. Camera: never lose the player (wall min distance, fade occluding props/bushes/cars)
-- [x] 4. Building placement at camp: diagnose finding 29 (game bug or bot?) and fix
-- [x] 5. Visuals: character rebuild (hands, face, clothing, silhouette), billboard smoke, desaturate props, roughness variation, contact shadows; within budgets
-- [x] 6. After shots (same 6 points) → docs/review/after/ WebP
-- [x] 7. Gates green, budgets, CI deploy, live smoke both URLs
-- [x] 8. PLAN.md updated; final reply
+- [ ] 1. Restoration payoff: lit street lamps (+ light pools), new props/plants, hazards cleared, ambient walkers, warmer light, birdsong, cinematic beat on reboot; measurable check tools/review/restore-check.mjs → P15
+- [ ] 2. Progression: XP from play (grantXp), perk screen (32 perks, tiers, points, progress bar), perk effects wired; campaign plumbing (choice UI for toll/core, trader sets talk:guild_factor, Grid Core entrance, ending screen using sim ENDINGS + client epilogues), journal shows next step + ending paths → P8, P12
+- [ ] 3. Power/water: needsPower checked (stations, turret, floodlight), Haven powered once any district is Powered, irrigation from restored Waterworks → P9, P10
+- [ ] 4. Visual leftovers: soft flickering flames, ground grime/cracks/wear, Haven sign not mirrored, stronger contact shadows on high
+- [ ] 5. "Check your pack" tutorial step: human vs bot — diagnose + fix
+- [ ] 6. P2 asserts rendered pixels (smoke soft, non-cubic)
+- [ ] 7. Save schema 3 migration (retroactive XP for old saves) + test that a v2 save loads
+- [ ] 8. Before/after shots (items 1, 4) → docs/review/after/ WebP
+- [ ] 9. Gates green, budgets, CI deploy, live smoke both URLs; PLAN.md updated; final reply
 
-## Notes
-- Before shots (6 points for item 5): desktop-03 spawn-after-intro, desktop-04 haven-overview, desktop-05 downtown-street-dormant, desktop-08 building-closeup, desktop-11 prop-closeup-car, desktop-13 night-haven.
-- Status: accept.mjs 7/13 PASS (P1–P7). Session (bot) milestones: craft 10.5 s, build 57.6 s, threat 265 s, survivor 517 s. Finding 29 = bot issue (fixed bot).
-- Next: after shots (running) → docs/review/after/*.webp (6 points), gates (check, smoke, feel, guide, systems, grid, raid, defense, walk, models-flow, budget-tris), merge to main, CI deploy, live smoke both URLs, final reply.
-- Round 3 complete: merged to main 9d6a258, CI deploy + live smoke green on both URLs.
+## Findings while reading (round 4)
+- awardXp/grantXp exists (sim rank.ts:43) but the client never calls it → XP/perk points never accrue; quest reward.xp ignored (game.ts updateQuests).
+- No UI sets choice:toll / choice:core; trader talk doesn't set talk:guild_factor; nothing sets talk:grid_core → campaign cannot finish.
+- Client ENDINGS (content/campaign.ts, 3 epilogues) vs sim ENDINGS (data/quests.ts, 6 endings + resolveEnding) are not connected.

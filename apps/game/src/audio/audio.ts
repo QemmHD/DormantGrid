@@ -38,7 +38,8 @@ export type Sfx =
   | 'levelUp'
   | 'drone'
   | 'shot'
-  | 'bow';
+  | 'bow'
+  | 'chirp';
 
 const MAX_VOICES = 24;
 
@@ -383,6 +384,27 @@ export class AudioEngine {
           o.stop(t + i * 0.22 + 0.22);
         }
         return 0.95;
+      case 'chirp': {
+        // a small bird: 2-4 quick descending sweeps (restored districts, daytime)
+        const n = 2 + Math.floor(Math.random() * 3);
+        const base = 2600 + Math.random() * 1400;
+        for (let i = 0; i < n; i++) {
+          const o = ctx.createOscillator();
+          o.type = 'sine';
+          const tt = t + i * (0.09 + Math.random() * 0.05);
+          o.frequency.setValueAtTime(base * (1.15 - i * 0.04), tt);
+          o.frequency.exponentialRampToValueAtTime(base * 0.72, tt + 0.07);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, tt);
+          g.gain.exponentialRampToValueAtTime(0.05, tt + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.08);
+          o.connect(g);
+          g.connect(out);
+          o.start(tt);
+          o.stop(tt + 0.1);
+        }
+        break;
+      }
       case 'levelUp':
         [523, 659, 784, 1046].forEach((f, i) => {
           const o = ctx.createOscillator();

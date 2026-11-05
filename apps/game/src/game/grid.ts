@@ -283,6 +283,7 @@ export class Grid {
     this.beam.visible = true;
     (this.beam.material as THREE.MeshBasicMaterial).opacity = 0.9;
     g.fx.glowBurst(v.def.x, y + 3.6, v.def.z, 40);
+    this.onOnline?.(v.def.x, y, v.def.z);
     audio.play('powerUp', { vol: 1 });
     setTimeout(() => audio.play('levelUp', { vol: 0.8 }), 900);
     g.camera.addTrauma(0.35);
@@ -345,6 +346,9 @@ export class Grid {
     if (ev.length) this.handleEvents(ev);
     if (this.active && this.active.phase === 'syncing' && !holding && g.input.wasReleased('interact')) g.bus.emit({ type: 'progress', value: null });
   }
+
+  /** called when a node this player rebooted comes online (restoration cinematic beat) */
+  onOnline: ((x: number, y: number, z: number) => void) | null = null;
 
   /** A teammate brought a node online: recompute restoration and refresh visuals. */
   remoteOnline(_node: number, district: number): void {

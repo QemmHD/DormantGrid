@@ -1738,9 +1738,12 @@ export class Game implements GameAPI {
   }
 
   /** 0 = cold ruin .. 1 = warm restored, at the player's location */
+  /** effective restoration at a point (set by the restoration layer: district state, boosted near online nodes) */
+  restorationAt: ((x: number, z: number) => number) | null = null;
+
   warmth(): number {
     const d = districtAt(this.layout, this.player.pos.x, this.player.pos.z);
-    const st = this.save.world.districts[d.index]?.state ?? 0;
+    const st = this.restorationAt?.(this.player.pos.x, this.player.pos.z) ?? this.save.world.districts[d.index]?.state ?? 0;
     const base = d.key === 'haven' ? 0.55 : 0.2;
     return Math.min(1, base + st * 0.18);
   }

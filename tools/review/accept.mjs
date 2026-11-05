@@ -17,6 +17,7 @@ const grepCount = (pattern, dir, flags = 'rniE') => {
 const session = J('docs/review/session.json');
 const c2 = J('docs/review/controls2.json');
 const content = J('docs/review/content.json');
+const restore = J('docs/review/restore.json');
 
 const checks = {
   'P1-tutorial-scrap': () => {
@@ -77,6 +78,11 @@ const checks = {
   'P13-recorded-audio': () => {
     const n = content?.audio?.recordedAudioFiles ?? 0;
     return [n >= 10, `recorded audio files: ${n} (target ≥ 10 ambience/SFX beds; run content.mjs)`];
+  },
+  'P15-restoration-payoff': () => {
+    if (!restore) return [false, 'run node tools/review/restore-check.mjs first'];
+    const a = restore.after, b = restore.before;
+    return [restore.pass, `lamps ${b.litLamps}→${a.litLamps}, decor ${a.decor}, walkers ${a.walkers}, hazards near player ${b.hazardsVisibleWithin60m}→${a.hazardsVisibleWithin60m}, pixels changed ${(restore.pixelFrac * 100).toFixed(1)}% (thresholds: lamps 0→≥${restore.thresholds.lamps}, decor ≥${restore.thresholds.decor}, walkers ≥${restore.thresholds.walkers}, cleared ≥${restore.thresholds.cleared}, pixels ≥${restore.thresholds.pixelFrac * 100}%)`];
   },
   'P14-tri-budget': () => {
     try {
