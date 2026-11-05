@@ -659,3 +659,31 @@ html.touch .prompt { display: none; }
 /* round 6: Odile's free first trade */
 .welcome-trade { border: 1px solid rgba(255,210,122,0.55); background: rgba(255,210,122,0.08); border-radius: 10px; }
 .welcome-trade b { color: #ffd27a; }
+/* ===== round 6: landscape phone layout (tools/review/layout-check.mjs: SE 3rd gen, 13, 15 Pro Max as a
+   Home Screen PWA with notch / Dynamic Island insets). #ui-scoped: the minifier merges same-query
+   @media blocks ahead of base rules. ===== */
+/* Jump sat at the bottom-left of the cluster and covered quick slot 4 on the SE; it now sits above
+   Attack, left of Sprint. Zoom grows to a 45 px target after the 0.9 cluster scale. */
+#ui .act.jump { right: 160px; bottom: 148px; }
+#ui .act.zoom { width: 50px; height: 50px; right: 168px; bottom: 88px; }
+@media (max-height: 500px) {
+  /* clock under the top bar, left of the minimap (8 top-bar buttons cover a centred clock) */
+  #ui .clock { top: calc(var(--safe-t) + 62px); left: auto; right: calc(var(--safe-r) + 136px); transform: none; text-align: right; }
+  /* objective card: below the meters, text passes touches to the stick, buttons first, never taller
+     than the space above the bottom inset */
+  #ui .objective { top: calc(var(--safe-t) + 126px); display: flex; flex-direction: column; pointer-events: none;
+    max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 134px); overflow: hidden; }
+  #ui .objective .orow { order: -1; margin: 0 0 4px; pointer-events: auto; }
+  #ui .objective .ot { order: 0; }
+  #ui .objective .ob { order: 2; }
+  #ui .objective .op { order: 3; }
+  #ui .objective .oraid { order: 4; }
+  #ui .objective .ocrop { order: 5; }
+  #ui .objective .orank { order: 6; }
+  /* a raid outranks the quest text on short screens */
+  #ui .objective.raid .ob, #ui .objective.raid .op { display: none; }
+}
+/* SE-class width: the card must end left of the centred quick bar (slot 1 starts at ~206 px) */
+@media (max-height: 500px) and (max-width: 700px) {
+  #ui .objective { width: 186px; }
+}

@@ -150,8 +150,10 @@ const c = await page.evaluate(async () => {
   };
   // player in Haven, raider 8 m away (inside the ring, as if it wandered in)
   out.inHaven = await run(s.x + 4, s.z, s.x + 12, s.z);
-  // control: same raider 8 m from a player standing 150 m out (Old Downtown)
-  out.outside = await run(s.x + 150, s.z, s.x + 158, s.z);
+  // control: same raider 8 m from a player on open ground by the downtown control node (~260 m out)
+  const di = g.layout.districts.findIndex((d) => d.key === 'downtown');
+  const nd = g.layout.nodes.filter((n) => n.district === di).sort((a, b) => Math.hypot(a.x - s.x, a.z - s.z) - Math.hypot(b.x - s.x, b.z - s.z))[0];
+  out.outside = await run(nd.x, nd.z + 3, nd.x + 8, nd.z + 3);
   // ambient spawns near Haven's edge never land within 78 m
   for (const e of E.list) if (e.state !== 'dead') E.die?.(e);
   const seen = new Set(E.list);

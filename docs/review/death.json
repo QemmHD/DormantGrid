@@ -55,10 +55,11 @@
     },
     {
       "k": "picking it up clears the marker",
-      "ok": false,
+      "ok": true,
       "detail": {
-        "scrap": 0,
-        "beacon": "Your satchel"
+        "scrap": 18,
+        "beacon": "",
+        "prompt": "EPick up Dropped pack"
       }
     },
     {
@@ -93,31 +94,39 @@
       "k": "Haven safe zone: ambient raider never reaches you, backs off",
       "ok": true,
       "detail": {
-        "minD": 16.1,
+        "minD": 8,
         "hpLost": 0,
         "state": "flee",
-        "endFromHaven": 50
+        "endFromHaven": 68
       }
     },
     {
       "k": "control: outside the ring the same raider attacks",
-      "ok": false,
+      "ok": true,
       "detail": {
-        "minD": 14.5,
-        "hpLost": 0,
-        "state": "chase",
-        "endFromHaven": 115
+        "minD": 1.6,
+        "hpLost": 74,
+        "state": "windup",
+        "endFromHaven": 277
       }
     },
     {
       "k": "ambient spawns never land within 78 m of Haven",
-      "ok": false,
+      "ok": true,
       "detail": {
-        "n": 0,
-        "near": 0
+        "n": 194,
+        "near": 0,
+        "tries": 1200,
+        "byOffset": {
+          "0": 0,
+          "85": 0,
+          "100": 0,
+          "115": 0,
+          "-100": 194
+        }
       }
     }
   ],
   "pageErrors": [],
-  "pass": false
+  "pass": true
 }

@@ -61,9 +61,10 @@ export const QUESTS: readonly QuestDef[] = [
   {
     id: 'q.first_neighbors', act: 'ember', title: 'Neighbors', requires: ['q.roof_over'], main: true,
     steps: [
-      { text: 'Build a workbench and a farm plot.', hint: 'Survivors only stay where there’s work and food.', obj: { type: 'build', piece: 'farm_plot', count: 2 } },
+      { text: 'Build a workbench and two farm plots.', hint: 'Survivors only stay where there’s work and food.', obj: { type: 'build', piece: 'farm_plot', count: 2 } },
       { text: 'Find the woman signalling from the Residential Rows.', hint: 'Follow the mirror flashes north.', obj: { type: 'reach', district: 'residential' } },
-      { text: 'Bring Haven to three residents.', hint: 'Beds attract survivors. One bed, one neighbor.', obj: { type: 'population', count: 3 } },
+      // round 6 pacing: three residents came with you, so "three" completed itself; a fourth needs a spare bed and food
+      { text: 'Bring Haven to four residents.', hint: 'Three came with you. Build a spare bed and keep food in the stockpile: newcomers walk in at dawn.', obj: { type: 'population', count: 4 } },
     ],
     reward: { items: [{ item: 'bp.workbench2', count: 1 }, { item: 'misc.guild_chit', count: 30 }], rep: { hearth: 10 }, xp: 120 },
   },

@@ -38,9 +38,12 @@ const r = await page.evaluate(async () => {
   const key = (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true }));
   const tap = async (code) => { key(code, true); await frames(2); key(code, false); await frames(2); };
   const out = {};
+  const subs = [];
+  g.bus.on('subtitle', (e) => subs.push(e.text));
   const toasts = () => [...document.querySelectorAll('.toast')].map((t) => t.textContent);
   // 1. the "bed" step completes → "A first crop"
   W.hour = 8; // day 0, spring morning
+  W.flags['raid.last'] = 1e6; // no raids during the 100 skipped hours (a lost raid's recovery objective would outrank the crop)
   const bedIdx = 12;
   g.onbStep = bedIdx; W.flags.onb = bedIdx;
   for (let i = 0; i < g.save.player.inventory.length; i++) g.save.player.inventory[i] = null;
@@ -73,7 +76,7 @@ const r = await page.evaluate(async () => {
     planted: crop?.crop ?? null,
     onbStep: g.onbStep,
     nextTitle: document.querySelector('.objective .ot')?.textContent ?? '',
-    seasonCard: !!document.querySelector('[data-season-card]'),
+    seasonCard: !!document.querySelector('[data-season-card]') && !!W.flags['seen:seasonCard'],
     seasonText: document.querySelector('[data-season-card]')?.textContent ?? '',
   };
   document.querySelector('[data-season-card]')?.closest('.screen')?.querySelector('.btn.primary')?.click();
@@ -93,12 +96,12 @@ const r = await page.evaluate(async () => {
   while (planted.growth < 1 && jumps < 80) {
     planted.water = 1;
     // 12 h jumps, then hour by hour near the end (real play passes an hour a minute)
-    const dh = planted.growth > 0.85 ? 1 : 12;
+    const dh = planted.growth > 0.7 ? 1 : 12;
     W.hour += dh;
     hours += dh;
     jumps++;
     await frames(30);
-    timeline.push(Math.round(planted.growth * 100));
+    timeline.push(`${planted.crop}:${Math.round(planted.growth * 100)}`);
   }
   await frames(40);
   out.step4 = {
@@ -106,7 +109,7 @@ const r = await page.evaluate(async () => {
     gameHours: hours,
     timeline,
     ripe: planted.growth >= 1,
-    reminderToast: toasts().find((t) => /ripe/.test(t)) ?? null,
+    reminderToast: subs.find((t) => /ripe/.test(t)) ?? toasts().find((t) => /ripe/.test(t)) ?? null,
     reminders: Number(W.flags['harvestReminders'] ?? 0),
     beacon: guide.beaconTarget.label,
     card: document.querySelector('[data-cropline]')?.textContent ?? '',

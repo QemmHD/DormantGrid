@@ -300,15 +300,17 @@ export const S = {
 
   // first crop: tutorial gift, growth timer, harvest reminder, seasons card
   farm: {
+    /** crop name → plural for player-facing lines (Carrot → Carrots, Potato → Potatoes, Corn → Corn) */
+    plural: (name: string) => (/^(Corn|Wheat)$/.test(name) ? name : /o$/.test(name) ? `${name}es` : `${name}s`),
     gift: 'A seed pouch and a sack of compost sat by the door: 4 carrot seeds, 6 compost, 4 timber. Enough for a first plot.',
     cropLine: (name: string, pct: number, when: string) => `${name}: ${pct}% grown · ${when}`,
     readyIn: (d: number, h: number, mins: number) => `ripe in ${d ? `${d} d ` : ''}${h} h (about ${mins < 60 ? `${Math.max(1, mins)} min` : `${Math.round(mins / 6) / 10} h`} of play)`,
     stalled: 'not growing: needs water or is out of season',
     ripe: 'ripe — harvest it!',
     promptSub: (pct: number, when: string) => `${pct}% · ${when}`,
-    reminder: (name: string) => `Your ${name.toLowerCase()} ${name.endsWith('s') ? 'are' : 'is'} ripe. Harvest the plot at Haven before it spoils.`,
+    reminder: (plural: string) => `Your ${plural.toLowerCase()} ${/(Corn|Wheat)$/.test(plural) ? 'is' : 'are'} ripe. Harvest the plot at Haven before it spoils.`,
     reminderWho: 'Haven',
-    ripeTarget: (name: string) => `Ripe ${name.toLowerCase()}`,
+    ripeTarget: (plural: string) => `Ripe ${plural.toLowerCase()}`,
     seasonTitle: 'Seasons',
     seasonBody: (season: string) => [
       `A year is 28 days: spring, summer, autumn, winter, 7 days each. It is ${season} now.`,

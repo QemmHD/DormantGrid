@@ -79,12 +79,12 @@
         "won": true,
         "lost": false,
         "deaths": 0,
-        "minHp": 75,
-        "swings": 10,
+        "minHp": 88,
+        "swings": 9,
         "bandages": 0,
         "spawned": 2,
-        "seconds": 17,
-        "hpEnd": 75
+        "seconds": 16,
+        "hpEnd": 88
       }
     },
     {
@@ -114,10 +114,10 @@
         "lost": false,
         "deaths": 0,
         "minHp": 96,
-        "swings": 13,
+        "swings": 12,
         "bandages": 0,
         "spawned": 3,
-        "seconds": 15,
+        "seconds": 14,
         "hpEnd": 96
       }
     },
@@ -125,7 +125,13 @@
       "k": "raid lost while away → soft failure (≤10% stores, nobody hurt)",
       "ok": true,
       "detail": {
-        "lossPct": -3,
+        "outcome": {
+          "won": false,
+          "early": true,
+          "stockLoss": 0.1,
+          "lostItems": 18,
+          "injuries": 0
+        },
         "injured": 0
       }
     },
@@ -144,10 +150,11 @@
     },
     {
       "k": "placing a defence completes recovery and returns supplies",
-      "ok": false,
+      "ok": true,
       "detail": {
-        "before": 93,
-        "after": 93
+        "returned": 13,
+        "of": 18,
+        "obAfter": "Get a Grid fuse."
       }
     },
     {
@@ -175,5 +182,5 @@
     }
   ],
   "pageErrors": [],
-  "pass": false
+  "pass": true
 }

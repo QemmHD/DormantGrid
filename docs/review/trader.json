@@ -1,0 +1,83 @@
+{
+  "steps": [
+    {
+      "k": "minute 0: Odile on the minimap, next to the fire",
+      "ok": true,
+      "detail": {
+        "onMap": true,
+        "call": false,
+        "minute": 0,
+        "fromSpawn": 8.7
+      }
+    },
+    {
+      "k": "a survivor mentions her once the tutorial reaches crafting",
+      "ok": true,
+      "detail": {
+        "by": "Yara Hale",
+        "bySurvivor": true,
+        "text": "Odile from the Meridian Guild keeps a stall by the bus shelter, just east of the fire. First trade is free for newcomers. Go say hello.",
+        "toast": true,
+        "pulsing": true,
+        "at": 0.1
+      }
+    },
+    {
+      "k": "her coin pulses until the first visit",
+      "ok": true,
+      "detail": {
+        "before": true,
+        "after": false
+      }
+    },
+    {
+      "k": "she calls out once when you come near",
+      "ok": true,
+      "detail": {
+        "callouts": 1
+      }
+    },
+    {
+      "k": "E opens trade with a free welcome trade",
+      "ok": true,
+      "detail": {
+        "prompt": "ETrade OdileMeridian Guild trader",
+        "welcome": "Welcome trade (free, first visit)2 Canned Beans, 1 Rag Bandage and 6 Guild chits to get you started.Take it"
+      }
+    },
+    {
+      "k": "taking it grants food, a bandage and chits (once)",
+      "ok": true,
+      "detail": {
+        "before": {
+          "beans": 2,
+          "chits": 0,
+          "band": 1
+        },
+        "after": {
+          "beans": 4,
+          "chits": 6,
+          "band": 2
+        },
+        "gone": true
+      }
+    },
+    {
+      "k": "first contact stamped before minute 15",
+      "ok": true,
+      "detail": {
+        "minute": 0.1
+      }
+    },
+    {
+      "k": "fallback: stalled tutorial still hears about her by minute 4",
+      "ok": true,
+      "detail": {
+        "early": false,
+        "at": 4
+      }
+    }
+  ],
+  "pageErrors": [],
+  "pass": true
+}

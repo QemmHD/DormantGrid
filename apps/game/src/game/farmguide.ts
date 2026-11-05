@@ -44,7 +44,7 @@ export class FarmGuide {
       const mins = Math.round(hrs * (this.game.settings.dayMinutes / 24));
       when = S.farm.readyIn(d, h, mins);
     }
-    return { plot: c.plot, name: def.name, pct, hours: hrs, text: S.farm.cropLine(`${def.name}s`.replace(/ss$/, 's'), pct, when) };
+    return { plot: c.plot, name: def.name, pct, hours: hrs, text: S.farm.cropLine(S.farm.plural(def.name), pct, when) };
   }
 
   /** crop line for the objective card: the crop closest to ripe */
@@ -66,7 +66,7 @@ export class FarmGuide {
     if (!b || b.hours > 0) return null;
     const p = this.game.base.pos.get(b.plot);
     if (!p) return null;
-    return { pos: p.clone().setY(p.y + 1.2), label: S.farm.ripeTarget(b.name), kind: 'farm' };
+    return { pos: p.clone().setY(p.y + 1.2), label: S.farm.ripeTarget(S.farm.plural(b.name)), kind: 'farm' };
   }
 
   /** once per save: what seasons do (called on first planting, or a failed out-of-season one) */
@@ -96,6 +96,8 @@ export class FarmGuide {
     if (this.t > 0) return;
     this.t = 1;
     const w = g.save.world;
+    // seasons matter from the first crop the player plants: explain them once (a second after planting)
+    if (!w.flags['seen:seasonCard'] && g.mode === 'play' && w.crops.some((c) => c.mine && c.crop)) this.seasonCard();
     let best: CropStatus | null = null;
     for (const c of w.crops) {
       if (!c.crop) continue;
@@ -107,8 +109,8 @@ export class FarmGuide {
         if (w.flags[key] !== c.planted) {
           w.flags[key] = c.planted;
           const name = CROP_MAP.get(c.crop)?.name ?? c.crop;
-          g.toast(S.farm.reminder(`${name}s`.replace(/ss$/, 's')), 'warm');
-          g.bus.emit({ type: 'subtitle', who: S.farm.reminderWho, text: S.farm.reminder(`${name}s`.replace(/ss$/, 's')) });
+          g.toast(S.farm.reminder(S.farm.plural(name)), 'warm');
+          g.bus.emit({ type: 'subtitle', who: S.farm.reminderWho, text: S.farm.reminder(S.farm.plural(name)) });
           audio.play('levelUp', { vol: 0.5 });
           w.flags['harvestReminders'] = Number(w.flags['harvestReminders'] ?? 0) + 1;
         }

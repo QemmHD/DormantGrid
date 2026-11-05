@@ -4,14 +4,16 @@
 // — no quest state is set directly. It follows the Journal's "next step" (Story.info()).
 // Logs SIM-time timestamps for the PLAN.md pacing table.
 // Speed: rendering off, performance.now/rAF faked at 50 ms per frame (same as session.mjs).
-// Usage: node tools/review/pacing.mjs [simMinutes=150]  → docs/review/pacing.json
+// Usage: node tools/review/pacing.mjs [simMinutes=150] [outFile=docs/review/pacing.json]
+// PACING_DIST=/abs/dir serves a frozen copy of the build (so rebuilding during a long run is safe).
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 const SIM_MIN = Number(process.argv[2] ?? 150);
 const port = 7420 + Math.floor(Math.random() * 60);
-const srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { cwd: 'apps/game', stdio: 'pipe' });
+const OUT = process.argv[3] ?? 'docs/review/pacing.json';
+const srv = spawn(process.execPath, ['../../node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort', ...(process.env.PACING_DIST ? ['--outDir', process.env.PACING_DIST] : [])], { cwd: 'apps/game', stdio: 'pipe' });
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
@@ -440,7 +442,8 @@ const result = await page.evaluate(async (SIM_MIN) => {
       await walkTo(g.layout.spawn.x, g.layout.spawn.z, 6, 600);
     } else if (o === 'population') {
       // more beds attract survivors; otherwise keep busy near Haven
-      if (W().pieces.filter((p) => p.piece === 'bed').length < 3) await build('bed', W().pieces.filter((p) => p.piece === 'bed').length + 1);
+      const beds = W().pieces.filter((p) => p.piece === 'bed').length;
+      if (beds < W().survivors.filter((x) => x.alive).length + 2) await build('bed', beds + 1);
       else await gather('mat.scrap', count('mat.scrap') + 8, 150);
     } else if (o === 'collect' && text.includes('fuse')) {
       if (!(await trade('misc.grid_fuse'))) await gather('mat.scrap', count('mat.scrap') + 20, 240);
@@ -475,7 +478,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   };
 }, SIM_MIN);
 result.pageErrors = errs.slice(0, 5);
-writeFileSync('docs/review/pacing.json', JSON.stringify(result, null, 2) + '\n');
+writeFileSync(OUT, JSON.stringify(result, null, 2) + '\n');
 console.log(JSON.stringify({ simSeconds: result.simSeconds, day: result.day, milestones: result.milestones, deaths: result.deaths }, null, 2));
 await browser.close();
 srv.kill();

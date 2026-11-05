@@ -241,12 +241,14 @@ async function start() {
       game.toast(S.death.safeZone, 'warm');
     }
   });
-  const objective = () => {
+  const priority = () => {
     const r = raids.status();
     if (r && r.phase === 'warning' && Math.hypot(game.player.pos.x - game.layout.spawn.x, game.player.pos.z - game.layout.spawn.z) > 40) return havenTarget(S.raid.targetHaven);
     if (raids.recovery()) return havenTarget(S.raid.recoverTarget);
-    return satchelTarget() ?? farm.ripeTarget() ?? story.target();
+    return satchelTarget() ?? farm.ripeTarget();
   };
+  const objective = () => priority() ?? story.target();
+  guide.prioritySource = priority;
   guide.objectiveSource = objective;
   objectiveRef = objective;
   const { rankOf } = await import('./game/town');

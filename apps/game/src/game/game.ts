@@ -1383,8 +1383,6 @@ export class Game implements GameAPI {
       this.fx.dust(pos.x, pos.y - 0.4, pos.z, 4, 0x5a4a36);
       this.toast(`Planted ${getItem(seed.id)?.name.replace(' Seeds', '') ?? seed.id}.`, 'warm');
       this.trigger('plantedCrop');
-      // seasons matter from the first planting on: explain them once
-      if (!w.flags['seen:seasonCard']) setTimeout(() => this.farmHooks?.seasonCard(), 900);
     } else {
       const water = this.inv.findIndex((s) => s && (s.id === 'drink.dirty_water' || s.id === 'drink.clean_water' || s.id === 'tool.watering_can'));
       const fert = this.inv.findIndex((s) => s?.id === 'misc.fertilizer');

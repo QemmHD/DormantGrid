@@ -34,6 +34,8 @@ export class Guide {
   private tipUntil = 0;
   private v = new THREE.Vector3();
   private lastStep = -1;
+  /** urgent targets that outrank everything, even tutorial markers: raid, recovery, satchel, ripe crop */
+  prioritySource: (() => { pos: THREE.Vector3; label: string } | null) | null = null;
   /** current quest objective in the world (set by main from Story) */
   objectiveSource: (() => { pos: THREE.Vector3; label: string } | null) | null = null;
   private targetLabel = '';
@@ -265,7 +267,11 @@ export class Guide {
       this.titleEl.textContent = `Tutorial ${g.onbStep + 1}/${ONBOARDING.length} · ${step.title}`;
       this.bodyEl.textContent = touch ? step.touch : step.desktop;
       this.progEl.textContent = '';
-      if (Date.now() > this.adviceUntil) this.target = this.tutorialTarget(step.marker);
+      if (Date.now() > this.adviceUntil) {
+        const pri = this.prioritySource?.() ?? null;
+        this.target = pri ? pri.pos : this.tutorialTarget(step.marker);
+        this.targetLabel = pri ? pri.label : '';
+      }
       if (step.id !== String(this.lastStep)) {
         this.el.classList.remove('flash');
         void this.el.offsetWidth;
