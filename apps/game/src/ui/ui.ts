@@ -8,6 +8,7 @@ import { S } from './strings';
 import { btn, clear, h, shield, SVG, tap } from './dom';
 import { iconImg, iconURL } from './icons';
 import { buildScreen, type ScreenCtx } from './screens';
+import type { StoryInfo } from '../game/story';
 
 export interface JournalEntry {
   title: string;
@@ -31,6 +32,7 @@ const SCREEN_ACTIONS: [Action, ScreenId][] = [
   ['map', 'map'],
   ['ledger', 'ledger'],
   ['journal', 'journal'],
+  ['perks', 'perks'],
 ];
 
 export class UI {
@@ -68,6 +70,10 @@ export class UI {
   private refreshT = 0;
   // hooks provided by the game
   journalSource: () => JournalEntry[] = () => [];
+  /** campaign next step / decisions / endings (set by main from Story) */
+  storySource: (() => StoryInfo) | null = null;
+  decideHandler: (key: string) => void = () => {};
+  private perkBadge: HTMLElement | null = null;
   jobAssign: (id: number, job: string) => void = () => {};
   quitHandler: () => void = () => {};
   respawnHandler: () => void = () => {};
@@ -129,12 +135,17 @@ export class UI {
       ['map', 'map'],
       ['ledger', 'ledger'],
       ['journal', 'journal'],
+      ['perks', 'perks'],
       ['menu', 'menu'],
     ];
     for (const [a, ic] of topDefs) {
-      const b = h('div.icon-btn', { role: 'button', 'aria-label': S.topbar[a as keyof typeof S.topbar], html: SVG[ic] });
+      const b = h('div.icon-btn', { role: 'button', 'aria-label': S.topbar[a as keyof typeof S.topbar], html: SVG[ic], 'data-action': a });
       api.input.bindButton(b, a);
       top.append(b);
+      if (a === 'perks') {
+        this.perkBadge = h('span.badge');
+        b.append(this.perkBadge);
+      }
     }
     this.hud.append(top);
     this.netChip = h('div.net-chip');
@@ -239,6 +250,13 @@ export class UI {
   }
   setJournalSource(fn: () => JournalEntry[]): void {
     this.journalSource = fn;
+  }
+  /** perk points waiting: badge on the ★ button */
+  setPerkBadge(n: number): void {
+    if (!this.perkBadge) return;
+    this.perkBadge.textContent = n > 0 ? String(n) : '';
+    this.perkBadge.classList.toggle('on', n > 0);
+    this.refreshOpen(['perks']);
   }
   setJobAssign(fn: (id: number, job: string) => void): void {
     this.jobAssign = fn;

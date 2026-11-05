@@ -2,7 +2,9 @@
 // measured value. Runtime evidence comes from the review scripts; re-run them first:
 //   node tools/review/session.mjs 10 && node tools/review/controls2.mjs && node tests/budget-tris.mjs
 // Usage: node tools/review/accept.mjs [id ...]
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const J = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null);
@@ -18,6 +20,20 @@ const session = J('docs/review/session.json');
 const c2 = J('docs/review/controls2.json');
 const content = J('docs/review/content.json');
 const restore = J('docs/review/restore.json');
+const smoke = J('docs/review/smoke.json');
+const progress = J('docs/review/progress.json');
+// unit tests that back P9/P10 (run here, so the result is always current)
+const vitest = (file) => {
+  const out = join(mkdtempSync(join(tmpdir(), 'accept-')), 'v.json');
+  try {
+    execSync(`npx vitest run ${file} --reporter=json --outputFile=${out}`, { cwd: 'packages/sim', stdio: 'ignore' });
+  } catch {
+    /* failures are read from the report */
+  }
+  const j = J(out);
+  return j ? { pass: j.success, passed: j.numPassedTests, total: j.numTotalTests } : { pass: false, passed: 0, total: 0 };
+};
+const tests = { power: vitest('test/power.test.ts') };
 
 const checks = {
   'P1-tutorial-scrap': () => {
@@ -25,10 +41,9 @@ const checks = {
     return [t !== undefined && t <= 90, `first craft at ${t ?? 'never'} s (target ≤ 90 s; run session.mjs 10)`];
   },
   'P2-smoke': () => {
-    const fx = src('apps/game/src/render/fx.ts');
-    const body = fx.slice(fx.indexOf('  smoke('), fx.indexOf('\n  }', fx.indexOf('  smoke(')));
-    const opaque = /this\.spawn\(1,/.test(body);
-    return [!opaque, opaque ? 'smoke() still spawns into the opaque box pool (pool 1)' : 'smoke uses a non-box pool'];
+    // rendered pixels (tools/review/smoke-check.mjs), not source code
+    if (!smoke) return [false, 'run node tools/review/smoke-check.mjs first'];
+    return [smoke.pass, `smoke covers ${(smoke.smokeFrac * 100).toFixed(2)}% of the frame (≥ ${smoke.thresholds.smokeFrac * 100}%), hard-edge pixels ${(smoke.hardEdgeRatio * 100).toFixed(1)}% (≤ ${smoke.thresholds.hardEdge * 100}%), box pool adds ${(smoke.boxFrac * 100).toFixed(3)}% (≤ ${smoke.thresholds.boxFrac * 100}%)`];
   },
   'P3-targeting': () => {
     const a = c2?.ahead2m;
@@ -53,17 +68,20 @@ const checks = {
     return [t !== undefined && t <= 420, `first piece placed at ${t ?? 'never'} s (target ≤ 420 s)`];
   },
   'P8-perks-reachable': () => {
-    const n = grepCount('PERKS|canTakePerk', 'apps/game/src');
-    return [n > 0, `client references to perks: ${n} (target > 0, plus a UI screen)`];
+    if (!progress) return [false, 'run node tools/review/progress-check.mjs first'];
+    const p = progress.p8;
+    return [p.pass, `real salvage XP ${p.salvage.xpBefore}→${p.salvage.xpAfter}; craft level-up → ${p.levelUp.pts} perk point, ★ badge "${p.levelUp.badge}"; Perks screen ${p.screen.tabs} tracks × ${p.screen.perks} perks; Take → ${p.take.perks.length} learned, carry ${p.take.carryBefore}→${p.take.carry}`];
   },
   'P9-power-gating': () => {
-    const n = grepCount('needsPower', 'apps/game/src') + grepCount('needsPower', 'packages/sim/src/systems');
-    return [n > 0, `needsPower checks outside data: ${n} (target > 0)`];
+    const t = tests?.power;
+    const gate = grepCount('needsPower', 'apps/game/src');
+    const ok = !!t && t.pass && gate > 0;
+    return [ok, `${t ? `${t.passed}/${t.total} power+water unit tests pass` : 'run vitest power.test.ts'}; client needsPower gates: ${gate} (stations, turrets, floodlights via sim districtPowered)`];
   },
   'P10-irrigation': () => {
-    const t = src('apps/game/src/game/town.ts');
-    const ok = /irrigation/.test(t);
-    return [ok, ok ? 'town ctx passes irrigation' : 'town.ts ctx() does not pass irrigation'];
+    const tw = src('apps/game/src/game/town.ts');
+    const ok = /irrigation: irrigationOn\(/.test(tw) && !!tests?.power?.pass;
+    return [ok, ok ? 'town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one' : 'town.ts ctx() does not pass irrigation'];
   },
   'P11-enemy-variety': () => {
     const m = src('apps/game/src/game/enemies.ts').match(/export type EnemyKind = ([^;]+);/)?.[1] ?? '';
@@ -71,9 +89,10 @@ const checks = {
     return [n >= 9, `client enemy kinds: ${n} (target ≥ 9 of the 11 sim types)`];
   },
   'P12-endings-reachable': () => {
-    // case-sensitive; uses outside content/campaign.ts (where it is defined)
-    const n = grepCount('\\bENDINGS\\b', 'apps/game/src', 'rnE') - grepCount('export const ENDINGS', 'apps/game/src', 'rnE');
-    return [n > 0, `references to ENDINGS outside its definition: ${n} (target > 0)`];
+    if (!progress) return [false, 'run node tools/review/progress-check.mjs first'];
+    const p = progress.p12;
+    const shown = p.steps.filter((x) => x.startsWith('✓')).length;
+    return [p.pass, `campaign walked: ${p.steps.length} steps, next step shown in Journal at ${shown}/${p.steps.length}; via UI: ${p.uiSteps.join(', ')}; endings reached through the UI: ${p.endings.filter((e) => e.ok).length}/6 (${p.endings.map((e) => e.got).join(', ')})`];
   },
   'P13-recorded-audio': () => {
     const n = content?.audio?.recordedAudioFiles ?? 0;

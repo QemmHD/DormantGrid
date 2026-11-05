@@ -11,3 +11,4 @@ export * from './time';
 export * from './survivors';
 export * from './townboard';
 export * from './progression';
+export * from './campaign';

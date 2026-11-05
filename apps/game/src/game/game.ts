@@ -37,6 +37,14 @@ import {
   canPlant,
   activeQuests,
   advanceQuests,
+  applyQuestRewards,
+  grantXp,
+  perkFx,
+  districtPowered,
+  canTakePerk,
+  PERK_MAP,
+  XP,
+  PERK_POINT_PER_QUEST,
   objectiveProgress,
   QUESTS,
   ACT_NAMES,
@@ -72,6 +80,7 @@ import { PlayerController } from './player';
 import { CollisionWorld, type Collider } from './collision';
 import { CharacterRig, randomLook } from '../render/character';
 import { ContactShadows } from '../render/contact';
+import { S } from '../ui/strings';
 import { audio, type Sfx } from '../audio/audio';
 import { WorldView } from '../world/world';
 import { FX } from '../render/fx';
@@ -167,7 +176,8 @@ export class Game implements GameAPI {
   /** soft blob shadows under characters and props near the player (4×/s) */
   private updateContactShadows(): void {
     const c = this.contact;
-    c.strength = this.renderer.quality.shadows ? 0.32 : 0.55;
+    // round 4: 0.32 read as no shadow at all on high; real shadows don't cover the feet at this res
+    c.strength = this.renderer.quality.shadows ? 0.5 : 0.6;
     c.begin();
     for (const r of CharacterRig.all) {
       if (!r.root.parent || !r.root.visible) continue;
@@ -265,6 +275,7 @@ export class Game implements GameAPI {
     this.camp = new HavenCamp(this.layout.spawn.x, this.layout.spawn.z, (x, z) => this.view.surface(x, z), this.collision);
     this.scene.add(this.camp.group);
     this.camp.smoke = (x, y, z) => this.fx.smoke(x, y, z);
+    this.camp.cam = this.camera.cam;
     this.fx.camera = this.camera.cam;
     const rig = new CharacterRig(randomLook(7, { backpack: true, hairStyle: 1, shirt: 0x46535c, accent: 0xe8a65a }));
     this.scene.add(rig.root);
@@ -291,7 +302,7 @@ export class Game implements GameAPI {
       this.renderer.post = q.tier === 'low' ? null : new PostFX(this.renderer.gl, this.scene, this.camera.cam, q.tier === 'high');
       this.view.radius = q.detailRadius;
       this.view.propDensity = q.propDensity;
-      for (const u of this.view.uniforms) u.uPattern.value = q.patterns ? 1 : 0;
+      for (const u of this.view.uniforms) u.uGround.value = u.uPattern.value = q.patterns ? 1 : 0;
       this.atm.setShadows(q.shadows ? q.shadowSize : 0);
       this.view.setShadows(q.shadows);
     };
@@ -328,7 +339,7 @@ export class Game implements GameAPI {
     };
     v.radius = this.renderer.quality.detailRadius;
     v.propDensity = this.renderer.quality.propDensity;
-    for (const u of v.uniforms) u.uPattern.value = this.renderer.quality.patterns ? 1 : 0;
+    for (const u of v.uniforms) u.uGround.value = u.uPattern.value = this.renderer.quality.patterns ? 1 : 0;
     this.scene.add(v.group);
     return v;
   }
@@ -588,7 +599,7 @@ export class Game implements GameAPI {
   }
 
   carryWeight(): { kg: number; max: number } {
-    return { kg: totalWeight(this.inv), max: 40 };
+    return { kg: totalWeight(this.inv), max: 40 + this.pk('carry') };
   }
 
   useSlot(i: number): void {
@@ -702,15 +713,27 @@ export class Game implements GameAPI {
   }
 
   // ------------------------------------------------------------ crafting
-  private nearbyStations(): StationId[] {
+  private nearbyStations(unpowered?: StationId[]): StationId[] {
     const out: StationId[] = ['hands'];
     for (const p of this.save.world.pieces) {
       const def = getPiece(p.piece);
       if (!def?.station) continue;
       const pos = this.base.pos.get(p.id);
-      if (pos && pos.distanceToSquared(this.player.pos) < 6 * 6) out.push(def.station);
+      if (!pos || pos.distanceToSquared(this.player.pos) >= 6 * 6) continue;
+      // needsPower stations only work on Grid current
+      if (def.needsPower && !this.poweredAt(pos.x, pos.z)) {
+        unpowered?.push(def.station);
+        continue;
+      }
+      out.push(def.station);
     }
     return out;
+  }
+
+  /** Grid power at a point (sim districtPowered: district Powered, or Haven fed by any Powered district) */
+  poweredAt(x: number, z: number): boolean {
+    const d = districtAt(this.layout, x, z);
+    return districtPowered(this.save.world, this.layout.districts.map((q) => q.key), d.index);
   }
 
   /** Recipe the current tutorial step asks for (pinned to the top of the craft list). */
@@ -720,7 +743,9 @@ export class Game implements GameAPI {
   }
 
   craftInfo(): CraftInfo {
-    return { stations: this.nearbyStations(), blueprints: this.save.world.blueprints, rank: Number(this.save.world.flags['rank'] ?? 1) };
+    const unpowered: StationId[] = [];
+    const stations = this.nearbyStations(unpowered);
+    return { stations, unpowered, blueprints: this.save.world.blueprints, rank: Number(this.save.world.flags['rank'] ?? 1) };
   }
 
   craft(recipeId: string, times: number): boolean {
@@ -742,6 +767,7 @@ export class Game implements GameAPI {
     this.fx.glowBurst(this.player.pos.x, this.player.pos.y + 1.2, this.player.pos.z, 10, 0xe8a65a);
     const f = this.save.world.flags;
     f[`crafted:${r.out}`] = Number(f[`crafted:${r.out}`] ?? 0) + made;
+    this.award(XP.craft * made);
     if (r.out === 'tool.crowbar') this.trigger('craftedCrowbar');
     if (def?.tool && !this.save.player.equipped) {
       this.save.player.equipped = r.out;
@@ -778,7 +804,10 @@ export class Game implements GameAPI {
     const def = getPiece(this.build.piece);
     if (!def) return [];
     if (def.fromItem) return [{ item: def.fromItem, count: 1 }];
-    return def.costs[Math.min(this.build.tier, def.costs.length - 1)] ?? [];
+    const base = def.costs[Math.min(this.build.tier, def.costs.length - 1)] ?? [];
+    // perks: Square and Level (all pieces), Master Builder (reinforced tier)
+    const m = 1 + this.pk('buildCost') + (this.build.tier >= 2 ? this.pk('reinforcedCost') : 0);
+    return m >= 1 ? base : base.map((c) => ({ item: c.item, count: Math.max(1, Math.round(c.count * m)) }));
   }
 
   private updateBuild(): void {
@@ -857,6 +886,7 @@ export class Game implements GameAPI {
       }
       const f = this.save.world.flags;
       f[`built:${b.piece}`] = Number(f[`built:${b.piece}`] ?? 0) + 1;
+      this.award(XP.build);
       this.bus.emit({ type: 'inventory' });
       this.persist('build');
       if (def.fromItem && !this.inv.some((s) => s?.id === def.fromItem)) this.stopBuild();
@@ -1078,7 +1108,7 @@ export class Game implements GameAPI {
     } else {
       can = toolCanBreak(tool.tier, t.def.tool);
       const best = tool.tier === t.def.best ? 1.6 : 1;
-      need = t.def.time / (tool.speed * best);
+      need = t.def.time / (tool.speed * best * (1 + this.pk('deconSpeed')));
       if (t.kind === 'prop') need *= Math.max(0.6, this.layout.props[t.id].scale);
     }
     if (!can) {
@@ -1111,7 +1141,7 @@ export class Game implements GameAPI {
       this.holdT = 0;
       this.bus.emit({ type: 'progress', value: null });
       if (tool.slot >= 0 && t.kind !== 'placed') {
-        if (wearSlot(this.inv, tool.slot, 1)) {
+        if (!(this.pk('durability') < 0 && this.rng.chance(-this.pk('durability'))) && wearSlot(this.inv, tool.slot, 1)) {
           this.toast('Your tool broke.', 'bad');
           this.save.player.equipped = null;
         }
@@ -1189,8 +1219,10 @@ export class Game implements GameAPI {
     this.hitstop = 0.035 + def.weight * 0.035;
     this.camera.addTrauma(0.15 + def.weight * 0.3);
     this.camera.kickFov(2 + def.weight * 3);
+    this.perkYields(items);
     this.grant(items, pos);
     this.trigger('brokeProp');
+    this.award(def.weight > 0.7 ? XP.salvageHeavy : XP.salvage);
     const f = this.save.world.flags;
     f['salvaged'] = Number(f['salvaged'] ?? 0) + 1;
   }
@@ -1228,6 +1260,8 @@ export class Game implements GameAPI {
     const pos = toWorld(info);
     const mult = this.districtMult(b.x, b.z);
     const items = this.rollYields(def.yields, mult);
+    this.perkYields(items);
+    this.award(def.weight > 0.7 ? XP.salvageHeavy : XP.salvage);
     this.fx.debris(pos.x, pos.y, pos.z, def.sfx, def.weight);
     audio.play('break', { pos });
     this.hitstop = 0.05;
@@ -1315,7 +1349,9 @@ export class Game implements GameAPI {
     const pos = (this.base.pos.get(p.id) ?? this.player.pos).clone().setY(this.player.pos.y + 0.5);
     if (c && c.crop && c.growth >= 1) {
       const got = harvestCrop(c, this.rng);
+      if (got.length && this.pk('harvest') > 0) got[0].count += this.pk('harvest');
       this.grant(got.map((g) => ({ item: g.item, n: g.count })), pos);
+      this.award(XP.harvest);
       audio.play('pickup');
       this.fx.debris(pos.x, pos.y, pos.z, 'foliage', 0.3, 6);
       w.flags['harvested'] = Number(w.flags['harvested'] ?? 0) + 1;
@@ -1488,9 +1524,9 @@ export class Game implements GameAPI {
     this.attackT = cd;
     this.player.rig.attackDur = Math.min(0.6, cd * 0.85);
     this.player.rig.setState('attack');
-    tickStamina(p, 0, eq?.weapon?.stamina ?? 8, modifiers(p));
+    tickStamina(p, 0, eq?.weapon?.stamina ?? 8, modifiers(p, this.perkMods()));
     audio.play('swing', { vol: 0.6 });
-    const dmg = eq?.weapon?.damage ?? (eq?.tool ? 12 : 6);
+    const dmg = (eq?.weapon?.damage ?? (eq?.tool ? 12 : 6)) * (1 + this.pk(eq?.weapon?.kind === 'ranged' ? 'ranged' : 'melee'));
     if (eq?.weapon?.kind === 'ranged') {
       const ammo = eq.weapon.ammo;
       if (ammo && !this.inv.some((s) => s?.id === ammo)) {
@@ -1543,7 +1579,68 @@ export class Game implements GameAPI {
 
   // ------------------------------------------------------------ survival
   survivalCtx() {
-    return { difficulty: this.save.world.difficulty, rng: this.rng, sleeping: this.mode === 'sleeping', exposed: this.atm.wetness > 0.5 && !this.underRoof() };
+    return { difficulty: this.save.world.difficulty, rng: this.rng, sleeping: this.mode === 'sleeping', exposed: this.atm.wetness > 0.5 && !this.underRoof(), perks: this.perkMods() };
+  }
+
+  // ------------------------------------------------------------ progression (XP, perk points, perk effects)
+  /** sum of an owned perk effect (perks.ts fx keys) */
+  pk(key: string): number {
+    return this.save ? perkFx(this.save.player.perks, key) : 0;
+  }
+
+  perkMods(): { sickness: number; medicine: number; staminaRegen: number } {
+    return { sickness: this.pk('sickness'), medicine: this.pk('medicine'), staminaRegen: this.pk('staminaRegen') };
+  }
+
+  /** set by main: perk point earned (UI badge/refresh) */
+  onPerkPoint: (() => void) | null = null;
+
+  /** Grant XP for an action. A level-up gives a perk point. */
+  award(xp: number, why?: string): void {
+    if (!this.save || xp <= 0) return;
+    const gained = grantXp(this.save.player, xp);
+    if (why) this.toast(S.prog.xpGain(xp, why), 'info');
+    if (gained > 0) this.perkPointToast(gained, S.prog.levelUp);
+  }
+
+  /** Perk points that do not come from levelling (nodes, quests). */
+  givePerkPoints(n: number, why: string): void {
+    if (!this.save || n <= 0) return;
+    this.save.player.perkPoints += n;
+    this.perkPointToast(n, why);
+  }
+
+  private perkPointToast(n: number, why: string): void {
+    this.toast(S.prog.point(why, n), 'warm');
+    audio.play('levelUp', { vol: 0.7 });
+    this.fx.glowBurst(this.player.pos.x, this.player.pos.y + 1.4, this.player.pos.z, 14, 0xffd27a);
+    this.onPerkPoint?.();
+  }
+
+  takePerk(id: string): boolean {
+    const p = this.save.player;
+    if (!canTakePerk(p.perks, id, p.perkPoints)) {
+      audio.play('deny');
+      return false;
+    }
+    p.perks.push(id);
+    p.perkPoints--;
+    const def = PERK_MAP.get(id);
+    this.toast(S.prog.taken(def?.name ?? id), 'warm');
+    audio.play('levelUp', { vol: 0.8 });
+    this.fx.glowBurst(this.player.pos.x, this.player.pos.y + 1.2, this.player.pos.z, 18, 0xffd27a);
+    this.onPerkPoint?.();
+    this.persist('perk');
+    return true;
+  }
+
+  /** Strip It All / Eye for Wire */
+  private perkYields(items: { item: string; n: number }[]): void {
+    if (!items.length) return;
+    const bonus = this.pk('salvageBonus');
+    if (bonus > 0) items[0].n += bonus;
+    const wire = items.find((i) => i.item === 'mat.wiring');
+    if (wire) wire.n += this.pk('wiringBonus');
   }
 
   private underRoof(): boolean {
@@ -1553,7 +1650,7 @@ export class Game implements GameAPI {
 
   hurt(amount: number, kind: 'blunt' | 'cut' | 'fall' | 'bite' | 'shot', cause = kind as string): void {
     if (this.mode === 'dead') return;
-    const dealt = damagePlayer(this.save.player, amount, kind, this.survivalCtx());
+    const dealt = damagePlayer(this.save.player, amount * (1 - Math.min(0.6, this.pk('armor'))), kind, this.survivalCtx());
     this.bus.emit({ type: 'damage', amount: dealt });
     audio.play('hurt');
     this.player.rig.hit(0.8);
@@ -1624,6 +1721,7 @@ export class Game implements GameAPI {
       this.trigger('slept');
       this.trigger('survivedNight');
       w.flags['nights'] = Number(w.flags['nights'] ?? 0) + 1;
+      this.award(XP.night, S.prog.night);
       this.persist('sleep');
       fade.classList.remove('on');
       setTimeout(() => fade.remove(), 900);
@@ -1658,7 +1756,7 @@ export class Game implements GameAPI {
     const p = this.save.player;
     const moving = this.player.rig.speed > 0.5;
     const sprinting = this.input.sprinting && moving && this.player.canSprint;
-    const mods = modifiers(p);
+    const mods = modifiers(p, this.perkMods());
     tickStamina(p, dt, sprinting ? 14 : 0, mods);
     // hysteresis: once you run dry you must recover to 30% before sprinting again
     if (!this.winded && p.stamina <= 3) {
@@ -1714,11 +1812,14 @@ export class Game implements GameAPI {
 
   private checkOnboarding(): void {
     if (this.onbStep >= ONBOARDING.length) return;
+    // remember a pack opened BEFORE its tutorial step, so the step does not ask twice
+    // (round 4: the review bot opened it during step 3 and the step then never completed)
+    if ((this.screenProbe?.() ?? this.openScreenId) === 'inventory') this.save.world.flags['seenPack'] = true;
     const step = ONBOARDING[this.onbStep];
     if (step.trigger === 'moved' && this.player.pos.distanceTo(this.onbStartPos) > 6) this.trigger('moved');
     if (step.trigger === 'looked' && Math.abs(this.camera.yaw - this.onbYaw) > 1.4) this.trigger('looked');
     if (step.trigger === 'nightfall' && isNight(this.save.world.hour)) this.trigger('nightfall');
-    if (step.trigger === 'openedInventory' && (this.screenProbe?.() ?? this.openScreenId) === 'inventory') this.trigger('openedInventory');
+    if (step.trigger === 'openedInventory' && this.save.world.flags['seenPack']) this.trigger('openedInventory');
   }
 
   // ------------------------------------------------------------ helpers
@@ -1748,7 +1849,7 @@ export class Game implements GameAPI {
     return Math.min(1, base + st * 0.18);
   }
 
-  private questCtx() {
+  questCtx() {
     return { inventory: this.inv, rank: Number(this.save.world.flags['rank'] ?? 1), districtKeys: this.layout.districts.map((d) => d.key) };
   }
 
@@ -1756,7 +1857,8 @@ export class Game implements GameAPI {
   objectives(): { title: string; text: string; done: boolean }[] {
     const w = this.save.world;
     const out: { title: string; text: string; done: boolean }[] = [];
-    for (const q of activeQuests(w)) {
+    // main story first: the HUD objective card shows entry 0, so it must be the main next step
+    for (const q of activeQuests(w).sort((a, b) => Number(b.main) - Number(a.main))) {
       const stepIdx = w.quests[q.id] ?? 0;
       const step = q.steps[stepIdx];
       if (!step) continue;
@@ -1768,6 +1870,11 @@ export class Game implements GameAPI {
   }
 
   private questT = 0;
+  /** advance quests now (after a talk/choice) instead of waiting for the 1.5 s tick */
+  pokeQuests(): void {
+    this.questT = 0;
+    this.updateQuests(0);
+  }
   private updateQuests(dt: number): void {
     this.questT -= dt;
     if (this.questT > 0) return;
@@ -1781,7 +1888,9 @@ export class Game implements GameAPI {
         this.toast(`Done: ${q.title}`, 'warm');
         audio.play('levelUp', { vol: 0.6 });
         for (const it of q.reward.items ?? []) addItem(this.inv, it.item, it.count);
-        for (const bp of q.reward.blueprints ?? []) if (!w.blueprints.includes(bp)) w.blueprints.push(bp);
+        applyQuestRewards(w, q);
+        this.award(q.reward.xp ?? 0, q.title);
+        this.givePerkPoints(PERK_POINT_PER_QUEST, S.prog.questDone(q.title));
         this.bus.emit({ type: 'inventory' });
       } else {
         const step = q.steps[e.step];
@@ -1829,7 +1938,7 @@ export class Game implements GameAPI {
       this.player.locked = (this.input.uiBlocking || this.holdT > 0.18) && !this.player.dodging;
       if (!blocked && this.input.wasPressed('dodge') && this.save.player.stamina > 12) {
         if (this.player.startDodge({ x: this.input.moveX, y: this.input.moveY, mag: 1, sprint: false, jump: false, dodge: true, camYaw: this.camera.yaw })) {
-          tickStamina(this.save.player, 0, 12, modifiers(this.save.player));
+          tickStamina(this.save.player, 0, 12 * (1 + this.pk('dodgeCost')), modifiers(this.save.player, this.perkMods()));
           audio.play('swing', { pitch: 0.7, vol: 0.4 });
         }
       }

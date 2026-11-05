@@ -22,6 +22,7 @@ export type Action =
   | 'cancel'
   | 'ledger'
   | 'journal'
+  | 'perks'
   | 'ping'
   | 'photo';
 
@@ -38,6 +39,7 @@ const KEYMAP: Record<string, Action> = {
   KeyM: 'map',
   KeyL: 'ledger',
   KeyJ: 'journal',
+  KeyK: 'perks',
   KeyG: 'ping',
   KeyP: 'photo',
   Escape: 'menu',

@@ -1,8 +1,10 @@
 // Modal screen builders. Each returns a refresh() function.
 import type { ItemDef, ItemStack, RecipeDef } from '@dg/shared';
-import { ASSIGNABLE_JOBS, JOB_NAMES, TRAIT_MAP, computeNeeds, countItem, getItem, queryRecipes, type CraftBlock } from '@dg/sim';
+import { ASSIGNABLE_JOBS, JOB_NAMES, PERKS, TRAIT_MAP, canTakePerk, clinicOn, computeNeeds, havenPowerSource, irrigationOn, countItem, getItem, levelProgress, queryRecipes, type CraftBlock } from '@dg/sim';
 import type { GameAPI, ScreenId, Settings } from '../game/api';
 import { LORE_TERMINALS } from '../content/lore';
+import { DISTRICT_INTROS } from '../content/campaign';
+import { DISTRICT_KEYS } from '@dg/shared';
 import { S } from './strings';
 import { btn, clear, h, tap } from './dom';
 import { iconImg } from './icons';
@@ -29,6 +31,8 @@ export function buildScreen(id: ScreenId, c: ScreenCtx): (() => void) | null {
       return ledgerScreen(c);
     case 'journal':
       return journalScreen(c);
+    case 'perks':
+      return perksScreen(c);
     case 'settings':
       return settingsScreen(c);
     case 'pause':
@@ -275,7 +279,7 @@ function craftScreen(c: ScreenCtx): () => void {
         const nm = getItem(x.item)?.name ?? x.item;
         req.append(h('span', { class: have >= x.count ? '' : 'miss' }, `${nm} ${have}/${x.count}`));
       }
-      const sub = block ? blockText(block, r) : S.stationNames[r.station] ?? r.station;
+      const sub = block === 'station' && info.unpowered?.includes(r.station) ? S.block.noPower(S.stationNames[r.station] ?? r.station) : block ? blockText(block, r) : S.stationNames[r.station] ?? r.station;
       const actions = h('div.craft-actions');
       const craftN = (n: number) => {
         if (api.craft(r.id, n)) api.audio.play('craft');
@@ -357,6 +361,16 @@ function ledgerScreen(c: ScreenCtx): () => void {
         needs ? h('div.stat', null, h('b', null, needs.foodDays.toFixed(1)), h('small', null, S.foodDays(needs.foodDays).replace(/^[\d.]+ /, ''))) : null,
       ),
     );
+    // the Grid chain: what restored districts give Haven right now
+    const src = havenPowerSource(world, DISTRICT_KEYS);
+    const grid = h('div.list.grid-chain', { 'data-grid-chain': '' });
+    const line = (on: boolean, text: string) => h('div', { class: `li obj ${on ? 'done-on' : ''}` }, h('span.check', null, on ? '⚡' : '·'), h('div.main', null, h('small', null, text)));
+    grid.append(
+      line(!!src, src ? S.power.havenFed(DISTRICT_INTROS[src]?.name ?? src) : S.power.havenDark),
+      line(irrigationOn(world, DISTRICT_KEYS), irrigationOn(world, DISTRICT_KEYS) ? S.power.waterOn : S.power.waterOff),
+      line(clinicOn(world, DISTRICT_KEYS), clinicOn(world, DISTRICT_KEYS) ? S.power.clinicOn : S.power.clinicOff),
+    );
+    body.append(h('h3.section', null, S.power.chainTitle), grid);
     if (needs) {
       const board = h('div.needs', null, h('h3', null, S.needs));
       for (const k of ['food', 'materials', 'defense', 'construction'] as const) {
@@ -412,12 +426,38 @@ function journalScreen(c: ScreenCtx): () => void {
   c.title.textContent = S.journal;
   const render = () => {
     clear(body);
+    const st = c.ui.storySource?.();
+    if (st) {
+      // the one thing to do next, always visible at the top
+      const next = h('div.next-step', { 'data-next': '' });
+      if (st.ending) next.append(h('b', null, S.camp.endingReached(st.ending)));
+      if (st.next) {
+        const prog = st.next.need > 1 ? ` (${Math.min(st.next.have, st.next.need)}/${st.next.need})` : '';
+        next.append(h('small.kicker', null, `${S.camp.nextStep} · ${st.next.title}`), h('b', null, st.next.text + prog), h('small', null, st.next.hint));
+        if (st.decide) {
+          const key = st.decide;
+          next.append(btn(S.camp.decide, 'primary small', () => c.ui.decideHandler(key), { 'data-decide': key }));
+        }
+      } else if (!st.ending) next.append(h('b', null, S.camp.allDone));
+      body.append(next);
+    }
     body.append(h('h3.section', null, S.objectives));
     const entries = c.ui.journalSource();
     if (!entries.length) body.append(h('p.empty-note', null, S.noObjectives));
     const list = h('div.list');
     for (const e of entries) list.append(h('div', { class: `li obj ${e.done ? 'done' : ''}` }, h('span.check', null, e.done ? '✓' : ''), h('div.main', null, h('b', null, e.title), h('small', null, e.text))));
     body.append(list);
+    if (st) {
+      body.append(h('h3.section', null, S.camp.endingsTitle));
+      body.append(h('p.rep-line', null, `${S.camp.rep}: ${st.rep.map((r) => `${r.name} ${r.value}`).join(' · ')}`));
+      if (!st.endings) body.append(h('p.empty-note', null, S.camp.endingsLocked));
+      else {
+        const el = h('div.list.endings');
+        for (const e of st.endings)
+          el.append(h('div', { class: `li obj ${e.reached ? 'done' : ''}`, 'data-ending-row': '' }, h('span.check', null, e.met ? '✓' : ''), h('div.main', null, h('b', null, e.title), h('small', null, e.met ? S.camp.endingMet : S.camp.endingNeeds(e.how)))));
+        body.append(el);
+      }
+    }
     body.append(h('h3.section', null, S.lore));
     const flags = api.save.world.flags ?? {};
     const found = LORE_TERMINALS.filter((l) => flags[`lore:${l.id}`]);
@@ -426,6 +466,62 @@ function journalScreen(c: ScreenCtx): () => void {
       const det = h('details.lore', null, h('summary', null, l.title), h('pre', null, l.header), h('p', null, l.body));
       body.append(det);
     }
+  };
+  render();
+  return render;
+}
+
+// ---------------- perks ----------------
+const TRACKS = ['scavenger', 'builder', 'fighter', 'provider'] as const;
+function perksScreen(c: ScreenCtx): () => void {
+  const { api, body } = c;
+  c.title.textContent = S.prog.title;
+  let track = 0;
+  const render = () => {
+    const scroll = body.scrollTop;
+    clear(body);
+    const p = api.save.player;
+    const lp = levelProgress(p.xp);
+    const bar = h('i');
+    bar.style.width = `${Math.min(100, (lp.into / lp.need) * 100)}%`;
+    body.append(
+      h('div.perk-head', null,
+        h('b', null, S.prog.level(lp.level)),
+        h('div.xpbar', null, bar),
+        h('small', null, S.prog.xpBar(lp.into, lp.need)),
+        h('b', { class: `pts ${p.perkPoints > 0 ? 'on' : ''}`, 'data-points': p.perkPoints }, p.perkPoints > 0 ? S.prog.points(p.perkPoints) : S.prog.noPoints),
+        h('small', null, S.prog.ownedCount(p.perks.length, PERKS.length)),
+      ),
+      h('p.empty-note', null, S.prog.howTo),
+    );
+    const tabs = h('div.tabs');
+    TRACKS.forEach((t, i) => {
+      const n = PERKS.filter((x) => x.track === t && p.perks.includes(x.id)).length;
+      const b = h('button', { class: `tab ${i === track ? 'on' : ''}`, type: 'button' }, `${S.prog.tracks[t]} ${n}/8`);
+      tap(b, () => {
+        track = i;
+        api.audio.play('click');
+        render();
+      });
+      tabs.append(b);
+    });
+    body.append(tabs);
+    const list = h('div.list.perks');
+    const rows = PERKS.filter((x) => x.track === TRACKS[track]).sort((a, b) => a.tier - b.tier);
+    for (const perk of rows) {
+      const owned = p.perks.includes(perk.id);
+      const can = canTakePerk(p.perks, perk.id, p.perkPoints);
+      const prev = rows.find((x) => x.tier === perk.tier - 1);
+      const prevOwned = !prev || p.perks.includes(prev.id);
+      const sub = owned ? S.prog.owned : !prevOwned && prev ? S.prog.locked(prev.name) : S.prog.tier(perk.tier);
+      const act = owned ? h('span.check', null, '✓') : btn(S.prog.take, can ? 'small primary' : 'small', () => {
+        if (api.takePerk(perk.id)) render();
+      }, { 'data-perk': perk.id });
+      if (!owned && !can) (act as HTMLButtonElement).disabled = true;
+      list.append(h('div', { class: `li perk ${owned ? 'owned' : ''} ${!owned && !prevOwned ? 'locked' : ''}` }, h('div.tierno', null, String(perk.tier)), h('div.main', null, h('b', null, perk.name), h('small', null, `${perk.desc} · ${sub}`)), act));
+    }
+    body.append(list);
+    body.scrollTop = scroll;
   };
   render();
   return render;

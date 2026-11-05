@@ -1,5 +1,6 @@
 // Save creation, validation, migration and (de)serialization. Pure TS (fflate for deflate).
 
+import { retroactiveProgress } from '../systems/campaign';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import {
   DISTRICT_KEYS,
@@ -402,6 +403,15 @@ export const MIGRATIONS: Record<number, (raw: Obj) => Obj> = {
     const w = isObj(raw.world) ? { ...raw.world } : {};
     w.genVersion = 1;
     return { ...raw, schema: 2, world: w };
+  },
+  // v2 -> v3: progression goes live. XP, perk points and quest reputation were
+  // never granted before; credit completed quests and rebooted nodes once.
+  2: (raw) => {
+    const p = isObj(raw.player) ? { ...raw.player } : {};
+    const w = isObj(raw.world) ? { ...raw.world } : {};
+    if (isObj(w.factions)) w.factions = { ...w.factions };
+    retroactiveProgress(p, w);
+    return { ...raw, schema: 3, player: p, world: w };
   },
 };
 

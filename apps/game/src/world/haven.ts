@@ -2,13 +2,26 @@
 // Tents, tarp canopy, fire barrels with flicker, string lights, a cookfire,
 // crates and a hand-painted sign. One merged mesh + a few glow sprites.
 import * as THREE from 'three';
+import { glowTexture } from '../render/glow';
+
+const TONGUES = 10;
+const FM = new THREE.Matrix4();
+const FV = new THREE.Vector3();
+const FS = new THREE.Vector3();
+const FQ = new THREE.Quaternion();
+const FC = new THREE.Color();
 import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
 import type { CollisionWorld } from '../game/collision';
 
 export class HavenCamp {
   readonly group = new THREE.Group();
-  private flames: THREE.Mesh[] = [];
+  private flames: THREE.Object3D[] = [];
+  private tongues!: THREE.InstancedMesh;
+  private life!: Float32Array;
+  private drift!: Float32Array;
+  /** set by the game: billboards face this camera */
+  cam: THREE.Camera | null = null;
   private bulbs: THREE.Mesh;
   readonly mat = makeChunkMaterial();
   private t = 0;
@@ -108,15 +121,27 @@ export class HavenCamp {
     b.setColor(0x8a6a48);
     b.bevelBox(0, 1.6, 0, 1.45, 0.38, 0.04, 0.02);
     b.setColor(0xd8c8a0);
-    // "HAVEN" in blocky strokes
-    const strokes: [number, number, number, number][] = [
-      [-1.05, 1.6, 0.03, 0.22], [-0.85, 1.6, 0.03, 0.22], [-0.95, 1.6, 0.1, 0.03],
-      [-0.55, 1.6, 0.03, 0.22], [-0.35, 1.6, 0.03, 0.22], [-0.45, 1.78, 0.1, 0.03], [-0.45, 1.6, 0.1, 0.03],
-      [-0.1, 1.6, 0.03, 0.22], [0.1, 1.6, 0.03, 0.22], [0, 1.4, 0.1, 0.03],
-      [0.4, 1.6, 0.03, 0.22], [0.5, 1.78, 0.1, 0.03], [0.5, 1.6, 0.08, 0.03], [0.5, 1.42, 0.1, 0.03],
-      [0.85, 1.6, 0.03, 0.22], [1.15, 1.6, 0.03, 0.22], [1.0, 1.6, 0.13, 0.03],
+    // "HAVEN" as a 5×7 pixel font so V and N read as V and N (round 3 strokes read "HAUEH")
+    const GLYPHS = [
+      ['10001', '10001', '10001', '11111', '10001', '10001', '10001'], // H
+      ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], // A
+      ['10001', '10001', '10001', '10001', '01010', '01010', '00100'], // V
+      ['11111', '10000', '10000', '11110', '10000', '10000', '11111'], // E
+      ['10001', '11001', '10101', '10101', '10011', '10001', '10001'], // N
     ];
-    for (const [x, y, hx, hy] of strokes) b.box(x, y, -0.045, hx, hy, 0.005);
+    const px = 0.062, gap = 0.44;
+    for (let gi = 0; gi < GLYPHS.length; gi++) {
+      const x0 = (gi - 2) * gap - 2 * px;
+      GLYPHS[gi].forEach((row, r) => {
+        for (let c = 0; c < 5; c++) {
+          if (row[c] !== '1') continue;
+          const x = x0 + c * px, y = 1.6 + (3 - r) * px;
+          // the -z face is read from behind the board's local frame: mirror x there
+          b.box(-x, y, -0.045, px * 0.46, px * 0.46, 0.006);
+          b.box(x, y, 0.045, px * 0.46, px * 0.46, 0.006);
+        }
+      });
+    }
     b.pop();
     // string-light poles around the fire
     const poles: [number, number][] = [[-5, -7], [5, -7], [6, 1], [-6, 1]];
@@ -132,21 +157,23 @@ export class HavenCamp {
     mesh.receiveShadow = true;
     this.group.add(mesh);
 
-    // flames (additive) on fire barrels + cookfire
-    const flameGeo = new THREE.ConeGeometry(0.2, 0.8, 7, 1, true);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xff6a18, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const coreGeo = new THREE.ConeGeometry(0.15, 0.5, 5);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffd090, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
-    const fires: [number, number, number][] = [...barrels.map(([x, z]) => [x, z, 1.25] as [number, number, number]), [0, -4, 0.45]];
-    for (const [x, z, h] of fires) {
-      const f = new THREE.Mesh(flameGeo, flameMat);
+    // flames: soft additive billboard "tongues" that rise, shrink and cool from
+    // white-yellow to deep orange (replaces the round-3 cones), plus a base glow
+    const fires: [number, number, number, number][] = [...barrels.map(([x, z]) => [x, z, 1.15, 0.8] as [number, number, number, number]), [0, -4, 0.3, 1.25]];
+    for (const [x, z, h, size] of fires) {
+      const f = new THREE.Object3D();
       f.position.set(cx + x, ground(cx + x, cz + z) + h, cz + z);
-      const core = new THREE.Mesh(coreGeo, coreMat);
-      core.position.y = -0.1;
-      f.add(core);
-      this.group.add(f);
+      f.userData.size = size;
       this.flames.push(f);
     }
+    const tex = glowTexture();
+    this.tongues = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), fires.length * TONGUES + fires.length);
+    this.tongues.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.tongues.count * 3), 3);
+    this.tongues.frustumCulled = false;
+    this.tongues.renderOrder = 4;
+    this.group.add(this.tongues);
+    this.life = new Float32Array(fires.length * TONGUES).map((_, i) => (i % TONGUES) / TONGUES);
+    this.drift = new Float32Array(fires.length * TONGUES * 2).map(() => (Math.random() - 0.5) * 0.18);
     this.light.position.set(cx, y0 + 1.4, cz - 4);
     this.group.add(this.light);
     // string light bulbs along catenaries between poles
@@ -175,6 +202,52 @@ export class HavenCamp {
   smoke: ((x: number, y: number, z: number) => void) | null = null;
   private smokeT = 0;
 
+  private updateFlames(dt: number): void {
+    const im = this.tongues;
+    const cq = this.cam?.quaternion ?? FQ.identity();
+    let k = 0;
+    for (let i = 0; i < this.flames.length; i++) {
+      const f = this.flames[i];
+      const size = f.userData.size as number;
+      const gust = Math.sin(this.t * 2.3 + i) * 0.5 + Math.sin(this.t * 5.1 + i * 2) * 0.3;
+      for (let j = 0; j < TONGUES; j++) {
+        const n = i * TONGUES + j;
+        let l = this.life[n] + dt * (1.5 + (j % 3) * 0.25);
+        if (l >= 1) {
+          l -= 1;
+          this.drift[n * 2] = (Math.random() - 0.5) * 0.2;
+          this.drift[n * 2 + 1] = (Math.random() - 0.5) * 0.2;
+        }
+        this.life[n] = l;
+        const rise = l * 0.95 * size;
+        const sway = gust * 0.08 * l;
+        const sc = size * (0.62 * (1 - l) ** 0.7 + 0.08) * (0.9 + Math.random() * 0.2);
+        FV.set(f.position.x + this.drift[n * 2] * (1 - l) + sway, f.position.y + rise, f.position.z + this.drift[n * 2 + 1] * (1 - l));
+        FM.compose(FV, cq, FS.set(sc * 0.8, sc * 1.25, sc));
+        im.setMatrixAt(k, FM);
+        // white-yellow core → orange → dim red tips; additive, so dimmer = more transparent
+        const heat = 1 - l;
+        FC.setRGB(1, 0.32 + 0.6 * heat * heat, 0.08 + 0.45 * heat ** 3).multiplyScalar(0.25 + 0.75 * heat);
+        im.setColorAt(k, FC);
+        k++;
+      }
+    }
+    // a soft, flickering base glow per fire
+    for (let i = 0; i < this.flames.length; i++) {
+      const f = this.flames[i];
+      const size = f.userData.size as number;
+      const fl = 0.85 + Math.sin(this.t * 13 + i * 3) * 0.08 + Math.sin(this.t * 7.3 + i) * 0.07;
+      FV.set(f.position.x, f.position.y + 0.15 * size, f.position.z);
+      FM.compose(FV, cq, FS.setScalar(size * 1.5 * fl));
+      im.setMatrixAt(k, FM);
+      im.setColorAt(k, FC.setRGB(1, 0.45, 0.12).multiplyScalar(0.45 * fl));
+      k++;
+    }
+    im.count = k;
+    im.instanceMatrix.needsUpdate = true;
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+  }
+
   update(dt: number, night: number): void {
     this.t += dt;
     this.smokeT -= dt;
@@ -183,12 +256,7 @@ export class HavenCamp {
       const f = this.flames[Math.floor(Math.random() * this.flames.length)];
       if (f) this.smoke(f.position.x, f.position.y + 0.5, f.position.z);
     }
-    for (let i = 0; i < this.flames.length; i++) {
-      const f = this.flames[i];
-      const s = 0.8 + Math.sin(this.t * 13 + i * 3) * 0.12 + Math.sin(this.t * 7.3 + i) * 0.1;
-      f.scale.set(s * (0.9 + Math.sin(this.t * 17 + i) * 0.1), s * (1 + Math.sin(this.t * 9 + i) * 0.25), s);
-      f.rotation.y += dt * 2;
-    }
+    this.updateFlames(dt);
     this.light.intensity = (3 + night * 13) * (0.85 + Math.sin(this.t * 11) * 0.08 + Math.sin(this.t * 4.7) * 0.07);
     const mat = (this.bulbs as unknown as THREE.InstancedMesh).material as THREE.MeshBasicMaterial;
     mat.color.setRGB(1, 0.82, 0.54).multiplyScalar(0.35 + night * 0.9);

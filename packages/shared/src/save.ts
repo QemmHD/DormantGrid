@@ -4,7 +4,7 @@
 import type { ConditionId, ItemStack } from './items';
 import type { RestorationState } from './world';
 
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 export type Difficulty = 'chill' | 'standard' | 'hard';
 

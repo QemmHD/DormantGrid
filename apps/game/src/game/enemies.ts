@@ -2,7 +2,7 @@
 // and Ashline raiders. Simple readable state machines with telegraphed attacks,
 // full hit feedback, and fairness rules (no spawns in view, none in restored areas).
 import * as THREE from 'three';
-import { RESTORATION_FX, districtAt, getItem, getPiece } from '@dg/sim';
+import { RESTORATION_FX, XP, districtAt, getItem, getPiece } from '@dg/sim';
 import type { RestorationState } from '@dg/shared';
 import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
@@ -546,6 +546,27 @@ export class Enemies {
     return true;
   }
 
+  /** nearest live enemy within r of (x,z), or null (turrets) */
+  nearest(x: number, z: number, r: number): Enemy | null {
+    let best: Enemy | null = null;
+    let bd = r;
+    for (const e of this.list) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.pos.x - x, e.pos.z - z);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** damage from a non-player source (turrets) */
+  hitFrom(e: Enemy, damage: number, fromX: number, fromZ: number): void {
+    if (e.state === 'dead') return;
+    this.damage(e, damage, this.tmp.set(e.pos.x - fromX, 0, e.pos.z - fromZ).normalize());
+  }
+
   private damage(e: Enemy, damage: number, dir: THREE.Vector3): void {
     const g = this.game;
     e.hp -= damage;
@@ -582,6 +603,7 @@ export class Enemies {
     g.grant(loot.filter((l) => getItem(l.item)), p.setY(p.y + 0.6));
     const f = g.save.world.flags;
     f[`killed:${e.kind}`] = Number(f[`killed:${e.kind}`] ?? 0) + 1;
+    g.award(e.kind === 'bot' ? XP.killHeavy : XP.kill);
   }
 
   clear(): void {

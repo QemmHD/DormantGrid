@@ -17,6 +17,8 @@ export interface ChunkUniforms {
   uTint: { value: THREE.Color };
   /** facade pattern strength (0 disables the pattern branch entirely) */
   uPattern: { value: number };
+  /** ground grime/cracks/wear strength on upward faces (0 = off, low quality) */
+  uGround: { value: number };
   /** occluder cutout: geometry on the lens→player line is dithered away (1 = on) */
   uCut: { value: number };
   uCamPos: { value: THREE.Vector3 };
@@ -63,6 +65,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     uGrid: { value: 0 },
     uTint: { value: new THREE.Color(1, 1, 1) },
     uPattern: { value: 1 },
+    uGround: { value: 1 },
     uCut: { value: 0 },
     uCamPos: { value: new THREE.Vector3() },
     uFocus: { value: new THREE.Vector3() },
@@ -74,6 +77,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
     shader.uniforms.uGrid = u.uGrid;
     shader.uniforms.uTint = u.uTint;
     shader.uniforms.uPattern = u.uPattern;
+    shader.uniforms.uGround = u.uGround;
     shader.uniforms.uCut = u.uCut;
     shader.uniforms.uCamPos = u.uCamPos;
     shader.uniforms.uFocus = u.uFocus;
@@ -97,7 +101,7 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
         '#include <common>',
         `#include <common>
         varying float vEmit; varying vec3 vGritP; varying vec3 vGritN;
-        uniform float uWindow; uniform float uGrid; uniform vec3 uTint; uniform float uPattern;
+        uniform float uWindow; uniform float uGrid; uniform vec3 uTint; uniform float uPattern; uniform float uGround;
         uniform float uCut; uniform vec3 uCamPos; uniform vec3 uFocus;
         float dgHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float dgNoise(vec2 p) {
@@ -167,6 +171,29 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
             vec2 fw = fwidth(wp);
             float fade = 1.0 - smoothstep(0.02, 0.07, max(fw.x, fw.y));
             diffuseColor.rgb *= mix(1.0, k, fade * uPattern);
+          }
+          // ground wear (review: "the ground is a flat grey plane"): grime stains, oil/damp
+          // spots, hairline + branching cracks and aggregate speckle on paved (grey) ground;
+          // only stains on saturated ground (grass, dirt). Fine detail fades with distance.
+          if (uGround > 0.0 && an.y > 0.6 && vEmit > -0.5) {
+            vec2 p = vGritP.xz;
+            vec3 c0 = diffuseColor.rgb;
+            float sat = max(c0.r, max(c0.g, c0.b)) - min(c0.r, min(c0.g, c0.b));
+            float paved = 1.0 - smoothstep(0.05, 0.14, sat);
+            vec2 fwp = fwidth(p);
+            float px = max(fwp.x, fwp.y);
+            float near = 1.0 - smoothstep(0.04, 0.16, px);
+            float stain = smoothstep(0.5, 0.82, dgNoise(p * 0.09) * 0.6 + dgNoise(p * 0.41 + 3.0) * 0.4);
+            float spot = smoothstep(0.74, 0.92, dgNoise(p * 0.75 + 17.0));
+            float n1 = dgNoise(p * 0.5 + vec2(dgNoise(p * 2.3), dgNoise(p * 2.3 + 7.0)) * 0.7);
+            float w1 = 0.016 + px * 0.3;
+            float crack = (1.0 - smoothstep(0.0, w1, abs(n1 - 0.5))) * smoothstep(0.38, 0.62, dgNoise(p * 0.17 + 5.0));
+            float n2 = dgNoise(p * 1.7 + 31.0);
+            crack = max(crack, (1.0 - smoothstep(0.0, w1 * 0.7, abs(n2 - 0.5))) * 0.55 * smoothstep(0.55, 0.78, dgNoise(p * 0.29 + 9.0)));
+            float speck = (dgHash(floor(p * 11.0)) - 0.5) * 0.12 * near;
+            float wear = smoothstep(0.62, 0.88, dgNoise(vec2(p.x * 0.07, p.y * 0.55) + 2.0)) * paved;
+            float k = 1.0 - stain * 0.24 - spot * 0.2 * paved - crack * 0.5 * paved * near + speck * paved;
+            diffuseColor.rgb = mix(c0, c0 * k + wear * 0.035, uGround);
           }
         }
         // roughness variation: a faint, noise-modulated grazing sheen so surfaces are not uniform

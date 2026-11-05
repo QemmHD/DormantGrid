@@ -7,6 +7,8 @@
 // when those or the player's 64 m cell change. Budget: ≤ 96 lamp glows + 96 light pools
 // (2 draw calls), ≤ 3 decor batches, ≤ 6 walkers (one skinned draw each).
 import * as THREE from 'three';
+import { glowTexture } from '../render/glow';
+export { glowTexture };
 import { hash2, type PropDef, type RestorationState } from '@dg/shared';
 import { districtAt, RESTORATION_FX } from '@dg/sim';
 import type { Game } from './game';
@@ -28,22 +30,6 @@ const v = new THREE.Vector3();
 const sc = new THREE.Vector3();
 const col = new THREE.Color();
 
-function glowTexture(): THREE.DataTexture {
-  const n = 32;
-  const d = new Uint8Array(n * n * 4);
-  for (let y = 0; y < n; y++)
-    for (let x = 0; x < n; x++) {
-      const r = Math.hypot((x + 0.5) / n - 0.5, (y + 0.5) / n - 0.5) * 2;
-      const a = Math.max(0, 1 - r) ** 2;
-      const i = (y * n + x) * 4;
-      d[i] = d[i + 1] = d[i + 2] = 255;
-      d[i + 3] = Math.round(a * 255);
-    }
-  const t = new THREE.DataTexture(d, n, n, THREE.RGBAFormat);
-  t.magFilter = t.minFilter = THREE.LinearFilter;
-  t.needsUpdate = true;
-  return t;
-}
 
 interface Walker {
   rig: CharacterRig;

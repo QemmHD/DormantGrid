@@ -27,7 +27,7 @@ export type GameEvent =
   | { type: 'open'; screen: ScreenId | null };
 
 export type GameMode = 'menu' | 'play' | 'build' | 'dead' | 'sleeping' | 'cinematic';
-export type ScreenId = 'inventory' | 'craft' | 'map' | 'ledger' | 'journal' | 'settings' | 'pause' | 'storage' | 'account' | 'coop' | 'help';
+export type ScreenId = 'inventory' | 'craft' | 'map' | 'ledger' | 'journal' | 'perks' | 'settings' | 'pause' | 'storage' | 'account' | 'coop' | 'help';
 export type NetStatus = 'offline' | 'online' | 'syncing' | 'conflict' | 'error' | 'reconnecting';
 
 type Handler<T extends GameEvent['type']> = (ev: Extract<GameEvent, { type: T }>) => void;
@@ -109,6 +109,8 @@ export function storeSettings(s: Settings): void {
 // ---------------- game API used by UI ----------------
 export interface CraftInfo {
   stations: StationId[];
+  /** stations in reach that need Grid power and have none */
+  unpowered?: StationId[];
   blueprints: string[];
   rank: number;
 }
@@ -159,4 +161,8 @@ export interface GameAPI {
   importSave(json: string): Promise<boolean>;
   /** open a UI screen by id (UI implements; game calls) */
   openScreen(id: ScreenId | null): void;
+
+  // progression
+  /** learn a perk with a perk point; false if not allowed */
+  takePerk(id: string): boolean;
 }

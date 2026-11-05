@@ -175,6 +175,23 @@ async function start() {
   game.restorationAt = (x, z) => restoration.stateAt(x, z);
   grid.onOnline = (x, y, z) => restoration.beat(x, y, z);
   (window as unknown as { __restore: unknown }).__restore = restoration;
+  const { Power } = await import('./game/power');
+  (window as unknown as { __power: unknown }).__power = new Power(game, enemies);
+  const { Story } = await import('./game/story');
+  const story = new Story(game, ui);
+  ui.storySource = () => story.info();
+  ui.decideHandler = (key) => story.decide(key);
+  (window as unknown as { __story: unknown }).__story = story;
+  let lastPts = -1;
+  const syncPerks = () => {
+    const n = game.save?.player.perkPoints ?? 0;
+    if (n !== lastPts) {
+      lastPts = n;
+      ui.setPerkBadge(n);
+    }
+  };
+  game.onPerkPoint = syncPerks;
+  game.tickers.push(syncPerks);
   const { Opening } = await import('./game/opening');
   (window as unknown as { __opening: unknown }).__opening = new Opening(game, enemies);
   trader.onLore = (title, header, body) => {

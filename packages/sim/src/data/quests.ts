@@ -80,8 +80,8 @@ export const QUESTS: readonly QuestDef[] = [
   {
     id: 'q.guild_contact', act: 'reboot', title: 'The Clipboard People', requires: ['q.first_node'], main: true,
     steps: [
-      { text: 'Meet the Meridian Guild factor at Market Row.', hint: 'Look for the yellow awning.', obj: { type: 'talk', npc: 'guild_factor' } },
-      { text: 'Sell the Guild three data tapes.', hint: 'Data tapes drop in Grid buildings.', obj: { type: 'rep', faction: 'guild', min: 15 } },
+      { text: 'Talk to Odile, the Meridian Guild factor trading at Haven Lot.', hint: 'She stands by the camp, east of the fire. Walk up and talk.', obj: { type: 'talk', npc: 'guild_factor' } },
+      { text: 'Earn the Guild’s trust (reputation 15).', hint: 'Trade with Odile or finish her delivery contracts.', obj: { type: 'rep', faction: 'guild', min: 15 } },
     ],
     reward: { items: [{ item: 'misc.guild_chit', count: 40 }], blueprints: ['bp.nailgun'], xp: 150 },
   },
