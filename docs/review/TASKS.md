@@ -7,7 +7,7 @@ Out of scope: new maps, content packs, 3D model integration, monetization.
 - [x] 1. Enemy variety (P11): all 11 sim types as distinct client kinds — silhouette (readable at 30 m), behaviour, counter; raids/ambient escalate by district + threat tier; measured check (silhouette IoU + behaviour signatures) → tools/review/enemies-check.mjs; re-measure budgets
 - [x] 2. Dead perks: implement or replace the 6 (Quiet Work, Patch Job, Site Foreman, Gridwright, Tracker, Warden); check that no perk is dead
 - [x] 3. Town Rank bar: progress + next 3 unlocks on HUD and Journal, iPhone-readable; check
-- [ ] 4. Real-play pacing: bot plays collect/build steps for real; timestamps (first perk, first reboot, first faction contact, first raid repelled, first harvest, first night, end of act 1); targets + measured table in PLAN.md; flag <30 s or >10 min
+- [x] 4. Real-play pacing: bot plays collect/build steps for real; timestamps (first perk, first reboot, first faction contact, first raid repelled, first harvest, first night, end of act 1); targets + measured table in PLAN.md; flag <30 s or >10 min
 - [x] 5. Audio pipeline: file-driven by stable ID via ingest (AAC/MP3, size/duration budgets, loudness normalisation), synth fallback; docs/asset-requests/audio-sfx.md (60) + audio-music.md (6); P13 left failing honestly
 - [x] 6. Co-op readiness: (a) local Worker (wrangler dev / miniflare) + 2 headless clients: join, disconnect/reconnect, duplicate join, old client refused — check; (b) diagnostics overlay (state, RTT, snapshot age, desync count, copy report) toggled in Settings; (c) docs/review/COOP_TEST.md
 - [x] 7. Saves: migration if data changed + previous-version load test
