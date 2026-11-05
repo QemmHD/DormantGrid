@@ -5,56 +5,56 @@
   },
   "silhouettes": {
     "px": {
-      "raider": 210,
-      "scout": 213,
-      "brute": 322,
-      "sniper": 135,
-      "captain": 352,
-      "drone": 124,
-      "bot": 867,
-      "crawler": 94,
-      "heavy": 2016,
-      "hound": 138,
-      "boar": 317
+      "raider": 155,
+      "scout": 196,
+      "brute": 328,
+      "sniper": 188,
+      "captain": 227,
+      "drone": 102,
+      "bot": 932,
+      "crawler": 92,
+      "heavy": 2035,
+      "hound": 139,
+      "boar": 363
     },
     "size": {
-      "raider": "14×31",
-      "scout": "11×39",
-      "brute": "21×41",
-      "sniper": "9×31",
-      "captain": "19×73",
-      "drone": "42×65",
-      "bot": "28×39",
+      "raider": "12×31",
+      "scout": "12×38",
+      "brute": "23×40",
+      "sniper": "17×31",
+      "captain": "14×73",
+      "drone": "35×64",
+      "bot": "30×39",
       "crawler": "22×7",
-      "heavy": "61×50",
+      "heavy": "53×51",
       "hound": "24×15",
-      "boar": "22×19"
+      "boar": "28×19"
     },
     "worstPairs": [
       [
+        "scout",
+        "sniper",
+        0.548
+      ],
+      [
         "raider",
         "scout",
-        0.615
+        0.539
       ],
       [
         "raider",
         "sniper",
-        0.487
+        0.485
       ],
       [
-        "scout",
-        "sniper",
-        0.403
+        "bot",
+        "heavy",
+        0.363
       ],
       [
-        "scout",
-        "boar",
-        0.349
-      ],
-      [
-        "hound",
-        "boar",
-        0.342
+        "brute",
+        "bot",
+        0.315
       ]
     ],
     "pass": true
@@ -66,7 +66,7 @@
       "pass": true
     },
     "scout": {
-      "behaviour": "max sideways offset on approach 4.1 m",
+      "behaviour": "max sideways offset on approach 4.5 m",
       "counter": "bear trap pinned it 5.4 s",
       "pass": true
     },
@@ -86,8 +86,8 @@
       "pass": true
     },
     "drone": {
-      "behaviour": "orbited 490°, cruise 3.4 m, dipped to 1.5 m to fire",
-      "counter": "melee at cruise height hit 0/72; while dipped 30/30",
+      "behaviour": "orbited 449°, cruise 3.4 m, dipped to 1.5 m to fire",
+      "counter": "melee at cruise height hit 0/74; while dipped 38/38",
       "pass": true
     },
     "bot": {

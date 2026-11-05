@@ -13,8 +13,8 @@
     "puffsAlive": 30,
     "boxesAlive": 0
   },
-  "smokeFrac": 0.0084,
-  "shapePx": 8753,
+  "smokeFrac": 0.0151,
+  "shapePx": 14915,
   "hardEdgeRatio": 0,
   "boxFrac": 0,
   "checks": {

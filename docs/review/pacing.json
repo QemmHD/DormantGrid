@@ -1,0 +1,41 @@
+{
+  "simSeconds": 303.8,
+  "simMinutesTarget": 150,
+  "day": 1,
+  "milestones": {
+    "firstPerk": 95.1
+  },
+  "deaths": 0,
+  "steps": [
+    "24.4s step done: q.first_light#0 (22 s)",
+    "38.8s step done: q.first_light#1 (14 s)",
+    "90.1s step done: q.first_light#2 (51 s)",
+    "91.7s step done: q.first_light#3 (2 s)"
+  ],
+  "quests": {
+    "q.first_light": 4
+  },
+  "log": [
+    "24.4s step done: q.first_light#0 (22 s)",
+    "38.8s step done: q.first_light#1 (14 s)",
+    "72.7s gathered mat.brick 4/3 for campfire in 34 s",
+    "90.1s place campfire ok in 17 s",
+    "90.1s step done: q.first_light#2 (51 s)",
+    "91.7s step done: q.first_light#3 (2 s)",
+    "92.1s took perk perk.scavenger.light_fingers",
+    "95.1s FIRST firstPerk perk.scavenger.light_fingers",
+    "138.4s gathered mat.scrap 8/8 for foundation in 18 s",
+    "151s place foundation ok in 13 s",
+    "181.5s took perk perk.scavenger.pack_mule",
+    "191.8s gathered mat.scrap 9/8 for foundation in 41 s",
+    "213.7s place foundation ok in 22 s",
+    "241.5s gathered mat.scrap 8/8 for foundation in 28 s",
+    "255.2s place foundation ok in 14 s",
+    "286s gathered mat.scrap 8/8 for foundation in 31 s",
+    "303.8s place foundation ok in 18 s",
+    "303.8s loop 10 t=303.8 next=q.roof_over#0 mode=play",
+    "303.8s FROZEN diag {\"paused\":false,\"mode\":\"play\",\"hitstop\":-0.020000000000000004,\"last\":622031.9000000004,\"fake\":622081.9000000004,\"screen\":null,\"uiBlocking\":false,\"err\":\"DORMANT GRID device report — v0.2.0\\ntime: 2026-11-05T06:28:27.808Z\\nua: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36\\ngpu: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)\\nscreen: 640x360 @1  viewport 640x360\\nstandalone: false\\nfps 10  frame 0 ms  worst 0 ms\\ncalls 134 (peak 134)  tris 568565 (peak 568565)\\ntextures 24  textureMB 0 (peak 0)\\nheapMB 117.3 (peak 117.3)\\ndpr 1  tier high  chunks 35  chunkBuildMs peak 67.4\\nmaxTextureSize 8192\\nhour: 12:58\\nmode: play\\npos: 235,667\\nerrors (0):\"}",
+    "303.8s run ended: t=303.8 guard=10 next=q.roof_over"
+  ],
+  "pageErrors": []
+}

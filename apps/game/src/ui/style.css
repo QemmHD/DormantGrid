@@ -624,3 +624,15 @@ html.touch .prompt { display: none; }
 .coop-diag[data-status="offline"] b, .coop-diag[data-status="error"] b { color: var(--danger); }
 .coop-diag .btn { margin-top: 6px; min-height: 44px; width: 100%; }
 .coop-diag .coop-report { display: none; max-height: 120px; overflow: auto; font-size: 10px; white-space: pre-wrap; user-select: text; -webkit-user-select: text; }
+/* round 5: short landscape phones — the objective card grew (rank row, 44 px buttons) into the
+   left-thumb zone and swallowed stick drags (tests/feel.mjs). Its text now passes touches through
+   to the stick, and its buttons sit right under the title, above the thumb zone. */
+@media (max-height: 420px) {
+  /* #ui-scoped: the minifier merges same-query @media blocks ahead of the base .objective rule */
+  #ui .objective { display: flex; flex-direction: column; pointer-events: none; }
+  .objective .ot { order: 0; }
+  #ui .objective .orow { order: 1; margin: 4px 0 4px; pointer-events: auto; }
+  .objective .ob { order: 2; }
+  .objective .op { order: 3; }
+  .objective .orank { order: 4; }
+}

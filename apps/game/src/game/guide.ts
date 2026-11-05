@@ -179,7 +179,7 @@ export class Guide {
       return;
     }
     this.el.style.opacity = '1';
-    this.el.style.pointerEvents = 'auto';
+    this.el.style.pointerEvents = ''; // CSS decides (short screens: text passes touches to the stick)
     this.refreshRank();
     const touch = g.input.usingTouch || document.documentElement.classList.contains('touch');
     const step = g.onbStep < ONBOARDING.length ? ONBOARDING[g.onbStep] : null;
