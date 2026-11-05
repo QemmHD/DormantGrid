@@ -9,6 +9,7 @@
 - Baseline at review (2026-11-04): **0/13 pass**.
 - **After round 3 (2026-11-05): 7/13 pass.** P1–P7 pass; P8–P13 were out of scope this round. Output is in "Round 3 status" below.
 - **After round 5 (2026-11-05): 12/13 pass.** P11 passes on a measured enemy check. P13 (recorded audio) fails on purpose: the pipeline is ready but no recorded files exist. New checks: perks, Town Rank, co-op localhost, pacing. Output is in "Round 5 status" below.
+- **After round 6 (2026-11-05): 12/13 pass** (P13 waits on recorded audio, out of scope). Six new round-6 checks pass: reboot, raid, death, farm, trader, layout. Output is in "Round 6 status" below.
 - **After round 4 (2026-11-05): 11/13 pass** (P1–P10, P12), plus the new P15 restoration check. P11 (enemy variety) and P13 (recorded audio) were out of scope. P2, P8, P9, P10 and P12 now assert measured behaviour (pixels, real UI, unit tests), not grep counts. Output is in "Round 4 status" below.
 
 | Rank | Fix | Findings | Effort | Acceptance check (must pass) |
@@ -417,7 +418,28 @@ Flag rule from the brief: ⚠ marks a step under 30 s or over 10 min of bot time
 
 Scope: make the first hour reliable and fair for real players. Covers the reboot flow, first-raid fairness and a difficulty setting, deaths, the first crop, the trader, Act I pacing and the iPhone layout. The rule this round: **difficulty is not tuned to the bot.** The bot finds dead ends, stalls and unclear steps; human-plausible play sets difficulty. Out of scope: audio files (P13), 3D model integration, new maps or content, monetization.
 
-`node tools/review/accept.mjs` on the round-6 build: see "Verification" below.
+`node tools/review/accept.mjs` on the round-6 build (evidence refreshed: `session.mjs 30`, `controls2.mjs`, progress/enemies/restore/smoke checks re-run):
+
+```
+PASS P1-tutorial-scrap: first craft at 10.5 s (target ≤ 90 s; run session.mjs 10)
+PASS P2-smoke: smoke covers 1.04% of the frame (≥ 0.5%), hard-edge pixels 0.0% (≤ 8%), box pool adds 0.000% (≤ 0.05%)
+PASS P3-targeting: wrong target 0/60 = 0% (target ≤ 5%)
+PASS P4-camera-wall: camera behind wall 0/1080 frames = 0.0% (target ≤ 2%)
+PASS P5-threat-timing: first threat at 265.3 s (target ≤ 600 s in a 30-min session)
+PASS P6-new-survivor: first new survivor at 509.5 s (target ≤ 900 s)
+PASS P7-first-build: first piece placed at 57.6 s (target ≤ 420 s)
+PASS P8-perks-reachable: real salvage XP 0→2; craft level-up → 1 perk point, ★ badge "1"; Perks screen 4 tracks × 32 perks; Take → 2 learned, carry 40→55
+PASS P9-power-gating: 6/6 power+water unit tests pass; client needsPower gates: 5 (stations, turrets, floodlights via sim districtPowered)
+PASS P10-irrigation: town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one
+PASS P11-enemy-variety: client kinds 11/11; behaviour+counter 11/11; silhouettes at 30 m: smallest 82 px, most similar pair bot/heavy IoU 0.498 (≤ 0.8); escalation tier 0 → 4: 6 → 11 kinds
+PASS P12-endings-reachable: campaign walked: 27 steps, next step shown in Journal at 27/27; via UI: talk:guild_factor, talk:guild_factor, choice:toll, talk:grid_core, choice:core → ending screen; endings reached through the UI: 6/6 (end.commons, end.fracture, end.guild, end.reavers, end.sleep, end.custodian)
+FAIL P13-recorded-audio: recorded audio files shipped and played: 0 (target ≥ 10). Pipeline ready: 66 IDs, 46 with a runtime hook; files needed are listed in docs/asset-requests/audio-sfx.md and audio-music.md
+PASS P15-restoration-payoff: lamps 0→72, decor 104, walkers 3, hazards near player 42→10, pixels changed 13.1% (thresholds: lamps 0→≥6, decor ≥10, walkers ≥2, cleared ≥5, pixels ≥12%)
+
+1 failing
+```
+
+P6 first read 929 s. Round 6 removed the auto-respawn so the death recap can be read, and `session.mjs` sat on the death screen while the opening timer (play time) stood still. The bot now presses "Get back up" like a player: 509 s.
 
 ### New checks (all pass; output in `docs/review/*.json`)
 
@@ -539,3 +561,14 @@ Times are in-game minutes at the default 24-minute day. **Every bot number is an
 - Every layout number is Playwright emulation with emulated safe-area insets. Real notch and Dynamic Island rendering, the Home Screen PWA chrome and thumb comfort were **not** tested on a device.
 - The human Act I time, first-node defence difficulty and first-raid difficulty for a person are estimates. The raid bar was set from a lead pipe and no armour; the bot cleared it without top-ups.
 - How the death recap, the raid card and the crop line read at arm's length on an SE.
+
+### Verification
+- `npm run check`: typecheck; lint with 0 warnings; 112 sim + 37 game + 61 server tests; build; bundle 0.63 MB gzip (baseline 0.61, under the 10% guard); GLB ingest; secret scan clean.
+- **Playwright, passing:**
+  - feel, guide, systems-flow, grid-flow, raid-flow, defense-flow, walk, models-flow, audio-flow.
+  - budget-tris: worst main pass 246k tris / 60 calls at medium (market).
+  - Review checks: perks, rank, pack-step, smoke-check, restore, progress, enemies.
+  - The six new round-6 checks.
+- **`tests/smoke.mjs` fails "salvage a crate" in this container.** The live round-5 build fails it the same way here: this container's software GPU now renders ~2 fps at 1280×720, so a 20 s hold never finishes. All its other steps pass: load, move, clock, inventory, save/reload, draw calls, zero console errors. The CI runner and live smoke are the gate for salvage; the CI run is in "Deploy" below.
+- The review checks' screenshot wait went from 30 s to 120 s for the same reason. Their assertions are unchanged.
+- **Saves:** schema 4 with a v3 → v4 migration. Test: a frozen round-5 (v3) save loads; the tutorial index shifts only at or past the new step. Difficulty and the new crop fields are optional or already stored, so they need no migration.

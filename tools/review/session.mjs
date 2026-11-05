@@ -63,6 +63,11 @@ const result = await page.evaluate(async (SIM_MIN) => {
     const en = window.__enemies?.list?.filter((e) => e.state !== 'dead' && Math.hypot(e.pos.x - P().x, e.pos.z - P().z) < 30) ?? [];
     if (en.length) mark('threat', `${en[0].kind} at ${Math.hypot(en[0].pos.x - P().x, en[0].pos.z - P().z).toFixed(0)} m`);
     if (g.save.player.health < hpStart - 1) mark('damaged');
+    // round 6: no auto-respawn (the death recap waits) — get back up like a player would
+    if (g.mode === 'dead') {
+      note(`died: ${document.querySelector('[data-death-recap]')?.textContent?.slice(0, 80) ?? ''}`);
+      document.querySelector('.death .btn.primary')?.click();
+    }
   };
   const sample = () => {
     const w = g.save.world;
