@@ -400,3 +400,15 @@ Flag rule from the brief: ⚠ marks a step under 30 s or over 10 min of bot time
 7. **7** iPhone legibility (menu title, clock contrast, map), plus the SE Jump/quick-slot overlap.
 8. **4** Raid legibility (spawn cone, threat arrows, horn — the horn sound is in the audio list).
 9. **15** Interiors; **9** prop and character edge-wear; **17** weather; **18** shadow cost (device); **19** remaining polish; **20** depth systems.
+
+### Deploy (main `553b27e`)
+- CI: "Deploy (Cloudflare)" run 25 and "Deploy fallback (GitHub Pages)" run 23 both succeeded.
+- Live smoke, Worker: 14/14 pass, serving the same `index-B7bFGfmd.js` as the local build.
+- Live smoke, Pages (`--offline`, no API there): pass.
+- Gates on the merged code:
+  - `npm run check` (108 sim + 36 + 61 tests, lint 0, bundle 0.62 MB, secret scan clean).
+  - smoke, feel, guide, systems-flow, grid-flow, raid-flow, defense-flow, walk, models-flow, audio-flow.
+  - budget-tris: downtown 292k tris / 58 calls at medium, unchanged.
+  - Review checks: enemies, perks, rank, progress, pack-step, smoke, restore, controls2, session 30.
+  - coop-local: 18/18.
+- smoke and feel failed once while the pacing bot ran beside them. Both pass alone; the feel failure was the real objective-card bug and is fixed above.
