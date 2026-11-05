@@ -82,6 +82,12 @@ export interface TownContext {
   moodBonus?: number;
   /** Green Thumb perk: crop growth bonus */
   growthBonus?: number;
+  /** Patch Job: repairs restore more and cost less scrap */
+  repairBonus?: number;
+  /** Site Foreman: builders work faster (player in Haven) */
+  crewBonus?: number;
+  /** Warden: guards defend better (player in Haven) */
+  guardBonus?: number;
   /** clinic service open */
   clinic?: boolean;
   /** Grid water: irrigated plots */
@@ -640,20 +646,21 @@ function hourStep(world: WorldSave, hour: number, ctx: TownContext, ev: TownEven
   }
   // Repairs
   if (buildPower > 0) {
-    let hp = buildPower * 40;
+    const rb = ctx.repairBonus ?? 0;
+    let hp = buildPower * (1 + (ctx.crewBonus ?? 0)) * 40 * (1 + rb);
     for (const p of world.pieces) {
       if (hp <= 0) break;
       const max = maxHpOf(p);
       if (p.hp < max) {
         const add = Math.min(max - p.hp, hp);
-        if (removeItem(stock, 'mat.scrap', Math.max(1, Math.floor(add / 80))) > 0 || add < 20) {
+        if (removeItem(stock, 'mat.scrap', Math.max(1, Math.floor(add / (80 * (1 + 2 * rb))))) > 0 || add < 20) {
           p.hp += add;
           hp -= add;
         } else break;
       }
     }
   }
-  world.flags['town.defense'] = Math.round(guardPower * 10) / 10;
+  world.flags['town.defense'] = Math.round(guardPower * (1 + (ctx.guardBonus ?? 0)) * 10) / 10;
 
   // Daily routines
   if (hOfDay === 0) dailySpoilage(stock, hour, ev);

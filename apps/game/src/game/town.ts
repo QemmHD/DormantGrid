@@ -124,7 +124,7 @@ export class Town {
     // perks: Heart of Haven (+mood while you are in town), Green Thumb (crop growth)
     const inTown = Math.hypot(this.game.player.pos.x - this.home.x, this.game.player.pos.z - this.home.z) < 60;
     const mood = restored * 2 + (inTown ? this.game.pk('townMood') : 0);
-    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: mood, irrigation: irrigationOn(w, keys), clinic: clinicOn(w, keys), growthBonus: this.game.pk('growth') };
+    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: mood, irrigation: irrigationOn(w, keys), clinic: clinicOn(w, keys), growthBonus: this.game.pk('growth'), repairBonus: this.game.pk('repair'), crewBonus: inTown ? this.game.pk('crewSpeed') : 0, guardBonus: inTown ? this.game.pk('guardDamage') : 0 };
   }
 
   /**

@@ -1,0 +1,1330 @@
+{
+ "version": 1,
+ "notes": [
+  "Single source of truth for audio asset IDs. Read by tools/ingest.mjs (budgets, loudness), apps/game/src/audio/files.ts (runtime) and tools/gen-audio-requests.mjs (docs/asset-requests/audio-*.md).",
+  "Drop files as assets/incoming/audio/<id>_<nn>.<wav|mp3|m4a|flac|ogg> (nn = variant 01..), plus a license note next to it: <file name>.license.txt (e.g. sfx.hit_wood_01.wav.license.txt containing owner-created or CC0).",
+  "runtime.sfx / amb / music = played by the game today when the file exists (synth fallback otherwise); runtime.pending = ingested and shipped but nothing plays it yet."
+ ],
+ "audio": [
+  {
+   "id": "sfx.step_concrete",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "step"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.45
+   ],
+   "loop": false,
+   "prompt": "single footstep, worn leather boot on dry cracked concrete, close mic, no reverb tail, slight grit scrape",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.step_asphalt",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "stepHard"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.45
+   ],
+   "loop": false,
+   "prompt": "single footstep, heavy boot on asphalt road with loose grit, close, dry",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.step_grass",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "stepGrass"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "single footstep on overgrown dry grass and weeds, soft crunch, close",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.step_wood",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "stepWood"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "single footstep on old hollow wooden floorboards, slight creak",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.step_metal",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "stepMetal"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "single footstep on thin steel grate or sheet metal, light ring",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.step_wet",
+   "kind": "sfx",
+   "group": "Footsteps",
+   "runtime": {
+    "sfx": "stepWet"
+   },
+   "variants": 4,
+   "duration": [
+    0.15,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "single footstep in a shallow puddle on pavement, small splash",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.jump",
+   "kind": "sfx",
+   "group": "Movement",
+   "runtime": {
+    "sfx": "jump"
+   },
+   "variants": 3,
+   "duration": [
+    0.1,
+    0.4
+   ],
+   "loop": false,
+   "prompt": "quick jump take-off: cloth rustle, short exhale, boot scuff",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.land",
+   "kind": "sfx",
+   "group": "Movement",
+   "runtime": {
+    "sfx": "land"
+   },
+   "variants": 3,
+   "duration": [
+    0.1,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "landing from a short jump on concrete, two boots, gear rattle",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.dodge_roll",
+   "kind": "sfx",
+   "group": "Movement",
+   "runtime": {
+    "pending": "dodge roll has no own sound yet"
+   },
+   "variants": 3,
+   "duration": [
+    0.3,
+    0.7
+   ],
+   "loop": false,
+   "prompt": "fast dodge roll on gravel: body thud, backpack rattle, cloth swish",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.breath_tired",
+   "kind": "sfx",
+   "group": "Movement",
+   "runtime": {
+    "sfx": "breath"
+   },
+   "variants": 3,
+   "duration": [
+    0.4,
+    1.2
+   ],
+   "loop": false,
+   "prompt": "single tired exhale after sprinting, neutral adult voice, no words",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.hit_wood",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "hitWood"
+   },
+   "variants": 4,
+   "duration": [
+    0.1,
+    0.6
+   ],
+   "loop": false,
+   "prompt": "crowbar striking a wooden pallet, dry crack, short",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.hit_metal",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "hitMetal"
+   },
+   "variants": 4,
+   "duration": [
+    0.1,
+    0.7
+   ],
+   "loop": false,
+   "prompt": "crowbar striking a car door panel, metallic clang with short ring",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.hit_stone",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "hitStone"
+   },
+   "variants": 4,
+   "duration": [
+    0.1,
+    0.6
+   ],
+   "loop": false,
+   "prompt": "hammer striking brick and concrete rubble, dull chip with grit",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.hit_glass",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "hitGlass"
+   },
+   "variants": 3,
+   "duration": [
+    0.1,
+    0.8
+   ],
+   "loop": false,
+   "prompt": "tool hitting a window pane: crack and small shards falling",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.break_small",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "break"
+   },
+   "variants": 3,
+   "duration": [
+    0.3,
+    1.2
+   ],
+   "loop": false,
+   "prompt": "small wooden crate breaking apart: splinter, pieces falling",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.break_big",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "breakBig"
+   },
+   "variants": 3,
+   "duration": [
+    0.6,
+    2.0
+   ],
+   "loop": false,
+   "prompt": "large metal object torn apart: wrench, crunch, debris settling",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.collapse",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "collapse"
+   },
+   "variants": 2,
+   "duration": [
+    1.0,
+    4.0
+   ],
+   "loop": false,
+   "prompt": "section of brick wall collapsing: rumble, bricks tumbling, dust settle",
+   "maxKB": 90,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "sfx.pry_crowbar",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "pending": "no pry-specific event yet"
+   },
+   "variants": 3,
+   "duration": [
+    0.3,
+    1.0
+   ],
+   "loop": false,
+   "prompt": "crowbar prying a stuck panel: creak, strain, pop",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.cloth_tear",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "pending": "no cloth-specific event yet"
+   },
+   "variants": 3,
+   "duration": [
+    0.2,
+    0.8
+   ],
+   "loop": false,
+   "prompt": "tearing old fabric curtain, rough rip",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.pickup",
+   "kind": "sfx",
+   "group": "Gather and break",
+   "runtime": {
+    "sfx": "pickup"
+   },
+   "variants": 4,
+   "duration": [
+    0.05,
+    0.35
+   ],
+   "loop": false,
+   "prompt": "small items dropped into a canvas backpack, soft clink",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.swing",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "swing"
+   },
+   "variants": 4,
+   "duration": [
+    0.1,
+    0.4
+   ],
+   "loop": false,
+   "prompt": "pipe swung through the air, whoosh",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.hit_flesh",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "hitFlesh"
+   },
+   "variants": 4,
+   "duration": [
+    0.1,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "blunt hit on a padded jacket, muffled thump, not gory",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.player_hurt",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "hurt"
+   },
+   "variants": 4,
+   "duration": [
+    0.2,
+    0.6
+   ],
+   "loop": false,
+   "prompt": "short pained grunt, neutral adult voice, no words",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.shot_rifle",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "shot"
+   },
+   "variants": 3,
+   "duration": [
+    0.3,
+    1.5
+   ],
+   "loop": false,
+   "prompt": "improvised rifle shot outdoors, sharp crack, short urban echo",
+   "maxKB": 70,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.bow_release",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "bow"
+   },
+   "variants": 3,
+   "duration": [
+    0.2,
+    0.6
+   ],
+   "loop": false,
+   "prompt": "bow string release and arrow whoosh",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.shield_block",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "pending": "enemy shield block uses hitMetal pitched up"
+   },
+   "variants": 3,
+   "duration": [
+    0.15,
+    0.6
+   ],
+   "loop": false,
+   "prompt": "heavy steel riot shield deflecting a blow, bright clank",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.boar_charge",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "pending": "boar charge uses a pitched grunt"
+   },
+   "variants": 2,
+   "duration": [
+    0.6,
+    1.5
+   ],
+   "loop": false,
+   "prompt": "wild boar squeal and hoof thunder starting a charge",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.heavy_slam",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "pending": "heavy slam uses breakBig"
+   },
+   "variants": 2,
+   "duration": [
+    0.6,
+    1.8
+   ],
+   "loop": false,
+   "prompt": "giant robot slamming fists into the ground: deep boom, metal groan",
+   "maxKB": 80,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.laser_lock",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "pending": "marksman telegraph is visual only"
+   },
+   "variants": 2,
+   "duration": [
+    0.4,
+    1.4
+   ],
+   "loop": false,
+   "prompt": "rising electronic targeting tone, thin and tense",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.drone_hum",
+   "kind": "sfx",
+   "group": "Combat",
+   "runtime": {
+    "sfx": "drone"
+   },
+   "variants": 2,
+   "duration": [
+    0.6,
+    2.0
+   ],
+   "loop": false,
+   "prompt": "small surveillance quadcopter passing: buzzing rotors, slight doppler",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.craft",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "craft"
+   },
+   "variants": 3,
+   "duration": [
+    0.3,
+    1.2
+   ],
+   "loop": false,
+   "prompt": "quick workbench crafting: ratchet, tap of hammer, clink",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.place",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "place"
+   },
+   "variants": 3,
+   "duration": [
+    0.2,
+    0.8
+   ],
+   "loop": false,
+   "prompt": "placing a heavy timber plank: thud, settle",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.deny",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "deny"
+   },
+   "variants": 2,
+   "duration": [
+    0.1,
+    0.4
+   ],
+   "loop": false,
+   "prompt": "soft muted negative click, not harsh",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.eat",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "eat"
+   },
+   "variants": 2,
+   "duration": [
+    0.3,
+    1.0
+   ],
+   "loop": false,
+   "prompt": "opening a can and a few bites, quiet",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.drink",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "drink"
+   },
+   "variants": 2,
+   "duration": [
+    0.3,
+    1.0
+   ],
+   "loop": false,
+   "prompt": "unscrewing a bottle and two gulps",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.level_up",
+   "kind": "sfx",
+   "group": "Craft and build",
+   "runtime": {
+    "sfx": "levelUp"
+   },
+   "variants": 2,
+   "duration": [
+    0.6,
+    1.6
+   ],
+   "loop": false,
+   "prompt": "warm rising three-note chime on a struck metal pipe, hopeful",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.click",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "sfx": "click"
+   },
+   "variants": 2,
+   "duration": [
+    0.03,
+    0.2
+   ],
+   "loop": false,
+   "prompt": "soft tactile button click, analog switch",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.open",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "sfx": "open"
+   },
+   "variants": 2,
+   "duration": [
+    0.1,
+    0.4
+   ],
+   "loop": false,
+   "prompt": "canvas pack flap opening, brief",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.close",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "sfx": "close"
+   },
+   "variants": 2,
+   "duration": [
+    0.1,
+    0.4
+   ],
+   "loop": false,
+   "prompt": "canvas pack flap closing, brief",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.perk_take",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "pending": "perk taken uses levelUp"
+   },
+   "variants": 1,
+   "duration": [
+    0.4,
+    1.2
+   ],
+   "loop": false,
+   "prompt": "bright confirming chime with a low warm pad",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.toast_warm",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "pending": "toasts are silent"
+   },
+   "variants": 1,
+   "duration": [
+    0.1,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "gentle positive notification blip",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "ui.toast_bad",
+   "kind": "ui",
+   "group": "UI",
+   "runtime": {
+    "pending": "toasts are silent"
+   },
+   "variants": 1,
+   "duration": [
+    0.1,
+    0.5
+   ],
+   "loop": false,
+   "prompt": "low muted warning blip",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.power_up",
+   "kind": "sfx",
+   "group": "Grid",
+   "runtime": {
+    "sfx": "powerUp"
+   },
+   "variants": 2,
+   "duration": [
+    0.8,
+    2.5
+   ],
+   "loop": false,
+   "prompt": "electrical substation powering up: transformer hum swelling, relay clicks",
+   "maxKB": 70,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.node_ping",
+   "kind": "sfx",
+   "group": "Grid",
+   "runtime": {
+    "sfx": "node"
+   },
+   "variants": 2,
+   "duration": [
+    0.2,
+    0.8
+   ],
+   "loop": false,
+   "prompt": "clean electronic interface ping, cyan-cold, short",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.reboot_sting",
+   "kind": "sfx",
+   "group": "Grid",
+   "runtime": {
+    "pending": "node online plays powerUp + levelUp"
+   },
+   "variants": 1,
+   "duration": [
+    2.0,
+    4.0
+   ],
+   "loop": false,
+   "prompt": "triumphant short sting: low hum bloom into a bright chord, lights-on feeling",
+   "maxKB": 100,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "sfx.relay_route",
+   "kind": "sfx",
+   "group": "Grid",
+   "runtime": {
+    "pending": "relay routed uses powerUp"
+   },
+   "variants": 2,
+   "duration": [
+    0.4,
+    1.2
+   ],
+   "loop": false,
+   "prompt": "heavy breaker switch thrown, spark crackle",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.alarm",
+   "kind": "sfx",
+   "group": "Grid",
+   "runtime": {
+    "sfx": "alarm"
+   },
+   "variants": 2,
+   "duration": [
+    0.6,
+    2.0
+   ],
+   "loop": false,
+   "prompt": "old municipal alarm whoop, distant",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.thunder",
+   "kind": "sfx",
+   "group": "World",
+   "runtime": {
+    "sfx": "thunder"
+   },
+   "variants": 2,
+   "duration": [
+    2.0,
+    6.0
+   ],
+   "loop": false,
+   "prompt": "distant rolling thunder over a city",
+   "maxKB": 120,
+   "loudness": {
+    "mode": "lufs",
+    "target": -20
+   }
+  },
+  {
+   "id": "sfx.bird_chirp",
+   "kind": "sfx",
+   "group": "World",
+   "runtime": {
+    "sfx": "chirp"
+   },
+   "variants": 3,
+   "duration": [
+    0.5,
+    2.5
+   ],
+   "loop": false,
+   "prompt": "two or three city songbird chirps, morning",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "sfx.fire_crackle",
+   "kind": "sfx",
+   "group": "World",
+   "runtime": {
+    "pending": "campfire is silent apart from the ambience"
+   },
+   "variants": 1,
+   "duration": [
+    2.0,
+    5.0
+   ],
+   "loop": false,
+   "prompt": "campfire crackle, small pops, loopable-feeling texture",
+   "maxKB": 90,
+   "loudness": {
+    "mode": "lufs",
+    "target": -24
+   }
+  },
+  {
+   "id": "sfx.raid_horn",
+   "kind": "sfx",
+   "group": "World",
+   "runtime": {
+    "pending": "raid warning uses alarm"
+   },
+   "variants": 1,
+   "duration": [
+    1.5,
+    3.5
+   ],
+   "loop": false,
+   "prompt": "ragged improvised air horn blown twice from far away, menacing",
+   "maxKB": 90,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "amb.dormant",
+   "kind": "amb",
+   "group": "Ambience by district state",
+   "runtime": {
+    "amb": "dormant"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    60
+   ],
+   "loop": true,
+   "prompt": "empty ruined city: low wind through broken windows, distant metal creak, no birds, no traffic",
+   "maxKB": 900,
+   "loudness": {
+    "mode": "lufs",
+    "target": -26
+   }
+  },
+  {
+   "id": "amb.stabilized",
+   "kind": "amb",
+   "group": "Ambience by district state",
+   "runtime": {
+    "amb": "stabilized"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    60
+   ],
+   "loop": true,
+   "prompt": "quiet ruined street with a few birds and a distant dog, light wind",
+   "maxKB": 900,
+   "loudness": {
+    "mode": "lufs",
+    "target": -26
+   }
+  },
+  {
+   "id": "amb.powered",
+   "kind": "amb",
+   "group": "Ambience by district state",
+   "runtime": {
+    "amb": "powered"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    60
+   ],
+   "loop": true,
+   "prompt": "restored street: soft electrical hum from street lamps, birds, distant generator",
+   "maxKB": 900,
+   "loudness": {
+    "mode": "lufs",
+    "target": -26
+   }
+  },
+  {
+   "id": "amb.thriving",
+   "kind": "amb",
+   "group": "Ambience by district state",
+   "runtime": {
+    "amb": "thriving"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    60
+   ],
+   "loop": true,
+   "prompt": "small lively town square: distant indistinct chatter, hammering, chickens, birds",
+   "maxKB": 900,
+   "loudness": {
+    "mode": "lufs",
+    "target": -26
+   }
+  },
+  {
+   "id": "amb.rain",
+   "kind": "amb",
+   "group": "Ambience by district state",
+   "runtime": {
+    "amb": "rain"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    60
+   ],
+   "loop": true,
+   "prompt": "steady rain on rooftops and pavement, gutters running, no thunder",
+   "maxKB": 900,
+   "loudness": {
+    "mode": "lufs",
+    "target": -26
+   }
+  },
+  {
+   "id": "vo.survivor_greet",
+   "kind": "vo",
+   "group": "Survivor and faction voices",
+   "runtime": {
+    "pending": "barks are subtitles only"
+   },
+   "variants": 4,
+   "duration": [
+    0.6,
+    2.0
+   ],
+   "loop": false,
+   "prompt": "friendly tired adult voice, short greeting with no clear words (gibberish), warm",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "vo.survivor_worried",
+   "kind": "vo",
+   "group": "Survivor and faction voices",
+   "runtime": {
+    "pending": "barks are subtitles only"
+   },
+   "variants": 4,
+   "duration": [
+    0.6,
+    2.0
+   ],
+   "loop": false,
+   "prompt": "worried adult voice, short anxious murmur, no clear words",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "vo.reaver_shout",
+   "kind": "vo",
+   "group": "Survivor and faction voices",
+   "runtime": {
+    "pending": "raider barks are subtitles only"
+   },
+   "variants": 4,
+   "duration": [
+    0.5,
+    1.5
+   ],
+   "loop": false,
+   "prompt": "rough raider shout, aggressive, no clear words",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "vo.custodian_announce",
+   "kind": "vo",
+   "group": "Survivor and faction voices",
+   "runtime": {
+    "pending": "Custodian lines are subtitles only"
+   },
+   "variants": 3,
+   "duration": [
+    1.0,
+    3.0
+   ],
+   "loop": false,
+   "prompt": "synthetic municipal PA announcement voice, calm robotic tone, unintelligible",
+   "maxKB": 60,
+   "loudness": {
+    "mode": "peak",
+    "dbfs": -6
+   }
+  },
+  {
+   "id": "music.dormant",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "music": "dormant"
+   },
+   "variants": 1,
+   "duration": [
+    60,
+    150
+   ],
+   "loop": true,
+   "prompt": "ambient exploration loop, sparse detuned piano and soft analog pads, minor key, 72 BPM, lonely but curious, seamless loop",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "music.restored",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "music": "restored"
+   },
+   "variants": 1,
+   "duration": [
+    60,
+    150
+   ],
+   "loop": true,
+   "prompt": "warm town loop, acoustic guitar and soft pads, dorian, 84 BPM, hopeful, seamless loop",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "music.night",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "music": "night"
+   },
+   "variants": 1,
+   "duration": [
+    60,
+    150
+   ],
+   "loop": true,
+   "prompt": "night tension loop, low drones, sparse metallic pulses, 64 BPM, uneasy, seamless loop",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "music.combat",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "music": "combat"
+   },
+   "variants": 1,
+   "duration": [
+    45,
+    120
+   ],
+   "loop": true,
+   "prompt": "combat loop, driving low toms and gritty synth bass, 120 BPM, tense not heroic, seamless loop",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "music.reboot",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "pending": "node online plays a synth swell"
+   },
+   "variants": 1,
+   "duration": [
+    20,
+    45
+   ],
+   "loop": false,
+   "prompt": "node-online triumph cue: pads swell into a bright major chord with a pulsing arpeggio, 100 BPM, ends cleanly",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  },
+  {
+   "id": "music.title",
+   "kind": "music",
+   "group": "",
+   "runtime": {
+    "pending": "title screen uses the generative score"
+   },
+   "variants": 1,
+   "duration": [
+    60,
+    150
+   ],
+   "loop": true,
+   "prompt": "title theme loop: slow piano melody over warm pads, hopeful melancholy, 70 BPM, seamless loop",
+   "maxKB": 2600,
+   "loudness": {
+    "mode": "lufs",
+    "target": -18
+   }
+  }
+ ]
+}

@@ -2,11 +2,13 @@
 // arrow) pointing at where to go, a "Next?" button that picks the next best
 // action, one-time contextual tips for each mechanic, and the Help screen.
 import * as THREE from 'three';
-import { computeNeeds, getPiece, isNight } from '@dg/sim';
+import { computeNeeds, getPiece, isNight, nextUnlocks, rankProgress } from '@dg/sim';
 import { ONBOARDING, CONTEXT_HINTS } from '../content/onboarding';
 import type { Game } from './game';
 import type { UI } from '../ui/ui';
 import { KIND_COLOR } from './markers';
+import { rankOf } from './town';
+import { S } from '../ui/strings';
 
 interface Advice {
   text: string;
@@ -31,6 +33,12 @@ export class Guide {
   private tipUntil = 0;
   private v = new THREE.Vector3();
   private lastStep = -1;
+  private rankEl: HTMLDivElement;
+  private rankLbl: HTMLElement;
+  private rankFill: HTMLElement;
+  private rankPts: HTMLElement;
+  private rankNext: HTMLDivElement;
+  private rankKey = '';
 
   constructor(private game: Game, private ui: UI) {
     const root = document.getElementById('ui')!;
@@ -56,7 +64,23 @@ export class Guide {
     help.className = 'obtn';
     help.textContent = 'Help';
     row.append(next, help, this.skipBtn);
-    this.el.append(this.titleEl, this.bodyEl, this.progEl, row);
+    // Town Rank: progress bar + the next unlocks, always on the HUD
+    this.rankEl = document.createElement('div');
+    this.rankEl.className = 'orank';
+    this.rankEl.setAttribute('data-rankbar', '');
+    this.rankLbl = document.createElement('b');
+    const bar = document.createElement('div');
+    bar.className = 'rbar';
+    this.rankFill = document.createElement('i');
+    bar.append(this.rankFill);
+    this.rankPts = document.createElement('small');
+    const top = document.createElement('div');
+    top.className = 'rtop';
+    top.append(this.rankLbl, bar, this.rankPts);
+    this.rankNext = document.createElement('div');
+    this.rankNext.className = 'rnext';
+    this.rankEl.append(top, this.rankNext);
+    this.el.append(this.titleEl, this.bodyEl, this.progEl, this.rankEl, row);
     for (const b of [next, help, this.skipBtn]) {
       b.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
       b.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -134,6 +158,19 @@ export class Guide {
     }
   }
 
+  private refreshRank(): void {
+    const r = rankOf(this.game.save.world);
+    const pr = rankProgress(r.rank, r.points);
+    const next = nextUnlocks(r.rank, 3);
+    const key = `${r.rank}:${r.points}`;
+    if (key === this.rankKey) return;
+    this.rankKey = key;
+    this.rankLbl.textContent = S.rankbar.label(r.rank);
+    this.rankFill.style.width = `${Math.round(pr.frac * 100)}%`;
+    this.rankPts.textContent = pr.max ? S.rankbar.max : S.rankbar.pts(pr.into, pr.need);
+    this.rankNext.textContent = next.length ? S.rankbar.next(next.map((u) => u.label).join(' · ')) : S.rankbar.max;
+  }
+
   refresh(): void {
     const g = this.game;
     if (!g.save || g.mode === 'menu' || g.mode === 'cinematic') {
@@ -142,7 +179,8 @@ export class Guide {
       return;
     }
     this.el.style.opacity = '1';
-    this.el.style.pointerEvents = 'auto';
+    this.el.style.pointerEvents = ''; // CSS decides (short screens: text passes touches to the stick)
+    this.refreshRank();
     const touch = g.input.usingTouch || document.documentElement.classList.contains('touch');
     const step = g.onbStep < ONBOARDING.length ? ONBOARDING[g.onbStep] : null;
     this.skipBtn.style.display = step ? '' : 'none';

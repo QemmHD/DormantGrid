@@ -83,7 +83,9 @@ export class Power {
       if (p.piece === 'floodlight' && on && np < MAX) {
         // the yard light: a big warm pool in front of the lamp, brighter at night
         const a = (p.rot * Math.PI) / 2;
-        m4.compose(v.set(pos.x + Math.sin(a) * 4, pos.y + 0.05, pos.z + Math.cos(a) * 4), q.identity(), sc.setScalar(14));
+        // Gridwright: floodlights reach farther
+        const reach = 1 + g.pk('floodRange');
+        m4.compose(v.set(pos.x + Math.sin(a) * 4 * reach, pos.y + 0.05, pos.z + Math.cos(a) * 4 * reach), q.identity(), sc.setScalar(14 * reach));
         this.pools.setMatrixAt(np, m4);
         this.pools.setColorAt(np, col.setScalar(night ? 0.9 : 0.12));
         np++;
@@ -141,7 +143,8 @@ export class Power {
       return;
     }
     removeItem(fromStock ? stock : g.save.player.inventory, AMMO, 1);
-    this.cd.set(id, TURRET_CD);
+    // Gridwright: turrets fire faster
+    this.cd.set(id, TURRET_CD / (1 + g.pk('turretRate')));
     this.stats.shots++;
     const my = pos.y + 1.2;
     g.fx.sparks(pos.x, my, pos.z, 6);

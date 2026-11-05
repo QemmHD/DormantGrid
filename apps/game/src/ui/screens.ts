@@ -426,6 +426,7 @@ function journalScreen(c: ScreenCtx): () => void {
   c.title.textContent = S.journal;
   const render = () => {
     clear(body);
+    const flags0 = api.save.world.flags ?? {};
     const st = c.ui.storySource?.();
     if (st) {
       // the one thing to do next, always visible at the top
@@ -440,6 +441,15 @@ function journalScreen(c: ScreenCtx): () => void {
         }
       } else if (!st.ending) next.append(h('b', null, S.camp.allDone));
       body.append(next);
+    }
+    const rk = c.ui.rankSource?.();
+    if (rk) {
+      const fill = h('i');
+      fill.style.width = `${Math.round(rk.frac * 100)}%`;
+      const box = h('div.rank-card', { 'data-rank-journal': '' }, h('div.rtop', null, h('b', null, S.rankbar.label(rk.rank)), h('div.rbar', null, fill), h('small', null, rk.max ? S.rankbar.max : S.rankbar.pts(rk.into, rk.need))), h('small.how', null, S.rankbar.how));
+      const ul = h('div.list.rank-unlocks');
+      for (const u of rk.next) ul.append(h('div', { class: 'li obj' }, h('span.check', null, String(u.rank)), h('div.main', null, h('b', null, u.label), h('small', null, S.rankbar.at(u.rank)))));
+      body.append(h('h3.section', null, S.rankbar.title), box, ul);
     }
     body.append(h('h3.section', null, S.objectives));
     const entries = c.ui.journalSource();
@@ -465,6 +475,13 @@ function journalScreen(c: ScreenCtx): () => void {
         body.append(el);
       }
     }
+    const seen = Object.keys(S.enemy).filter((k) => flags0[`seen:${k}`]);
+    if (seen.length) {
+      body.append(h('h3.section', null, S.threatsTitle));
+      const tl = h('div.list.threats');
+      for (const k of seen) tl.append(h('div', { class: 'li obj', 'data-threat': k }, h('div.main', null, h('b', null, S.enemy[k].name), h('small', null, S.enemy[k].counter))));
+      body.append(tl);
+    }
     body.append(h('h3.section', null, S.lore));
     const flags = api.save.world.flags ?? {};
     const found = LORE_TERMINALS.filter((l) => flags[`lore:${l.id}`]);
@@ -480,8 +497,7 @@ function journalScreen(c: ScreenCtx): () => void {
 
 // ---------------- perks ----------------
 const TRACKS = ['scavenger', 'builder', 'fighter', 'provider'] as const;
-/** perk effect keys no system reads yet (round 4): shown honestly on the perk row */
-const FX_NOT_WIRED = new Set(['deconNoise', 'repair', 'crewSpeed', 'power', 'tracker', 'guardDamage']);
+
 function perksScreen(c: ScreenCtx): () => void {
   const { api, body } = c;
   c.title.textContent = S.prog.title;
@@ -522,8 +538,7 @@ function perksScreen(c: ScreenCtx): () => void {
       const can = canTakePerk(p.perks, perk.id, p.perkPoints);
       const prev = rows.find((x) => x.tier === perk.tier - 1);
       const prevOwned = !prev || p.perks.includes(prev.id);
-      const dead = Object.keys(perk.fx).every((k) => FX_NOT_WIRED.has(k));
-      const sub = (owned ? S.prog.owned : !prevOwned && prev ? S.prog.locked(prev.name) : S.prog.tier(perk.tier)) + (dead ? ` · ${S.prog.notYet}` : '');
+      const sub = owned ? S.prog.owned : !prevOwned && prev ? S.prog.locked(prev.name) : S.prog.tier(perk.tier);
       const act = owned ? h('span.check', null, '✓') : btn(S.prog.take, can ? 'small primary' : 'small', () => {
         if (api.takePerk(perk.id)) render();
       }, { 'data-perk': perk.id });
@@ -564,7 +579,7 @@ function settingsScreen(c: ScreenCtx): () => void {
       }
       return el;
     };
-    const toggle = (k: 'muted' | 'invertY' | 'leftHanded' | 'colorblind' | 'reduceShake' | 'subtitles' | 'showPerf' | 'fpsCap30' | 'hints') =>
+    const toggle = (k: 'muted' | 'invertY' | 'leftHanded' | 'colorblind' | 'reduceShake' | 'subtitles' | 'showPerf' | 'coopDiag' | 'fpsCap30' | 'hints') =>
       seg(s[k] ? 'on' : 'off', [['off', 'Off'], ['on', 'On']], (v) => set(k, v === 'on'));
     const slider = (k: 'master' | 'music' | 'sfx' | 'ambience' | 'sensitivity', min: number, max: number, step: number) => {
       const r = h('input', { type: 'range', min, max, step, value: s[k] }) as HTMLInputElement;
@@ -578,6 +593,7 @@ function settingsScreen(c: ScreenCtx): () => void {
       row(S.sQuality, seg(s.quality, [['auto', S.qAuto], ['low', S.qLow], ['medium', S.qMed], ['high', S.qHigh]], (v) => set('quality', v))),
       row(S.sBattery, toggle('fpsCap30')),
       row(S.sPerf, toggle('showPerf')),
+      row(S.sCoopDiag, toggle('coopDiag'), S.sCoopDiagHint),
       section(S.sAudio),
       row(S.sMaster, slider('master', 0, 1, 0.05)),
       row(S.sMusic, slider('music', 0, 1, 0.05)),

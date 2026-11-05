@@ -137,7 +137,14 @@ export class WorldRoom extends DurableObject<Env> {
     await this.core.onMessage(this.wrap(ws), message);
   }
 
-  override async webSocketClose(ws: WebSocket, _code: number, _reason: string, _wasClean: boolean): Promise<void> {
+  override async webSocketClose(ws: WebSocket, code: number, _reason: string, _wasClean: boolean): Promise<void> {
+    // complete the close handshake: without this a client that closed its socket can sit in
+    // CLOSING until the browser times out (found by tests/coop-local.mjs on workerd)
+    try {
+      ws.close(code >= 1000 && code < 5000 && code !== 1005 && code !== 1006 ? code : 1000, 'closed');
+    } catch {
+      /* already closed */
+    }
     await this.core.onClose(this.wrap(ws));
   }
 

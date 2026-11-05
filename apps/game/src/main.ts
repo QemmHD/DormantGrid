@@ -83,6 +83,10 @@ async function start() {
   await game.boot((p) => bootProgress(0.3 + p * 0.6));
   const svc = new Services(game.bus);
   (window as unknown as { __svc: unknown }).__svc = svc;
+  // co-op diagnostics overlay (Settings → Co-op diagnostics)
+  const { CoopDiag } = await import('./ui/coopdiag');
+  const coopDiag = new CoopDiag(svc.coop, () => game.settings, (text) => game.toast(text, 'info'));
+  game.tickers.push((dt) => coopDiag.update(dt));
   const town = new Town(game);
   const enemies = new Enemies(game);
   const grid = new Grid(game, enemies);
@@ -95,6 +99,13 @@ async function start() {
   game.onRemoteNode = (node, district) => grid.remoteOnline(node, district);
   (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
+  // Tier B audio: recorded files by stable ID replace synthesized sounds when shipped; never blocks boot.
+  void (async () => {
+    const { audio: eng } = await import('./audio/audio');
+    const n = await eng.files.load(import.meta.env.BASE_URL);
+    (window as unknown as { __audio: unknown }).__audio = eng;
+    if (n) console.info(`[audio] ${n} recorded files available`);
+  })();
   // Tier B models (GLB) replace procedural meshes when present; never blocks boot.
   void (async () => {
     const [{ loadModelOverrides }, { overridePropShape }, { setEnemyModel }] = await Promise.all([
@@ -180,6 +191,14 @@ async function start() {
   const { Story } = await import('./game/story');
   const story = new Story(game, ui);
   ui.storySource = () => story.info();
+  const { rankOf } = await import('./game/town');
+  // review tools read sim data tables (salvage yields, recipes) through this
+  (window as unknown as { __sim: unknown }).__sim = await import('@dg/sim');
+  const { rankProgress, nextUnlocks } = await import('@dg/sim');
+  ui.rankSource = () => {
+    const r = rankOf(game.save.world);
+    return { rank: r.rank, ...rankProgress(r.rank, r.points), next: nextUnlocks(r.rank, 3) };
+  };
   ui.decideHandler = (key) => story.decide(key);
   (window as unknown as { __story: unknown }).__story = story;
   let lastPts = -1;
@@ -421,6 +440,7 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.drawImage(img, px - span, pz - span, span * 2, span * 2, -w / 2, -h / 2, w, h);
   ctx.restore();
   drawNodes(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
+  if (game.pk('tracker') > 0) drawWildlife(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
   ctx.fillStyle = '#e8a65a';
   ctx.beginPath();
   ctx.moveTo(w / 2, h / 2 - 7);
@@ -428,6 +448,27 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.lineTo(w / 2 - 5, h / 2 + 5);
   ctx.closePath();
   ctx.fill();
+}
+
+/** Tracker perk: hounds and boars within 80 m as brown dots */
+function drawWildlife(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {
+  const list = (window as unknown as { __enemies?: { list: { kind: string; state: string; pos: { x: number; z: number } }[] } }).__enemies?.list ?? [];
+  const k = w / (span * 2);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  ctx.fillStyle = '#c8955a';
+  let n = 0;
+  for (const e of list) {
+    if ((e.kind !== 'hound' && e.kind !== 'boar') || e.state === 'dead') continue;
+    if (Math.hypot(e.pos.x - game.player.pos.x, e.pos.z - game.player.pos.z) > 80) continue;
+    const dx = e.pos.x / 4 - px, dz = e.pos.z / 4 - pz;
+    const rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+    if (Math.abs(rx) > span || Math.abs(rz) > span) continue;
+    ctx.beginPath();
+    ctx.arc(w / 2 + rx * k, h / 2 + rz * k, e.kind === 'boar' ? 4 : 3, 0, Math.PI * 2);
+    ctx.fill();
+    n++;
+  }
+  game.trackedOnMap = n;
 }
 
 function drawNodes(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {

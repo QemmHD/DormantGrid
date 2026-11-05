@@ -81,6 +81,9 @@ import { CollisionWorld, type Collider } from './collision';
 import { CharacterRig, randomLook } from '../render/character';
 import { ContactShadows } from '../render/contact';
 import { S } from '../ui/strings';
+
+/** metres at which salvaging is heard by wandering enemies */
+export const NOISE_SALVAGE = 16;
 import { audio, type Sfx } from '../audio/audio';
 import { WorldView } from '../world/world';
 import { FX } from '../render/fx';
@@ -1130,6 +1133,8 @@ export class Game implements GameAPI {
       const sfx = 'def' in t ? SFX_FOR[t.def.sfx] : 'hitWood';
       audio.play(sfx, { vol: 0.55, pos: t.pos });
       this.camera.addTrauma(0.05 + weight * 0.05);
+      // salvaging is loud: wandering enemies within 16 m come to look (Quiet Work halves it)
+      this.noiseHook?.(t.pos.x, t.pos.z, NOISE_SALVAGE * (1 + this.pk('deconNoise')));
       this.fx.debris(t.pos.x, t.pos.y, t.pos.z, 'def' in t ? t.def.sfx : 'wood', 0.15, 3);
       if ('def' in t && (t.def.sfx === 'metal' || t.def.sfx === 'stone')) this.fx.sparks(t.pos.x, t.pos.y, t.pos.z, 5);
       if (t.kind === 'prop') this.view.pokeProp(t.id, 0.94, (Math.random() - 0.5) * 0.06);
@@ -1529,7 +1534,7 @@ export class Game implements GameAPI {
     this.player.rig.setState('attack');
     tickStamina(p, 0, eq?.weapon?.stamina ?? 8, modifiers(p, this.perkMods()));
     audio.play('swing', { vol: 0.6 });
-    const dmg = (eq?.weapon?.damage ?? (eq?.tool ? 12 : 6)) * (1 + this.pk(eq?.weapon?.kind === 'ranged' ? 'ranged' : 'melee'));
+    const dmg = (eq?.weapon?.damage ?? (eq?.tool ? 12 : 6)) * (1 + (eq?.weapon?.kind === 'ranged' ? this.pk('ranged') : this.pk('melee')));
     if (eq?.weapon?.kind === 'ranged') {
       const ammo = eq.weapon.ammo;
       if (ammo && !this.inv.some((s) => s?.id === ammo)) {
@@ -1546,6 +1551,12 @@ export class Game implements GameAPI {
     }
     setTimeout(() => this.resolveSwing(dmg), cd * 0.45 * 1000);
   }
+
+  /** Tracker perk: animals drawn on the minimap last frame (for checks) */
+  trackedOnMap = 0;
+
+  /** a noise at (x,z) heard within r metres (set by Enemies) */
+  noiseHook: ((x: number, z: number, r: number) => void) | null = null;
 
   /** ranged weapon fire (set by Enemies) */
   fireHook: ((damage: number, range: number, weapon: string) => void) | null = null;

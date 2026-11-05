@@ -18,10 +18,10 @@ const grepCount = (pattern, dir, flags = 'rniE') => {
 };
 const session = J('docs/review/session.json');
 const c2 = J('docs/review/controls2.json');
-const content = J('docs/review/content.json');
 const restore = J('docs/review/restore.json');
 const smoke = J('docs/review/smoke.json');
 const progress = J('docs/review/progress.json');
+const enemies = J('docs/review/enemies.json');
 // unit tests that back P9/P10 (run here, so the result is always current)
 const vitest = (file) => {
   const out = join(mkdtempSync(join(tmpdir(), 'accept-')), 'v.json');
@@ -84,9 +84,13 @@ const checks = {
     return [ok, ok ? 'town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one' : 'town.ts ctx() does not pass irrigation'];
   },
   'P11-enemy-variety': () => {
+    // measured (tools/review/enemies-check.mjs): silhouettes at 30 m, behaviour + counter per kind, escalation
     const m = src('apps/game/src/game/enemies.ts').match(/export type EnemyKind = ([^;]+);/)?.[1] ?? '';
     const n = (m.match(/'/g) ?? []).length / 2;
-    return [n >= 9, `client enemy kinds: ${n} (target ≥ 9 of the 11 sim types)`];
+    if (!enemies) return [false, `client enemy kinds: ${n}; run node tools/review/enemies-check.mjs`];
+    const ok = Object.values(enemies.behaviour).filter((b) => b.pass).length;
+    const w = enemies.silhouettes.worstPairs[0];
+    return [enemies.pass && n >= 11, `client kinds ${n}/11; behaviour+counter ${ok}/11; silhouettes at 30 m: smallest ${Math.min(...Object.values(enemies.silhouettes.px))} px, most similar pair ${w[0]}/${w[1]} IoU ${w[2]} (≤ ${enemies.thresholds.maxIoU}); escalation tier 0 → 4: ${enemies.escalation.tier0.length} → ${enemies.escalation.tier4.length} kinds`];
   },
   'P12-endings-reachable': () => {
     if (!progress) return [false, 'run node tools/review/progress-check.mjs first'];
@@ -95,8 +99,12 @@ const checks = {
     return [p.pass, `campaign walked: ${p.steps.length} steps, next step shown in Journal at ${shown}/${p.steps.length}; via UI: ${p.uiSteps.join(', ')}; endings reached through the UI: ${p.endings.filter((e) => e.ok).length}/6 (${p.endings.map((e) => e.got).join(', ')})`];
   },
   'P13-recorded-audio': () => {
-    const n = content?.audio?.recordedAudioFiles ?? 0;
-    return [n >= 10, `recorded audio files: ${n} (target ≥ 10 ambience/SFX beds; run content.mjs)`];
+    // only real recorded files that ship (assets/manifest.json) AND that the game plays (runtime not pending)
+    const man = J('assets/manifest.json') ?? { assets: {} };
+    const reg = J('assets/audio-registry.json') ?? { audio: [] };
+    const used = Object.values(man.assets ?? {}).filter((e) => e.kind === 'audio' && e.runtime && !e.runtime.pending && existsSync(join('assets', e.path))).length;
+    const wired = reg.audio.filter((a) => !a.runtime.pending).length;
+    return [used >= 10, `recorded audio files shipped and played: ${used} (target ≥ 10). Pipeline ready: ${reg.audio.length} IDs, ${wired} with a runtime hook; files needed are listed in docs/asset-requests/audio-sfx.md and audio-music.md`];
   },
   'P15-restoration-payoff': () => {
     if (!restore) return [false, 'run node tools/review/restore-check.mjs first'];

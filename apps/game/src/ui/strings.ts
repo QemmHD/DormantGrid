@@ -149,6 +149,19 @@ export const S = {
   sDayVal: (m: number) => `${m} min`,
   sBattery: 'Battery saver (30 fps)',
   sPerf: 'Show performance stats',
+  sCoopDiag: 'Co-op diagnostics',
+  sCoopDiagHint: 'Connection, round-trip time, snapshot age and desyncs, with a copyable report',
+  coopDiag: {
+    title: 'Co-op',
+    state: (s: string, room: string | null, n: number) => `${s}${room ? ` · room ${room}` : ''} · ${n} player${n === 1 ? '' : 's'}`,
+    rtt: (ms: number) => `Round trip ${ms} ms`,
+    age: (ms: number | null) => (ms === null ? 'No snapshots yet' : `Snapshot age ${ms} ms`),
+    desync: (n: number, rej: number, ooo: number) => `Desyncs ${n} (rejected ${rej}, out of order ${ooo})`,
+    reconnects: (n: number) => `Reconnects ${n}`,
+    copy: 'Copy co-op report',
+    copied: 'Co-op report copied.',
+    copyFailed: 'Could not copy. The report is selected: copy it by hand.',
+  },
   sData: 'Save data',
   exportSave: 'Export save',
   importSave: 'Import save',
@@ -201,6 +214,17 @@ export const S = {
   },
   topbar: { inventory: 'Inventory', craft: 'Craft', build: 'Build', map: 'Map', ledger: 'Ledger', journal: 'Journal', perks: 'Perks', menu: 'Menu' },
 
+  // Town Rank bar (HUD + Journal)
+  rankbar: {
+    label: (r: number) => `Rank ${r}`,
+    pts: (a: number, b: number) => `${a}/${b}`,
+    next: (list: string) => `Next: ${list}`,
+    max: 'Top rank reached',
+    title: 'Town Rank',
+    at: (r: number) => `Rank ${r}`,
+    how: 'Rank points: 10 per resident, 60 per fully restored district, 6 per station, and up to 200 for defenses.',
+  },
+
   // progression (XP, perk points, perks screen)
   prog: {
     title: 'Perks',
@@ -220,10 +244,28 @@ export const S = {
     take: 'Take',
     locked: (prev: string) => `Needs ${prev} first`,
     tier: (t: number) => `Tier ${t}`,
-    notYet: 'No effect in this build yet (it still unlocks the next tier)',
     taken: (name: string) => `Perk learned: ${name}.`,
     ownedCount: (n: number, total: number) => `${n} of ${total} perks learned`,
   },
+
+  // enemies: name + counter, shown the first time each is seen and in the Journal
+  enemy: {
+    raider: { name: 'Reaver Grunt', counter: 'Dodge the swing and hit back. Barricades hold it off your walls.' },
+    scout: { name: 'Reaver Scout', counter: 'Flanks fast with a spear. Bear traps pin it twice as long; the Shadow perk keeps you unseen.' },
+    brute: { name: 'Reaver Sapper', counter: 'Ignores you and plants charges on buildings. Hit it while it plants; turrets and barricades keep it off your walls.' },
+    sniper: { name: 'Reaver Marksman', counter: 'Fires only with a clear line. Break line of sight behind cover, or rush it. Dodge when the red line locks.' },
+    captain: { name: 'Reaver Captain', counter: 'Raiders near the banner are faster and hit harder. Drop the captain and the rest break and run.' },
+    drone: { name: 'Patrol Drone', counter: 'Circles out of reach and calls others. Hit it when it dips to fire, or shoot it; turrets track it.' },
+    bot: { name: 'Guard Unit', counter: 'Riot shield in front. Roll behind it, or let turrets and traps hit its sides.' },
+    crawler: { name: 'Swarm Crawler', counter: 'Comes in swarms. Swings cut through the pack; spike strips shred them.' },
+    heavy: { name: 'Custodian Heavy', counter: 'Slams the ground: leave the red ring. The glowing core on its back takes double damage.' },
+    hound: { name: 'Feral Hound', counter: 'Packs circle to bite from behind. At night they will not come into firelight or a powered floodlight.' },
+    boar: { name: 'Wild Boar', counter: 'Paws the ground, then charges in a straight line. Sidestep it into a wall or a bear trap and it stuns itself.' },
+  } as Record<string, { name: string; counter: string }>,
+  enemyNew: (name: string, counter: string) => `New threat: ${name}. ${counter}`,
+  enemyBlocked: 'Blocked',
+  enemyRout: 'The captain is down. The raiders break and run.',
+  threatsTitle: 'Threats you have met',
 
   // Grid power + water (machines, Ledger chain)
   power: {

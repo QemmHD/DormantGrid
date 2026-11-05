@@ -198,6 +198,11 @@ export class HavenCamp {
     this.group.add(new THREE.Line(wire, new THREE.LineBasicMaterial({ color: 0x1a1612 })));
   }
 
+  /** world positions of the camp's fires (hounds keep out of firelight at night) */
+  firePositions(): readonly THREE.Vector3[] {
+    return this.flames.map((f) => f.position);
+  }
+
   /** smoke emitter hook (set by the game: FX.smoke) */
   smoke: ((x: number, y: number, z: number) => void) | null = null;
   private smokeT = 0;

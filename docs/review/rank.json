@@ -1,0 +1,81 @@
+{
+  "devices": {
+    "iPhone SE": {
+      "before": {
+        "text": "Rank 130/40Next: Brick building tier · Machinist’s Bench · Kitchen",
+        "box": [
+          25,
+          225,
+          139,
+          293
+        ],
+        "onScreen": true,
+        "visible": true,
+        "minFont": 11,
+        "overlaps": [],
+        "fill": "75%"
+      },
+      "after": {
+        "text": "Rank 226/60Next: Chem Station · Livestock Pen · Cutting Torch",
+        "box": [
+          25,
+          225,
+          139,
+          293
+        ],
+        "onScreen": true,
+        "visible": true,
+        "minFont": 11,
+        "overlaps": [],
+        "fill": "43%"
+      },
+      "journal": {
+        "card": "Rank 226/60Rank points: 10 per resident, 60 per fully restored district, 6 per station, and up to 200 for defenses.",
+        "unlocks": 3,
+        "minFont": 11.5
+      },
+      "nextListed": 3,
+      "pass": true,
+      "pageErrors": []
+    },
+    "iPhone 13": {
+      "before": {
+        "text": "Rank 130/40Next: Brick building tier · Machinist’s Bench · Kitchen",
+        "box": [
+          25,
+          263,
+          203,
+          317
+        ],
+        "onScreen": true,
+        "visible": true,
+        "minFont": 11,
+        "overlaps": [],
+        "fill": "75%"
+      },
+      "after": {
+        "text": "Rank 226/60Next: Chem Station · Livestock Pen · Cutting Torch",
+        "box": [
+          25,
+          263,
+          203,
+          317
+        ],
+        "onScreen": true,
+        "visible": true,
+        "minFont": 11,
+        "overlaps": [],
+        "fill": "43%"
+      },
+      "journal": {
+        "card": "Rank 226/60Rank points: 10 per resident, 60 per fully restored district, 6 per station, and up to 200 for defenses.",
+        "unlocks": 3,
+        "minFont": 11.5
+      },
+      "nextListed": 3,
+      "pass": true,
+      "pageErrors": []
+    }
+  },
+  "pass": true
+}

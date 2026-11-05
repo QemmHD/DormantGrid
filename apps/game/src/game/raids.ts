@@ -17,12 +17,10 @@ import {
 import { RAID_WARNINGS } from '../content/factions';
 import { audio } from '../audio/audio';
 import type { Game } from './game';
-import type { EnemyKind, Enemies } from './enemies';
+import { KIND_OF, type EnemyKind, type Enemies } from './enemies';
 
-const KIND: Record<string, EnemyKind> = {
-  raider_grunt: 'raider', raider_scout: 'raider', raider_brute: 'raider', raider_sniper: 'raider', raider_leader: 'raider',
-  drone: 'drone', guard_bot: 'bot', crawler: 'crawler', custodian_heavy: 'bot', hound: 'hound', boar: 'hound',
-};
+/** every sim enemy id spawns as its own client kind (round 5: was 5 look-alikes) */
+const KIND: Record<string, EnemyKind> = KIND_OF;
 
 export class Raids {
   private lastHour = -1;
@@ -146,6 +144,7 @@ export class Raids {
     finishRaid(st, w.hour);
     storeRaidState(w, st);
     w.flags['raidsSurvived'] = Number(w.flags['raidsSurvived'] ?? 0) + (out.won ? 1 : 0);
+    w.flags['raidsLost'] = Number(w.flags['raidsLost'] ?? 0) + (out.won ? 0 : 1);
     if (out.won) {
       g.toast(offscreen ? 'Raid at Haven — the guards held.' : 'Raid repelled. Haven holds.', 'warm');
       audio.play('levelUp', { vol: 0.7 });

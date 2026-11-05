@@ -72,6 +72,8 @@ export class UI {
   journalSource: () => JournalEntry[] = () => [];
   /** campaign next step / decisions / endings (set by main from Story) */
   storySource: (() => StoryInfo) | null = null;
+  /** Town Rank for the Journal (set by main) */
+  rankSource: (() => { rank: number; into: number; need: number; frac: number; max: boolean; next: { rank: number; label: string }[] }) | null = null;
   decideHandler: (key: string) => void = () => {};
   private perkBadge: HTMLElement | null = null;
   jobAssign: (id: number, job: string) => void = () => {};
