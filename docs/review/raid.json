@@ -113,12 +113,12 @@
         "won": true,
         "lost": false,
         "deaths": 0,
-        "minHp": 96,
+        "minHp": 88,
         "swings": 12,
         "bandages": 0,
         "spawned": 3,
         "seconds": 14,
-        "hpEnd": 96
+        "hpEnd": 88
       }
     },
     {
