@@ -221,3 +221,18 @@ describe('perk effects in the sim', () => {
     expect(ate(-0.4)).toBe(false);
   });
 });
+
+describe('round 5 loads round-4 saves', () => {
+  it('a schema-3 save from the round-4 build loads unchanged (no migration needed)', async () => {
+    const { SAVE_V3 } = await import('./fixtures/save-v3');
+    const raw = JSON.parse(JSON.stringify(SAVE_V3)) as Record<string, unknown>;
+    expect(raw['schema']).toBe(3);
+    const s = migrateSave(raw);
+    expect(s.schema).toBe(SAVE_SCHEMA_VERSION);
+    expect(() => validateSave(s)).not.toThrow();
+    // perk ids kept their meaning; Gridwright now reads turretRate/floodRange
+    expect(s.player.perks).toContain('perk.builder.grid_wright');
+    expect(s.player.xp).toBe(1450);
+    expect(s.world.quests['q.first_node']).toBe(1);
+  });
+});
