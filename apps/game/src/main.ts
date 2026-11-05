@@ -421,6 +421,7 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.drawImage(img, px - span, pz - span, span * 2, span * 2, -w / 2, -h / 2, w, h);
   ctx.restore();
   drawNodes(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
+  if (game.pk('tracker') > 0) drawWildlife(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
   ctx.fillStyle = '#e8a65a';
   ctx.beginPath();
   ctx.moveTo(w / 2, h / 2 - 7);
@@ -428,6 +429,27 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.lineTo(w / 2 - 5, h / 2 + 5);
   ctx.closePath();
   ctx.fill();
+}
+
+/** Tracker perk: hounds and boars within 80 m as brown dots */
+function drawWildlife(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {
+  const list = (window as unknown as { __enemies?: { list: { kind: string; state: string; pos: { x: number; z: number } }[] } }).__enemies?.list ?? [];
+  const k = w / (span * 2);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  ctx.fillStyle = '#c8955a';
+  let n = 0;
+  for (const e of list) {
+    if ((e.kind !== 'hound' && e.kind !== 'boar') || e.state === 'dead') continue;
+    if (Math.hypot(e.pos.x - game.player.pos.x, e.pos.z - game.player.pos.z) > 80) continue;
+    const dx = e.pos.x / 4 - px, dz = e.pos.z / 4 - pz;
+    const rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+    if (Math.abs(rx) > span || Math.abs(rz) > span) continue;
+    ctx.beginPath();
+    ctx.arc(w / 2 + rx * k, h / 2 + rz * k, e.kind === 'boar' ? 4 : 3, 0, Math.PI * 2);
+    ctx.fill();
+    n++;
+  }
+  game.trackedOnMap = n;
 }
 
 function drawNodes(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {

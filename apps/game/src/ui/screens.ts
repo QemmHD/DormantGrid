@@ -488,8 +488,7 @@ function journalScreen(c: ScreenCtx): () => void {
 
 // ---------------- perks ----------------
 const TRACKS = ['scavenger', 'builder', 'fighter', 'provider'] as const;
-/** perk effect keys no system reads yet (round 4): shown honestly on the perk row */
-const FX_NOT_WIRED = new Set(['deconNoise', 'repair', 'crewSpeed', 'power', 'tracker', 'guardDamage']);
+
 function perksScreen(c: ScreenCtx): () => void {
   const { api, body } = c;
   c.title.textContent = S.prog.title;
@@ -530,8 +529,7 @@ function perksScreen(c: ScreenCtx): () => void {
       const can = canTakePerk(p.perks, perk.id, p.perkPoints);
       const prev = rows.find((x) => x.tier === perk.tier - 1);
       const prevOwned = !prev || p.perks.includes(prev.id);
-      const dead = Object.keys(perk.fx).every((k) => FX_NOT_WIRED.has(k));
-      const sub = (owned ? S.prog.owned : !prevOwned && prev ? S.prog.locked(prev.name) : S.prog.tier(perk.tier)) + (dead ? ` · ${S.prog.notYet}` : '');
+      const sub = owned ? S.prog.owned : !prevOwned && prev ? S.prog.locked(prev.name) : S.prog.tier(perk.tier);
       const act = owned ? h('span.check', null, '✓') : btn(S.prog.take, can ? 'small primary' : 'small', () => {
         if (api.takePerk(perk.id)) render();
       }, { 'data-perk': perk.id });

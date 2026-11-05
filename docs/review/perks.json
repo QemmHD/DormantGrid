@@ -1,0 +1,22 @@
+{
+  "perks": 32,
+  "deadPerks": [],
+  "noEffectLabelLeft": false,
+  "unitTests": {
+    "passed": 16,
+    "total": 16
+  },
+  "noise": {
+    "normal": {
+      "prop": "barrel",
+      "raider": "chase"
+    },
+    "quietWork": {
+      "prop": "barrel",
+      "raider": "wander"
+    },
+    "pass": true
+  },
+  "pass": true,
+  "pageErrors": []
+}

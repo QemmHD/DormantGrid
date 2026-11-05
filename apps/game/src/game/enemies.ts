@@ -112,6 +112,8 @@ interface Enemy {
   stun: number;
   /** seconds without progress toward a building target */
   stuckT: number;
+  /** heard a noise: keeps investigating this long even without seeing the player */
+  alertT: number;
   /** sniper laser / heavy slam ring / sapper charge fx */
   tele: THREE.Object3D | null;
   /** stats for the review check */
@@ -352,6 +354,7 @@ export class Enemies {
     game.tickers.push((dt, simDt) => this.update(simDt));
     game.swingHook = (dmg) => this.playerSwing(dmg);
     game.fireHook = (dmg, range, weapon) => this.fire(dmg, range, weapon);
+    game.noiseHook = (x, z, r) => this.noise(x, z, r);
     const pg = new THREE.CylinderGeometry(0.025, 0.025, 0.7, 4);
     pg.rotateX(Math.PI / 2);
     this.projGeo = pg;
@@ -410,7 +413,7 @@ export class Enemies {
     this.list.push({
       id, kind, def, obj, rig, eye, pos, vel: new THREE.Vector3(), yaw: Math.random() * 6.28, hp: def.hp, state: wave ? 'chase' : 'wander', t: 0,
       home: pos.clone(), wanderTo: pos.clone(), flash: 0, wave, tag, targetPiece: -1, pieceScanT: 0, trapT: 0,
-      side: id % 2 ? 1 : -1, aux: Math.random() * 6.28, dirX: 0, dirZ: 0, alt: def.fly, buff: 0, stun: 0, stuckT: 0, tele: null,
+      side: id % 2 ? 1 : -1, aux: Math.random() * 6.28, dirX: 0, dirZ: 0, alt: def.fly, buff: 0, stun: 0, stuckT: 0, alertT: 0, tele: null,
       stats: { maxLateral: 0, minAlt: 99, maxSpeed: 0, fired: 0, firedNoLos: 0, blocked: 0, planted: 0, orbit: 0 },
     });
     if (def.machine) audio.play('drone', { pos: { x, z }, vol: 0.4 });
@@ -492,7 +495,7 @@ export class Enemies {
     const g = this.game;
     this.lights.length = 0;
     for (const f of g.camp?.firePositions?.() ?? []) this.lights.push({ x: f.x, z: f.z, r: 9 });
-    for (const p of g.save.world.pieces) if (p.piece === 'floodlight' && g.poweredAt(p.x, p.z)) this.lights.push({ x: p.x, z: p.z, r: 10 });
+    for (const p of g.save.world.pieces) if (p.piece === 'floodlight' && g.poweredAt(p.x, p.z)) this.lights.push({ x: p.x, z: p.z, r: 10 * (1 + g.pk('floodRange')) });
   }
 
   /** nearest light the point is inside (hounds), or null */
@@ -537,6 +540,7 @@ export class Enemies {
       e.t += dt;
       e.buff = Math.max(0, e.buff - dt);
       e.stun = Math.max(0, e.stun - dt);
+      e.alertT = Math.max(0, e.alertT - dt);
       if (e.obj.scale.x < 1 && e.state !== 'dead') e.obj.scale.setScalar(Math.min(1, e.obj.scale.x + dt * 3));
       const dx = pp.x - e.pos.x, dz = pp.z - e.pos.z;
       const dist = Math.hypot(dx, dz);
@@ -729,7 +733,7 @@ export class Enemies {
         return true;
       }
     } else e.targetPiece = -1;
-    if (!playerAlive || dist > sense * 2.2) {
+    if (!playerAlive || (dist > sense * 2.2 && e.alertT <= 0)) {
       e.wave = false;
       e.state = 'wander';
       e.home.copy(e.pos);
@@ -1037,6 +1041,20 @@ export class Enemies {
     e.hp -= dmg;
     e.flash = Math.max(e.flash, 0.08);
     if (e.hp <= 0 && e.state !== 'dead') this.kill(e);
+  }
+
+  /** A noise (salvaging): wandering enemies within r come for the player. */
+  noise(x: number, z: number, r: number): number {
+    let n = 0;
+    for (const e of this.list) {
+      if (e.state !== 'wander' || Math.hypot(e.pos.x - x, e.pos.z - z) > r) continue;
+      e.state = 'chase';
+      e.t = 0;
+      e.alertT = 8;
+      this.firstSight(e);
+      n++;
+    }
+    return n;
   }
 
   /** Drones call for help: nearby enemies join the chase. */
