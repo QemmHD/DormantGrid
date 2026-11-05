@@ -8,23 +8,23 @@
     "build": 57.6,
     "survivorTalk": 195.8,
     "threat": 265.3,
-    "damaged": 270.3,
-    "newSurvivor": 517,
-    "reachedNode": 681.9
+    "damaged": 270.4,
+    "reachedNode": 408.5,
+    "newSurvivor": 519.7
   },
   "log": [
     "1s FIRST move ",
     "9.6s FIRST gather crate",
-    "9.6s salvaged crate (+7 items) in 3.5 s",
+    "9.6s salvaged crate (+6 items) in 3.5 s",
     "10.5s FIRST craft r.tool.crowbar",
     "10.5s crafted r.tool.crowbar",
     "10.7s equipped tool.crowbar",
     "14.7s FIRST deconstruct Barrel",
     "14.7s deconstructed Barrel in 2.2 s",
-    "32.6s salvaged sign (+3 items) in 2.7 s",
+    "32.6s salvaged sign (+2 items) in 2.7 s",
     "43.5s quest progress {\"q.first_light\":1}",
     "43.5s FIRST reward quest step",
-    "45s salvaged car (+13 items) in 6.5 s",
+    "45s salvaged car (+12 items) in 6.5 s",
     "45s gathered for foundation scrap for 22 s (done)",
     "57.5s place foundation: now 1",
     "57.6s FIRST build foundation",
@@ -32,9 +32,9 @@
     "74.5s salvaged barrel (+2 items) in 2.7 s",
     "74.5s gathered for wall scrap for 17 s (done)",
     "86.1s place wall: now 1",
-    "101s salvaged barrel (+2 items) in 2.7 s",
-    "109.2s salvaged barrel (+2 items) in 2.7 s",
-    "113.7s salvaged barrel (+3 items) in 2.7 s",
+    "101s salvaged barrel (+3 items) in 2.7 s",
+    "109.2s salvaged barrel (+4 items) in 2.7 s",
+    "113.7s salvaged barrel (+5 items) in 2.7 s",
     "113.7s gathered for wall scrap for 28 s (done)",
     "136.1s place wall failed; game reasons: unsupported",
     "136.3s place wall: now 1",
@@ -42,139 +42,101 @@
     "143s place wall: now 1",
     "144.3s place roof: now 1",
     "160.7s salvaged sign (+4 items) in 2.7 s",
-    "170s salvaged car (+13 items) in 6.5 s",
+    "170s salvaged car (+17 items) in 6.5 s",
     "170s gathered for bed scrap for 26 s (done)",
     "191.6s place bed failed; game reasons: materials",
     "191.8s place bed: now 0",
     "195.8s FIRST survivorTalk Calla",
-    "206.6s salvaged pallet (+4 items) in 2.5 s",
+    "206.6s salvaged pallet (+6 items) in 2.5 s",
     "211.4s salvaged pallet (+4 items) in 2.5 s",
-    "217.1s salvaged bush (+2 items) in 3.1 s",
+    "217.1s salvaged bush (+3 items) in 3.1 s",
     "221.8s salvaged cone (+2 items) in 2.3 s",
-    "228.4s salvaged tire (+3 items) in 3.1 s",
-    "232.9s salvaged pallet (+9 items) in 2.5 s",
+    "228.4s salvaged tire (+2 items) in 3.1 s",
+    "232.9s salvaged pallet (+7 items) in 2.5 s",
     "233.1s quest progress {\"q.first_light\":2}",
     "236.2s salvaged crate (+6 items) in 2.5 s",
     "241.7s salvaged weeds (+1 items) in 2.1 s",
     "245.6s salvaged weeds (+2 items) in 2.1 s",
-    "250.5s salvaged weeds (+2 items) in 2.1 s",
+    "250.5s salvaged weeds (+1 items) in 2.1 s",
     "256.1s salvaged weeds (+1 items) in 2.1 s",
-    "260.6s salvaged crate (+6 items) in 2.5 s",
+    "260.6s salvaged crate (+8 items) in 2.5 s",
     "264.4s salvaged weeds (+1 items) in 2.1 s",
     "265.3s FIRST threat drone at 24 m",
-    "270s salvaged barrel (+2 items) in 2.7 s",
-    "270.3s FIRST damaged ",
-    "276s salvaged tire (+3 items) in 3.1 s",
-    "281.4s salvaged barrel (+4 items) in 2.7 s",
-    "286.1s salvaged crate (+6 items) in 2.5 s",
-    "290.6s salvaged barrel (+4 items) in 2.7 s",
+    "270s salvaged barrel (+3 items) in 2.7 s",
+    "270.4s FIRST damaged ",
+    "276s salvaged tire (+2 items) in 3.1 s",
+    "281.4s salvaged barrel (+2 items) in 2.7 s",
+    "286.1s salvaged crate (+7 items) in 2.5 s",
+    "290.6s salvaged barrel (+2 items) in 2.7 s",
     "295s salvaged bush (+3 items) in 2.7 s",
-    "300s salvaged barrel (+4 items) in 2.7 s",
+    "300s salvaged barrel (+3 items) in 2.7 s",
     "303.7s salvaged weeds (+1 items) in 2.1 s",
     "306.7s salvaged weeds (+1 items) in 2.1 s",
-    "311.4s salvaged weeds (+2 items) in 2.1 s",
-    "315.8s salvaged weeds (+2 items) in 2.1 s",
-    "321.3s salvaged barrel (+4 items) in 2.7 s",
+    "311.4s salvaged weeds (+3 items) in 2.1 s",
+    "315.8s salvaged weeds (+3 items) in 2.1 s",
+    "321.3s salvaged barrel (+2 items) in 2.7 s",
     "325.4s salvaged weeds (+2 items) in 2.3 s",
     "330.6s salvaged weeds (+1 items) in 2.1 s",
     "349.2s could not reach weeds 23 m away",
-    "364.7s salvaged bush (+5 items) in 3.3 s",
-    "370.4s salvaged tire (+2 items) in 4.1 s",
-    "375.6s salvaged crate (+9 items) in 3.5 s",
-    "381.3s salvaged bush (+5 items) in 3.7 s",
-    "381.3s gathered for free salvage for 186 s (gave up)",
-    "517s FIRST newSurvivor survivors 4",
-    "681.9s reached node 3 (district residential)",
-    "681.9s FIRST reachedNode ",
-    "697.4s could not reach bush 12 m away",
-    "711.1s could not reach crate 14 m away",
-    "733.4s salvaged weeds (+2 items) in 2.3 s",
-    "739.1s salvaged bush (+3 items) in 3.3 s",
-    "742.8s salvaged trashbag (+5 items) in 2.3 s",
-    "749.4s salvaged trashbag (+4 items) in 2.3 s",
-    "753.6s salvaged weeds (+2 items) in 2.1 s",
-    "761.2s salvaged crate (+6 items) in 3.5 s",
-    "766s salvaged bush (+4 items) in 3.1 s",
-    "772.3s salvaged crate (+6 items) in 3.5 s",
-    "775.6s salvaged weeds (+2 items) in 2.1 s",
-    "783.8s salvaged rubble (+3 items) in 4.5 s",
-    "789s salvaged bush (+3 items) in 3.5 s",
-    "792.6s salvaged weeds (+1 items) in 2.1 s",
-    "795.7s salvaged weeds (+2 items) in 2.1 s",
-    "801.7s salvaged bush (+3 items) in 3.3 s",
-    "808.3s salvaged bush (+4 items) in 3.7 s",
-    "812s salvaged weeds (+2 items) in 2.1 s",
-    "817.6s salvaged bush (+2 items) in 3.5 s",
-    "820.8s salvaged weeds (+2 items) in 2.1 s",
-    "828.7s salvaged barrel (+3 items) in 4.1 s",
-    "836s salvaged barrel (+4 items) in 3.9 s",
-    "839.8s salvaged weeds (+1 items) in 2.1 s",
-    "843.6s salvaged weeds (+1 items) in 2.1 s",
-    "848.3s salvaged weeds (+2 items) in 2.1 s",
-    "853.7s salvaged bush (+1 items) in 3.3 s",
-    "859.8s salvaged tire (+2 items) in 3.9 s",
-    "865.3s salvaged trashbag (+3 items) in 2.3 s",
-    "865.3s gathered for free salvage for 180 s (gave up)",
-    "1165.6s reached node 3 (district residential)",
-    "1173.1s salvaged weeds (+2 items) in 2.3 s",
-    "1181.4s salvaged weeds (+1 items) in 2.1 s",
-    "1185.6s salvaged weeds (+1 items) in 2.1 s",
-    "1191.4s salvaged crate (+6 items) in 3.5 s",
-    "1197.7s salvaged crate (+8 items) in 3.5 s",
-    "1212.4s salvaged weeds (+2 items) in 2.1 s",
-    "1217.2s salvaged bush (+2 items) in 3.1 s",
-    "1225.4s salvaged bush (+1 items) in 3.3 s",
-    "1230.1s salvaged weeds (+1 items) in 2.1 s",
-    "1235.8s salvaged barrel (+6 items) in 3.9 s",
-    "1240.3s salvaged bush (+2 items) in 3.1 s",
-    "1245.8s salvaged bush (+3 items) in 3.5 s",
-    "1250.2s salvaged weeds (+2 items) in 2.1 s",
-    "1257.4s salvaged crate (+11 items) in 3.5 s",
-    "1261.4s salvaged trashbag (+3 items) in 2.3 s",
-    "1267.6s salvaged crate (+16 items) in 3.5 s",
-    "1273.1s salvaged bush (+6 items) in 3.5 s",
-    "1278.5s salvaged bush (+6 items) in 3.7 s",
-    "1284s salvaged weeds (+1 items) in 2.1 s",
-    "1292.8s salvaged trashbag (+4 items) in 2.3 s",
-    "1298.1s salvaged crate (+13 items) in 3.5 s",
-    "1302.5s salvaged bush (+5 items) in 3.1 s",
-    "1312.9s salvaged weeds (+3 items) in 2.1 s",
-    "1318.7s salvaged trashbag (+7 items) in 2.3 s",
-    "1323.7s salvaged trashbag (+7 items) in 2.3 s",
-    "1328.8s salvaged bush (+4 items) in 3.5 s",
-    "1332.2s salvaged trashbag (+5 items) in 2.3 s",
-    "1341.1s salvaged crate (+15 items) in 3.5 s",
-    "1348.5s salvaged bench (+4 items) in 4.5 s",
-    "1354.9s salvaged trashbag (+5 items) in 2.3 s",
-    "1354.9s gathered for free salvage for 186 s (gave up)",
-    "1488.9s reached node 3 (district residential)",
-    "1496s salvaged weeds (+1 items) in 2.1 s",
-    "1500.7s salvaged bush (+2 items) in 3.3 s",
-    "1507.1s salvaged rubble (+5 items) in 4.5 s",
-    "1512.2s salvaged bush (+6 items) in 3.3 s",
-    "1516.2s salvaged weeds (+3 items) in 2.1 s",
-    "1521.4s salvaged bush (+4 items) in 3.7 s",
-    "1527.2s salvaged bush (+3 items) in 3.3 s",
-    "1533.9s salvaged bush (+2 items) in 3.5 s",
-    "1545s could not reach crate 8 m away",
-    "1558.6s could not reach barrel 13 m away",
-    "1572.1s could not reach weeds 14 m away",
-    "1587.3s salvaged bush (+2 items) in 3.7 s",
-    "1594.2s salvaged rubble (+5 items) in 4.5 s",
-    "1600.2s salvaged crate (+9 items) in 3.5 s",
-    "1603.8s salvaged weeds (+1 items) in 2.1 s",
-    "1607.8s salvaged cone (+2 items) in 2.1 s",
-    "1611s salvaged cone (+2 items) in 2.1 s",
-    "1614.3s salvaged cone (+2 items) in 2.1 s",
-    "1618.9s salvaged weeds (+1 items) in 2.1 s",
-    "1624.8s salvaged barrel (+3 items) in 4.1 s",
-    "1636.9s could not reach crate 11 m away",
-    "1651.5s could not reach weeds 14 m away",
-    "1663.2s salvaged weeds (+1 items) in 2.1 s",
-    "1668.1s salvaged crate (+9 items) in 3.5 s",
-    "1672.9s salvaged pallet (+7 items) in 3.5 s",
-    "1672.9s gathered for free salvage for 181 s (gave up)",
-    "1973.2s reached node 3 (district residential)"
+    "365.2s salvaged bush (+2 items) in 3.3 s",
+    "370.8s salvaged tire (+2 items) in 4.1 s",
+    "376s salvaged crate (+8 items) in 3.5 s",
+    "376s gathered for free salvage for 180 s (gave up)",
+    "408.5s reached node 3 (district residential)",
+    "408.5s FIRST reachedNode ",
+    "415.6s salvaged weeds (+2 items) in 2.1 s",
+    "420.3s salvaged bush (+5 items) in 3.3 s",
+    "426.6s salvaged rubble (+4 items) in 4.5 s",
+    "431.8s salvaged bush (+3 items) in 3.3 s",
+    "435.7s salvaged weeds (+1 items) in 2.1 s",
+    "441s salvaged bush (+4 items) in 3.7 s",
+    "446.7s salvaged bush (+4 items) in 3.3 s",
+    "453.4s salvaged bush (+4 items) in 3.5 s",
+    "464.6s could not reach crate 8 m away",
+    "478.1s could not reach barrel 13 m away",
+    "491.7s could not reach weeds 14 m away",
+    "506.8s salvaged bush (+2 items) in 3.7 s",
+    "513.6s salvaged rubble (+5 items) in 4.5 s",
+    "519.6s salvaged crate (+9 items) in 3.5 s",
+    "519.7s FIRST newSurvivor survivors 4",
+    "523.2s salvaged weeds (+1 items) in 2.1 s",
+    "527.2s salvaged cone (+2 items) in 2.3 s",
+    "530.6s salvaged cone (+-58 items) in 2.3 s",
+    "538.8s could not reach cone 4 m away",
+    "549.2s could not reach weeds 7 m away",
+    "591.7s salvaged barrel (+2 items) in 4.1 s",
+    "591.7s gathered for free salvage for 180 s (gave up)",
+    "892s reached node 3 (district residential)",
+    "907.5s could not reach crate 12 m away",
+    "918.2s salvaged weeds (+2 items) in 2.1 s",
+    "923.6s salvaged cone (+2 items) in 2.3 s",
+    "932.4s salvaged mailbox (+2 items) in 3.5 s",
+    "937.3s salvaged trashbag (+-8 items) in 2.3 s",
+    "947.7s could not reach barrel 7 m away",
+    "1041s could not reach cone 164 m away",
+    "1053.8s could not reach bush 12 m away",
+    "1068.3s could not reach weeds 14 m away",
+    "1076.7s facade target: door Door Needs a crowbar",
+    "1082.1s facade target: break Wall Needs a pickaxe",
+    "1094.1s facade target: door Door Needs a crowbar",
+    "1127.4s gathered for free salvage for 232 s (gave up)",
+    "1428.5s reached node 3 (district residential)",
+    "1444s could not reach weeds 12 m away",
+    "1458s could not reach trashbag 14 m away",
+    "1474.1s could not reach bush 18 m away",
+    "1488.1s could not reach bush 15 m away",
+    "1491.6s facade target: door Door Needs a crowbar",
+    "1549.7s could not reach trashbag 7 m away",
+    "1557.8s salvaged weeds (+1 items) in 2.1 s",
+    "1561.9s salvaged weeds (+1 items) in 2.1 s",
+    "1568.3s salvaged trashbag (+2 items) in 2.3 s",
+    "1582.6s could not reach trashbag 14 m away",
+    "1600.5s salvaged bush (+2 items) in 3.7 s",
+    "1604.9s salvaged trashbag (+4 items) in 2.3 s",
+    "1608.4s salvaged weeds (+2 items) in 2.1 s",
+    "1620.5s salvaged trashbag (+4 items) in 2.3 s",
+    "1620.5s gathered for free salvage for 189 s (gave up)",
+    "1921.3s reached node 3 (district residential)"
   ],
   "activity": [
     [
@@ -664,877 +626,372 @@
     ],
     [
       330.6,
-      361.4,
+      361.9,
       "walk"
     ],
     [
-      361.4,
-      364.7,
+      361.9,
+      365.2,
       "salvage"
     ],
     [
-      364.7,
-      366.3,
+      365.2,
+      366.7,
       "walk"
     ],
     [
-      366.3,
-      370.4,
+      366.7,
+      370.8,
       "salvage"
     ],
     [
-      370.4,
-      372.1,
+      370.8,
+      372.5,
       "walk"
     ],
     [
-      372.1,
-      375.6,
+      372.5,
+      376,
       "salvage"
     ],
     [
-      375.6,
-      377.6,
-      "walk"
-    ],
-    [
-      377.6,
-      381.3,
-      "salvage"
-    ],
-    [
-      381.3,
-      381.3,
+      376,
+      376,
       "explore"
     ],
     [
-      381.3,
-      681.9,
+      376,
+      408.5,
       "walk"
     ],
     [
-      681.9,
-      684.9,
+      408.5,
+      411.5,
       "node"
     ],
     [
-      684.9,
-      684.9,
+      411.5,
+      411.5,
       "grind:free salvage"
     ],
     [
-      684.9,
-      731.1,
+      411.5,
+      413.5,
       "walk"
     ],
     [
-      731.1,
-      733.4,
+      413.5,
+      415.6,
       "salvage"
     ],
     [
-      733.4,
-      735.8,
+      415.6,
+      417,
       "walk"
     ],
     [
-      735.8,
-      739.1,
+      417,
+      420.3,
       "salvage"
     ],
     [
-      739.1,
-      740.5,
+      420.3,
+      422.1,
       "walk"
     ],
     [
-      740.5,
-      742.8,
+      422.1,
+      426.6,
       "salvage"
     ],
     [
-      742.8,
-      747.1,
+      426.6,
+      428.5,
       "walk"
     ],
     [
-      747.1,
-      749.4,
+      428.5,
+      431.8,
       "salvage"
     ],
     [
-      749.4,
-      751.5,
+      431.8,
+      433.6,
       "walk"
     ],
     [
-      751.5,
-      753.6,
+      433.6,
+      435.7,
       "salvage"
     ],
     [
-      753.6,
-      757.7,
+      435.7,
+      437.3,
       "walk"
     ],
     [
-      757.7,
-      761.2,
+      437.3,
+      441,
       "salvage"
     ],
     [
-      761.2,
-      762.9,
+      441,
+      443.4,
       "walk"
     ],
     [
-      762.9,
-      766,
+      443.4,
+      446.7,
       "salvage"
     ],
     [
-      766,
-      768.8,
+      446.7,
+      449.9,
       "walk"
     ],
     [
-      768.8,
-      772.3,
+      449.9,
+      453.4,
       "salvage"
     ],
     [
-      772.3,
-      773.5,
+      453.4,
+      503.1,
       "walk"
     ],
     [
-      773.5,
-      775.6,
+      503.1,
+      506.8,
       "salvage"
     ],
     [
-      775.6,
-      779.3,
+      506.8,
+      509.1,
       "walk"
     ],
     [
-      779.3,
-      783.8,
+      509.1,
+      513.6,
       "salvage"
     ],
     [
-      783.8,
-      785.5,
+      513.6,
+      516.1,
       "walk"
     ],
     [
-      785.5,
-      789,
+      516.1,
+      519.6,
       "salvage"
     ],
     [
-      789,
-      790.5,
+      519.6,
+      521.1,
       "walk"
     ],
     [
-      790.5,
-      792.6,
+      521.1,
+      523.2,
       "salvage"
     ],
     [
-      792.6,
-      793.6,
+      523.2,
+      524.9,
       "walk"
     ],
     [
-      793.6,
-      795.7,
+      524.9,
+      527.2,
       "salvage"
     ],
     [
-      795.7,
-      798.4,
+      527.2,
+      528.3,
       "walk"
     ],
     [
-      798.4,
-      801.7,
+      528.3,
+      530.6,
       "salvage"
     ],
     [
-      801.7,
-      804.6,
+      530.6,
+      587.6,
       "walk"
     ],
     [
-      804.6,
-      808.3,
+      587.6,
+      591.7,
       "salvage"
     ],
     [
-      808.3,
-      809.9,
-      "walk"
-    ],
-    [
-      809.9,
-      812,
-      "salvage"
-    ],
-    [
-      812,
-      814.1,
-      "walk"
-    ],
-    [
-      814.1,
-      817.6,
-      "salvage"
-    ],
-    [
-      817.6,
-      818.7,
-      "walk"
-    ],
-    [
-      818.7,
-      820.8,
-      "salvage"
-    ],
-    [
-      820.8,
-      824.6,
-      "walk"
-    ],
-    [
-      824.6,
-      828.7,
-      "salvage"
-    ],
-    [
-      828.7,
-      832.1,
-      "walk"
-    ],
-    [
-      832.1,
-      836,
-      "salvage"
-    ],
-    [
-      836,
-      837.7,
-      "walk"
-    ],
-    [
-      837.7,
-      839.8,
-      "salvage"
-    ],
-    [
-      839.8,
-      841.5,
-      "walk"
-    ],
-    [
-      841.5,
-      843.6,
-      "salvage"
-    ],
-    [
-      843.6,
-      846.2,
-      "walk"
-    ],
-    [
-      846.2,
-      848.3,
-      "salvage"
-    ],
-    [
-      848.3,
-      850.4,
-      "walk"
-    ],
-    [
-      850.4,
-      853.7,
-      "salvage"
-    ],
-    [
-      853.7,
-      855.9,
-      "walk"
-    ],
-    [
-      855.9,
-      859.8,
-      "salvage"
-    ],
-    [
-      859.8,
-      863,
-      "walk"
-    ],
-    [
-      863,
-      865.3,
-      "salvage"
-    ],
-    [
-      865.3,
-      865.3,
+      591.7,
+      591.7,
       "explore"
     ],
     [
-      865.3,
-      1165.6,
+      591.7,
+      892,
       "walk"
     ],
     [
-      1165.6,
-      1168.6,
+      892,
+      895,
       "node"
     ],
     [
-      1168.6,
-      1168.6,
+      895,
+      895,
       "grind:free salvage"
     ],
     [
-      1168.6,
-      1170.8,
+      895,
+      916.1,
       "walk"
     ],
     [
-      1170.8,
-      1173.1,
+      916.1,
+      918.2,
       "salvage"
     ],
     [
-      1173.1,
-      1179.3,
+      918.2,
+      921.3,
       "walk"
     ],
     [
-      1179.3,
-      1181.4,
+      921.3,
+      923.6,
       "salvage"
     ],
     [
-      1181.4,
-      1183.5,
+      923.6,
+      928.9,
       "walk"
     ],
     [
-      1183.5,
-      1185.6,
+      928.9,
+      932.4,
       "salvage"
     ],
     [
-      1185.6,
-      1187.9,
+      932.4,
+      935,
       "walk"
     ],
     [
-      1187.9,
-      1191.4,
+      935,
+      937.3,
       "salvage"
     ],
     [
-      1191.4,
-      1194.2,
+      937.3,
+      1127.4,
       "walk"
     ],
     [
-      1194.2,
-      1197.7,
-      "salvage"
-    ],
-    [
-      1197.7,
-      1210.3,
-      "walk"
-    ],
-    [
-      1210.3,
-      1212.4,
-      "salvage"
-    ],
-    [
-      1212.4,
-      1214.1,
-      "walk"
-    ],
-    [
-      1214.1,
-      1217.2,
-      "salvage"
-    ],
-    [
-      1217.2,
-      1222.1,
-      "walk"
-    ],
-    [
-      1222.1,
-      1225.4,
-      "salvage"
-    ],
-    [
-      1225.4,
-      1228,
-      "walk"
-    ],
-    [
-      1228,
-      1230.1,
-      "salvage"
-    ],
-    [
-      1230.1,
-      1231.9,
-      "walk"
-    ],
-    [
-      1231.9,
-      1235.8,
-      "salvage"
-    ],
-    [
-      1235.8,
-      1237.2,
-      "walk"
-    ],
-    [
-      1237.2,
-      1240.3,
-      "salvage"
-    ],
-    [
-      1240.3,
-      1242.3,
-      "walk"
-    ],
-    [
-      1242.3,
-      1245.8,
-      "salvage"
-    ],
-    [
-      1245.8,
-      1248.1,
-      "walk"
-    ],
-    [
-      1248.1,
-      1250.2,
-      "salvage"
-    ],
-    [
-      1250.2,
-      1253.9,
-      "walk"
-    ],
-    [
-      1253.9,
-      1257.4,
-      "salvage"
-    ],
-    [
-      1257.4,
-      1259.1,
-      "walk"
-    ],
-    [
-      1259.1,
-      1261.4,
-      "salvage"
-    ],
-    [
-      1261.4,
-      1264.1,
-      "walk"
-    ],
-    [
-      1264.1,
-      1267.6,
-      "salvage"
-    ],
-    [
-      1267.6,
-      1269.6,
-      "walk"
-    ],
-    [
-      1269.6,
-      1273.1,
-      "salvage"
-    ],
-    [
-      1273.1,
-      1274.8,
-      "walk"
-    ],
-    [
-      1274.8,
-      1278.5,
-      "salvage"
-    ],
-    [
-      1278.5,
-      1281.9,
-      "walk"
-    ],
-    [
-      1281.9,
-      1284,
-      "salvage"
-    ],
-    [
-      1284,
-      1290.5,
-      "walk"
-    ],
-    [
-      1290.5,
-      1292.8,
-      "salvage"
-    ],
-    [
-      1292.8,
-      1294.6,
-      "walk"
-    ],
-    [
-      1294.6,
-      1298.1,
-      "salvage"
-    ],
-    [
-      1298.1,
-      1299.4,
-      "walk"
-    ],
-    [
-      1299.4,
-      1302.5,
-      "salvage"
-    ],
-    [
-      1302.5,
-      1310.8,
-      "walk"
-    ],
-    [
-      1310.8,
-      1312.9,
-      "salvage"
-    ],
-    [
-      1312.9,
-      1316.4,
-      "walk"
-    ],
-    [
-      1316.4,
-      1318.7,
-      "salvage"
-    ],
-    [
-      1318.7,
-      1321.4,
-      "walk"
-    ],
-    [
-      1321.4,
-      1323.7,
-      "salvage"
-    ],
-    [
-      1323.7,
-      1325.3,
-      "walk"
-    ],
-    [
-      1325.3,
-      1328.8,
-      "salvage"
-    ],
-    [
-      1328.8,
-      1329.9,
-      "walk"
-    ],
-    [
-      1329.9,
-      1332.2,
-      "salvage"
-    ],
-    [
-      1332.2,
-      1337.6,
-      "walk"
-    ],
-    [
-      1337.6,
-      1341.1,
-      "salvage"
-    ],
-    [
-      1341.1,
-      1344,
-      "walk"
-    ],
-    [
-      1344,
-      1348.5,
-      "salvage"
-    ],
-    [
-      1348.5,
-      1352.6,
-      "walk"
-    ],
-    [
-      1352.6,
-      1354.9,
-      "salvage"
-    ],
-    [
-      1354.9,
-      1354.9,
+      1127.4,
+      1127.4,
       "explore"
     ],
     [
-      1354.9,
-      1488.9,
+      1127.4,
+      1428.5,
       "walk"
     ],
     [
-      1488.9,
-      1491.9,
+      1428.5,
+      1431.5,
       "node"
     ],
     [
-      1491.9,
-      1491.9,
+      1431.5,
+      1431.5,
       "grind:free salvage"
     ],
     [
-      1491.9,
-      1493.9,
+      1431.5,
+      1555.7,
       "walk"
     ],
     [
-      1493.9,
-      1496,
+      1555.7,
+      1557.8,
       "salvage"
     ],
     [
-      1496,
-      1497.4,
+      1557.8,
+      1559.8,
       "walk"
     ],
     [
-      1497.4,
-      1500.7,
+      1559.8,
+      1561.9,
       "salvage"
     ],
     [
-      1500.7,
-      1502.6,
+      1561.9,
+      1566,
       "walk"
     ],
     [
-      1502.6,
-      1507.1,
+      1566,
+      1568.3,
       "salvage"
     ],
     [
-      1507.1,
-      1508.9,
+      1568.3,
+      1596.8,
       "walk"
     ],
     [
-      1508.9,
-      1512.2,
+      1596.8,
+      1600.5,
       "salvage"
     ],
     [
-      1512.2,
-      1514.1,
+      1600.5,
+      1602.6,
       "walk"
     ],
     [
-      1514.1,
-      1516.2,
+      1602.6,
+      1604.9,
       "salvage"
     ],
     [
-      1516.2,
-      1517.7,
+      1604.9,
+      1606.3,
       "walk"
     ],
     [
-      1517.7,
-      1521.4,
+      1606.3,
+      1608.4,
       "salvage"
     ],
     [
-      1521.4,
-      1523.9,
+      1608.4,
+      1618.2,
       "walk"
     ],
     [
-      1523.9,
-      1527.2,
+      1618.2,
+      1620.5,
       "salvage"
     ],
     [
-      1527.2,
-      1530.4,
-      "walk"
-    ],
-    [
-      1530.4,
-      1533.9,
-      "salvage"
-    ],
-    [
-      1533.9,
-      1583.6,
-      "walk"
-    ],
-    [
-      1583.6,
-      1587.3,
-      "salvage"
-    ],
-    [
-      1587.3,
-      1589.7,
-      "walk"
-    ],
-    [
-      1589.7,
-      1594.2,
-      "salvage"
-    ],
-    [
-      1594.2,
-      1596.7,
-      "walk"
-    ],
-    [
-      1596.7,
-      1600.2,
-      "salvage"
-    ],
-    [
-      1600.2,
-      1601.7,
-      "walk"
-    ],
-    [
-      1601.7,
-      1603.8,
-      "salvage"
-    ],
-    [
-      1603.8,
-      1605.7,
-      "walk"
-    ],
-    [
-      1605.7,
-      1607.8,
-      "salvage"
-    ],
-    [
-      1607.8,
-      1608.9,
-      "walk"
-    ],
-    [
-      1608.9,
-      1611,
-      "salvage"
-    ],
-    [
-      1611,
-      1612.2,
-      "walk"
-    ],
-    [
-      1612.2,
-      1614.3,
-      "salvage"
-    ],
-    [
-      1614.3,
-      1616.8,
-      "walk"
-    ],
-    [
-      1616.8,
-      1618.9,
-      "salvage"
-    ],
-    [
-      1618.9,
-      1620.7,
-      "walk"
-    ],
-    [
-      1620.7,
-      1624.8,
-      "salvage"
-    ],
-    [
-      1624.8,
-      1661.1,
-      "walk"
-    ],
-    [
-      1661.1,
-      1663.2,
-      "salvage"
-    ],
-    [
-      1663.2,
-      1664.6,
-      "walk"
-    ],
-    [
-      1664.6,
-      1668.1,
-      "salvage"
-    ],
-    [
-      1668.1,
-      1669.4,
-      "walk"
-    ],
-    [
-      1669.4,
-      1672.9,
-      "salvage"
-    ],
-    [
-      1672.9,
-      1672.9,
+      1620.5,
+      1620.5,
       "explore"
     ],
     [
-      1672.9,
-      1973.2,
+      1620.5,
+      1921.3,
       "walk"
     ],
     [
-      1973.2,
-      1976.2,
+      1921.3,
+      1924.3,
       "node"
     ]
   ],
@@ -1551,7 +1008,7 @@
       "t": 9.6,
       "onb": 1,
       "obj": "Strip something for parts. Anything. The city won’t mind. (4/6)",
-      "inv": 14,
+      "inv": 13,
       "pieces": 0,
       "hour": 8.16
     },
@@ -1559,7 +1016,7 @@
       "t": 10.7,
       "onb": 1,
       "obj": "Strip something for parts. Anything. The city won’t mind. (0/6)",
-      "inv": 10,
+      "inv": 9,
       "pieces": 0,
       "hour": 8.17
     },
@@ -1567,154 +1024,148 @@
       "t": 14.7,
       "onb": 3,
       "obj": "Strip something for parts. Anything. The city won’t mind. (2/6)",
-      "inv": 12,
+      "inv": 11,
       "pieces": 0,
       "hour": 8.24
     },
     {
       "t": 57.5,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 20,
+      "inv": 17,
       "pieces": 1,
       "hour": 8.94
     },
     {
       "t": 86.1,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 20,
+      "inv": 17,
       "pieces": 2,
       "hour": 9.41
     },
     {
       "t": 136.3,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 27,
+      "inv": 29,
       "pieces": 2,
       "hour": 10.24
     },
     {
       "t": 143,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 27,
+      "inv": 29,
       "pieces": 2,
       "hour": 10.35
     },
     {
       "t": 144.3,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 21,
+      "inv": 23,
       "pieces": 3,
       "hour": 10.37
     },
     {
       "t": 191.8,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 38,
+      "inv": 44,
       "pieces": 3,
       "hour": 11.15
     },
     {
       "t": 195.8,
-      "onb": 4,
+      "onb": 5,
       "obj": "Gather timber from fences, pallets or furniture. (1/6)",
-      "inv": 36,
+      "inv": 42,
       "pieces": 3,
       "hour": 11.22
     },
     {
-      "t": 381.3,
-      "onb": 4,
+      "t": 376,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
-      "inv": 21,
+      "inv": 12,
       "pieces": 3,
-      "hour": 14.1
+      "hour": 14
     },
     {
-      "t": 684.9,
-      "onb": 4,
+      "t": 411.5,
+      "onb": 5,
+      "obj": "Build a campfire in Haven Lot.",
+      "inv": 12,
+      "pieces": 3,
+      "hour": 14.59
+    },
+    {
+      "t": 591.7,
+      "onb": 5,
+      "obj": "Build a campfire in Haven Lot.",
+      "inv": 2,
+      "pieces": 3,
+      "hour": 17.39
+    },
+    {
+      "t": 895,
+      "onb": 5,
+      "obj": "Build a campfire in Haven Lot.",
+      "inv": 2,
+      "pieces": 3,
+      "hour": 22.45
+    },
+    {
+      "t": 1127.4,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
       "inv": 0,
       "pieces": 3,
-      "hour": 19
+      "hour": 26.15
     },
     {
-      "t": 865.3,
-      "onb": 4,
-      "obj": "Build a campfire in Haven Lot.",
-      "inv": 73,
-      "pieces": 3,
-      "hour": 21.94
-    },
-    {
-      "t": 1168.6,
-      "onb": 4,
-      "obj": "Build a campfire in Haven Lot.",
-      "inv": 73,
-      "pieces": 3,
-      "hour": 27
-    },
-    {
-      "t": 1354.9,
-      "onb": 4,
-      "obj": "Build a campfire in Haven Lot.",
-      "inv": 225,
-      "pieces": 3,
-      "hour": 30.03
-    },
-    {
-      "t": 1491.9,
-      "onb": 4,
+      "t": 1431.5,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
       "inv": 0,
       "pieces": 3,
-      "hour": 32.15
+      "hour": 31.22
     },
     {
-      "t": 1672.9,
-      "onb": 4,
+      "t": 1620.5,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
-      "inv": 70,
+      "inv": 16,
       "pieces": 3,
-      "hour": 35.11
+      "hour": 34.36
     },
     {
-      "t": 1976.2,
-      "onb": 4,
+      "t": 1924.3,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
-      "inv": 70,
+      "inv": 16,
       "pieces": 3,
-      "hour": 40.17
+      "hour": 39.42
     },
     {
-      "t": 1976.2,
-      "onb": 4,
+      "t": 1924.3,
+      "onb": 5,
       "obj": "Build a campfire in Haven Lot.",
-      "inv": 70,
+      "inv": 16,
       "pieces": 3,
-      "hour": 40.17
+      "hour": 39.42
     }
   ],
   "end": {
-    "onbStep": 4,
+    "onbStep": 5,
     "objectives": [
       "[ ] Act I — Ember · First Light: Build a campfire in Haven Lot."
     ],
     "inventory": [
-      "mat.organicx19",
-      "mat.brickx5",
-      "mat.scrapx12",
-      "food.berriesx6",
-      "misc.feedx1",
-      "mat.glassx1",
-      "mat.timberx7",
-      "comp.nailsx13",
-      "mat.plasticx6"
+      "mat.organicx11",
+      "mat.plasticx4",
+      "food.crackersx1"
     ],
     "pieces": [
       "foundation",
@@ -1722,39 +1173,45 @@
       "roof"
     ],
     "survivors": 4,
-    "hour": 40.166291666637726,
-    "health": 68.27233333333331
+    "hour": 39.419999999971445,
+    "health": 15.16287500000023
   },
   "walking": {
-    "trips": 117,
-    "straightLineMeters": 1073,
-    "simSeconds": 349,
+    "trips": 66,
+    "straightLineMeters": 809,
+    "simSeconds": 264,
     "efficiency": 0.9
   },
   "pageErrors": [],
   "gapsOver60s": [
     {
-      "from": 381.3,
-      "to": 681.9,
+      "from": 591.7,
+      "to": 892,
+      "seconds": 300,
+      "doing": "walk"
+    },
+    {
+      "from": 937.3,
+      "to": 1127.4,
+      "seconds": 190,
+      "doing": "walk"
+    },
+    {
+      "from": 1127.4,
+      "to": 1428.5,
       "seconds": 301,
       "doing": "walk"
     },
     {
-      "from": 865.3,
-      "to": 1165.6,
-      "seconds": 300,
+      "from": 1431.5,
+      "to": 1555.7,
+      "seconds": 124,
       "doing": "walk"
     },
     {
-      "from": 1354.9,
-      "to": 1488.9,
-      "seconds": 134,
-      "doing": "walk"
-    },
-    {
-      "from": 1672.9,
-      "to": 1973.2,
-      "seconds": 300,
+      "from": 1620.5,
+      "to": 1921.3,
+      "seconds": 301,
       "doing": "walk"
     }
   ]

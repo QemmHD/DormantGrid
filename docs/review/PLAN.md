@@ -8,6 +8,7 @@
 - Visual checks name the exact screenshot command and what must be true in the image. Device checks name the item in `DEVICE_FEEL_TEST.md` and the rating needed.
 - Baseline at review (2026-11-04): **0/13 pass**.
 - **After round 3 (2026-11-05): 7/13 pass.** P1–P7 pass; P8–P13 were out of scope this round. Output is in "Round 3 status" below.
+- **After round 4 (2026-11-05): 11/13 pass** (P1–P10, P12), plus the new P15 restoration check. P11 (enemy variety) and P13 (recorded audio) were out of scope. P2, P8, P9, P10 and P12 now assert measured behaviour (pixels, real UI, unit tests), not grep counts. Output is in "Round 4 status" below.
 
 | Rank | Fix | Findings | Effort | Acceptance check (must pass) |
 |---|---|---|---|---|
@@ -138,3 +139,101 @@ FAIL P13-recorded-audio: recorded audio files: 0 (target ≥ 10 ambience/SFX bed
 7. **18** Shadow cost on medium (device report needed).
 8. **19** Small polish: mirrored Haven sign, survivor avoidance, `scanTargets` allocations.
 9. Out of scope this round: **11** power/water, **12** perks/endings, **14** enemy variety, **16** recorded audio, **20** depth systems.
+
+## Round 4 status (2026-11-05)
+
+Scope: restoration payoff, progression (perks + endings), Grid power and water, visual leftovers, the "Check your pack" step, P2 on pixels. Out of scope: P11 enemy variety, P13 recorded audio, co-op.
+
+`node tools/review/accept.mjs` on the round-4 build:
+
+```
+PASS P1-tutorial-scrap: first craft at 10.5 s (target ≤ 90 s; run session.mjs 10)
+PASS P2-smoke: smoke covers 0.84% of the frame (≥ 0.5%), hard-edge pixels 0.0% (≤ 8%), box pool adds 0.000% (≤ 0.05%)
+PASS P3-targeting: wrong target 0/60 = 0% (target ≤ 5%)
+PASS P4-camera-wall: camera behind wall 0/1080 frames = 0.0% (target ≤ 2%)
+PASS P5-threat-timing: first threat at 265.3 s (target ≤ 600 s in a 30-min session)
+PASS P6-new-survivor: first new survivor at 519.7 s (target ≤ 900 s)
+PASS P7-first-build: first piece placed at 57.6 s (target ≤ 420 s)
+PASS P8-perks-reachable: real salvage XP 0→2; craft level-up → 1 perk point, ★ badge "1"; Perks screen 4 tracks × 32 perks; Take → 2 learned, carry 40→55
+PASS P9-power-gating: 6/6 power+water unit tests pass; client needsPower gates: 5 (stations, turrets, floodlights via sim districtPowered)
+PASS P10-irrigation: town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one
+FAIL P11-enemy-variety: client enemy kinds: 5 (target ≥ 9 of the 11 sim types)
+PASS P12-endings-reachable: campaign walked: 25 steps, next step shown in Journal at 25/25; via UI: talk:guild_factor, choice:toll, talk:grid_core, choice:core → ending screen; endings reached through the UI: 6/6 (end.commons, end.fracture, end.guild, end.reavers, end.sleep, end.custodian)
+FAIL P13-recorded-audio: recorded audio files: 0 (target ≥ 10 ambience/SFX beds; run content.mjs)
+PASS P15-restoration-payoff: lamps 0→72, decor 104, walkers 3, hazards near player 42→10, pixels changed 12.8% (thresholds: lamps 0→≥6, decor ≥10, walkers ≥2, cleared ≥5, pixels ≥12%)
+
+2 failing
+```
+
+### What changed
+
+1. **Restoration payoff (P15, new measurable check).** `tools/review/restore-check.mjs` shoots the same downtown street at 22:30, dormant and with every downtown node online.
+   - Lit lamps 0 → 72 (glow plus ground pools), 104 planters, bushes and benches.
+   - 3 ambient walkers, 165 hazards cleared (42 → 10 within 60 m).
+   - 12.8% of screen pixels change luminance by more than 25/255 (threshold 12%).
+   - Also: warmer light near online nodes, birdsong by day, and a crane-shot beat with letterbox on every reboot.
+2. **Progression (P8).**
+   - **XP from play:** salvage, craft, build, harvest, kills, nights survived, new residents, lore, contracts.
+   - **Perk points:** one per level, +1 per node, +1 per quest. A full campaign alone grants at least 32 (unit test).
+   - **Perks screen** (K or ★, with a badge when points are waiting): 4 tracks × 8 tiers, an XP bar, and how points are earned.
+   - **Effects:** 26 of 32 perk effects are wired. The other 6 are labelled "no effect in this build yet" on the screen.
+3. **Campaign to every ending (P12).**
+   - Odile counts as the Guild factor.
+   - The toll decision opens by itself, with reputation effects shown on each option.
+   - A Grid Core hatch on a downtown plaza: sealed with its progress shown, then a beacon once it opens.
+   - The core choice shows which ending you would get right now and which reputation is short. The ending screen uses the sim endings plus the written epilogues.
+   - The Journal's top card always shows the next step. "How this can end" lists all 6 endings with requirements, your current value and how to raise it.
+   - `tools/review/progress-check.mjs` walks the whole campaign through the real UI: 25 steps, each shown in the Journal. It reaches all 6 endings from the Journal's "Decide now".
+4. **Power and water (P9, P10).**
+   - Grid Workshop, turrets and floodlights work only on Grid power. Each shows a status light, and you get a hint when one is dead.
+   - Turrets shoot (using rifle rounds). Floodlights light the yard at night.
+   - Irrigation starts when a Waterworks pump syncs, and the clinic opens when the Hospital is Powered.
+   - The Ledger shows the chain. Unit tests cover all of this: `packages/sim/test/power.test.ts`.
+5. **Visual leftovers** (before/after pairs in `docs/review/after/r4-4-*`, both builds shot with `tools/review/visual-pair.mjs`):
+   - Flames: soft, flickering additive flame billboards instead of cones.
+   - Ground: grime stains, Voronoi slab cracks in broken segments, aggregate grain and scuffed wear on paving.
+   - Sign: "HAVEN" in a 5×7 pixel font on both faces. It was "NAUH" from the road and blank from the camp.
+   - Contact shadows: 0.32 → 0.5 on high.
+6. **"Check your pack": it was the bot, not humans.** `tools/review/pack-step.mjs` passes the step in real time with Tab, I, and a touch tap on the pack icon (iPhone 13 landscape emulation). The bot opened the pack during step 3, before the step was active. The game now also counts a pack opened early.
+7. **P2 on pixels.** `tools/review/smoke-check.mjs` freezes a frame and toggles the puff layer and the box pool:
+   - The smoke covers ≥ 0.5% of the frame.
+   - Rendered alone over the sky it has ≤ 8% hard-edge pixels (measured 0%).
+   - The box pool adds ≤ 0.05% (measured 0%).
+8. **Saves:** schema 3. v2 saves get one-time credit for past quests and nodes (XP, perk points, quest reputation, Custodian reputation). A frozen v2 save fixture must keep loading.
+
+### Bugs found this round
+- **Fixed:**
+  - Quest reward reputation and XP were never applied.
+  - The Guild quest pointed at a "Market Row, yellow awning" NPC that does not exist.
+  - The HUD objective card showed a side quest ahead of the main step.
+  - Raiders measured distance to a wall's centre, so at a 4 m wall's end they pushed forever (defense-flow failed 2 of 3 runs on the round-4 build).
+  - The Haven sign glyphs read "HAUEH".
+- **Fixed in my own new code before merge:**
+  - The Grid Core hatch ignored the quest pointer.
+  - The core prompt read "Grid Core Grid Core".
+  - The first ground-crack shader drew black contour loops.
+  - The first wear term drew long bright bands across roads.
+- **Not fixed:** the review tools teleport the player and set state for steps whose objective logic is unit-tested (collect, build, reboot, rank…). That a human can get through those steps in a reasonable time was not measured this round.
+
+### Not confirmed without a real iPhone
+- Frame cost of the ground shader (about 12 extra noise and hash evaluations per ground fragment; off on low quality) and of the flame billboards on medium or high.
+- Readability of the perk screen and the 5-option core dialog at iPhone text sizes.
+- The top bar with 8 buttons fits in emulation (iPhone SE and 13 landscape: 44 px buttons, no overlap with the minimap). On the SE it covered the clock, so on screens ≤ 640 px wide the clock now sits under the top bar (0 overlaps measured). Not checked on a device with a notch or Dynamic Island in Home Screen PWA mode.
+
+### Out-of-scope bugs seen (logged, not fixed)
+- P11: the client still has 5 enemy kinds of the sim's 11.
+- P13: no recorded audio.
+
+### Remaining (ranked)
+1. **4** Raid legibility: spawn raiders at 25–35 m inside a cone, add threat arrows and a horn.
+2. **7** iPhone legibility (menu title, clock contrast, map size and labels, tutorial card), plus a real device pass over the new perk, Journal and core screens.
+3. **14 / P11** Enemy variety from existing data.
+4. **12 (rest)** Town Rank bar with the next 3 named unlocks; the 6 perk effects with no system yet (Quiet Work, Patch Job, Site Foreman, Gridwright, Tracker, Warden).
+5. **10 (rest)** Inhabited/Thriving extras: laundry lines, market stalls, painted facades, music.
+6. **15** Interiors (ceilings, inner walls).
+7. **9 (rest)** Edge-wear on props and characters.
+8. **16 / P13** Recorded ambience and impact layers.
+9. **17** Weather that changes the world.
+10. **18** Shadow cost on medium (needs a device report).
+11. **19 (rest)** Survivor avoidance, `scanTargets` allocations, mouse-look hint, daylight window emission.
+12. **20** Depth systems.

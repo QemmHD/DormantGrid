@@ -10,11 +10,11 @@
     "z": 654
   },
   "live": {
-    "puffsAlive": 28,
+    "puffsAlive": 30,
     "boxesAlive": 0
   },
-  "smokeFrac": 0.0079,
-  "shapePx": 8383,
+  "smokeFrac": 0.0084,
+  "shapePx": 8753,
   "hardEdgeRatio": 0,
   "boxFrac": 0,
   "checks": {

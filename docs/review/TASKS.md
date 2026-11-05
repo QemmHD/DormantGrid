@@ -12,7 +12,7 @@ Out of scope: P11 enemy variety, P13 recorded audio, co-op.
 - [x] 6. P2 asserts rendered pixels (smoke soft, non-cubic)
 - [x] 7. Save schema 3 migration (retroactive XP for old saves) + test that a v2 save loads
 - [x] 8. Before/after shots (items 1, 4) → docs/review/after/ WebP
-- [ ] 9. Gates green, budgets, CI deploy, live smoke both URLs; PLAN.md updated; final reply
+- [ ] 9. (in progress: gates green locally; merge, CI deploy, live smoke next) Gates green, budgets, CI deploy, live smoke both URLs; PLAN.md updated; final reply
 
 ## Findings while reading (round 4)
 - awardXp/grantXp exists (sim rank.ts:43) but the client never calls it → XP/perk points never accrue; quest reward.xp ignored (game.ts updateQuests).
