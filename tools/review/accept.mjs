@@ -100,8 +100,12 @@ const checks = {
     return [p.pass, `campaign walked: ${p.steps.length} steps, next step shown in Journal at ${shown}/${p.steps.length}; via UI: ${p.uiSteps.join(', ')}; endings reached through the UI: ${p.endings.filter((e) => e.ok).length}/6 (${p.endings.map((e) => e.got).join(', ')})`];
   },
   'P13-recorded-audio': () => {
-    const n = content?.audio?.recordedAudioFiles ?? 0;
-    return [n >= 10, `recorded audio files: ${n} (target ≥ 10 ambience/SFX beds; run content.mjs)`];
+    // only real recorded files that ship (assets/manifest.json) AND that the game plays (runtime not pending)
+    const man = J('assets/manifest.json') ?? { assets: {} };
+    const reg = J('assets/audio-registry.json') ?? { audio: [] };
+    const used = Object.values(man.assets ?? {}).filter((e) => e.kind === 'audio' && e.runtime && !e.runtime.pending && existsSync(join('assets', e.path))).length;
+    const wired = reg.audio.filter((a) => !a.runtime.pending).length;
+    return [used >= 10, `recorded audio files shipped and played: ${used} (target ≥ 10). Pipeline ready: ${reg.audio.length} IDs, ${wired} with a runtime hook; files needed are listed in docs/asset-requests/audio-sfx.md and audio-music.md`];
   },
   'P15-restoration-payoff': () => {
     if (!restore) return [false, 'run node tools/review/restore-check.mjs first'];

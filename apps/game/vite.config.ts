@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
  */
 function dgModels(): Plugin {
   const root = process.env.DG_ASSETS_ROOT ? path.resolve(process.env.DG_ASSETS_ROOT) : fileURLToPath(new URL('../../assets', import.meta.url));
-  const MODEL_DIRS = ['props', 'characters', 'buildings', 'building-pieces'];
+  const MODEL_DIRS = ['props', 'characters', 'buildings', 'building-pieces', 'audio'];
   let outDir = 'dist';
   return {
     name: 'dg-models',
@@ -26,7 +26,7 @@ function dgModels(): Plugin {
         const rel = decodeURIComponent(url.slice(i + '/models/'.length));
         const file = path.resolve(root, rel);
         if (!file.startsWith(root + path.sep) || !existsSync(file) || !statSync(file).isFile()) return next();
-        res.setHeader('content-type', file.endsWith('.json') ? 'application/json' : 'model/gltf-binary');
+        res.setHeader('content-type', file.endsWith('.json') ? 'application/json' : file.endsWith('.m4a') ? 'audio/mp4' : file.endsWith('.mp3') ? 'audio/mpeg' : 'model/gltf-binary');
         res.end(readFileSync(file));
       });
     },
@@ -39,7 +39,7 @@ function dgModels(): Plugin {
         const src = path.join(root, 'processed', d);
         if (!existsSync(src)) continue;
         mkdirSync(path.join(dest, 'processed', d), { recursive: true });
-        for (const f of readdirSync(src)) if (f.endsWith('.glb')) copyFileSync(path.join(src, f), path.join(dest, 'processed', d, f));
+        for (const f of readdirSync(src)) if (f.endsWith('.glb') || f.endsWith('.m4a') || f.endsWith('.mp3')) copyFileSync(path.join(src, f), path.join(dest, 'processed', d, f));
       }
     },
   };
@@ -99,6 +99,8 @@ export default defineConfig({
         runtimeCaching: [
           { urlPattern: /\/assets\/(GLTFLoader|meshopt_decoder)[^/]*\.js$/, handler: 'StaleWhileRevalidate', options: { cacheName: 'dg-model-loader' } },
           { urlPattern: /\/models\/.*\.(glb|json)$/, handler: 'StaleWhileRevalidate', options: { cacheName: 'dg-models', expiration: { maxEntries: 80 } } },
+          // recorded audio (Tier B): fetched on first use, then cached for offline play
+          { urlPattern: /\/models\/.*\.(m4a|mp3)$/, handler: 'CacheFirst', options: { cacheName: 'dg-audio', expiration: { maxEntries: 200 } } },
         ],
       },
     }),

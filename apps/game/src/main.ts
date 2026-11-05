@@ -95,6 +95,13 @@ async function start() {
   game.onRemoteNode = (node, district) => grid.remoteOnline(node, district);
   (window as unknown as { __enemies: unknown }).__enemies = enemies;
   (window as unknown as { __town: unknown }).__town = town;
+  // Tier B audio: recorded files by stable ID replace synthesized sounds when shipped; never blocks boot.
+  void (async () => {
+    const { audio: eng } = await import('./audio/audio');
+    const n = await eng.files.load(import.meta.env.BASE_URL);
+    (window as unknown as { __audio: unknown }).__audio = eng;
+    if (n) console.info(`[audio] ${n} recorded files available`);
+  })();
   // Tier B models (GLB) replace procedural meshes when present; never blocks boot.
   void (async () => {
     const [{ loadModelOverrides }, { overridePropShape }, { setEnemyModel }] = await Promise.all([
@@ -181,6 +188,8 @@ async function start() {
   const story = new Story(game, ui);
   ui.storySource = () => story.info();
   const { rankOf } = await import('./game/town');
+  // review tools read sim data tables (salvage yields, recipes) through this
+  (window as unknown as { __sim: unknown }).__sim = await import('@dg/sim');
   const { rankProgress, nextUnlocks } = await import('@dg/sim');
   ui.rankSource = () => {
     const r = rankOf(game.save.world);

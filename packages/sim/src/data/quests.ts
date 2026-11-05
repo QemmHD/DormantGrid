@@ -71,7 +71,7 @@ export const QUESTS: readonly QuestDef[] = [
   {
     id: 'q.first_node', act: 'reboot', title: 'Something Still Hums', requires: ['q.first_neighbors'], main: true,
     steps: [
-      { text: 'Craft two Grid fuses, or find them on Custodian units.', hint: 'Heavies carry fuses. So do Guild stalls.', obj: { type: 'collect', item: 'misc.grid_fuse', count: 1 } },
+      { text: 'Get a Grid fuse.', hint: 'Odile sells them for Guild chits (sell her scrap). Custodian heavies carry them too.', obj: { type: 'collect', item: 'misc.grid_fuse', count: 1 } },
       { text: 'Reach the control node in Old Downtown.', hint: 'The tall mast with the dead blue light.', obj: { type: 'reach', district: 'downtown' } },
       { text: 'Reboot the node and hold it until sync completes.', hint: 'Route power, then hold to sync. Then survive.', obj: { type: 'reboot', district: 'downtown', count: 1 } },
     ],

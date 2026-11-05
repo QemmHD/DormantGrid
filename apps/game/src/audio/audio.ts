@@ -41,6 +41,8 @@ export type Sfx =
   | 'bow'
   | 'chirp';
 
+import { AudioFiles } from './files';
+
 const MAX_VOICES = 24;
 
 interface MusicState {
@@ -70,6 +72,11 @@ export class AudioEngine {
   private amb: { wind: GainNode; windF: BiquadFilterNode; drone: GainNode; droneOsc: OscillatorNode[]; hum: GainNode; rain: GainNode; warm: GainNode } | null = null;
   private music = { nextBeat: 0, beat: 0, bar: 0, chord: 0, state: { danger: 0, warmth: 0, night: 0, combat: 0 } as MusicState };
   private unlocked = false;
+  /** recorded files by stable ID (Tier B); synth is the fallback */
+  readonly files = new AudioFiles();
+  /** what the last play() used, and counts (review checks) */
+  stats = { file: 0, synth: 0, last: 'none' as 'file' | 'synth' | 'none' };
+  private loops = new Map<string, { src: AudioBufferSourceNode; gain: GainNode }>();
 
   /** Must be called from a user gesture (first tap). */
   unlock(): void {
@@ -107,6 +114,7 @@ export class AudioEngine {
     this.unlocked = true;
     this.startAmbience();
     this.music.nextBeat = ctx.currentTime + 0.5;
+    this.files.warm(ctx);
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
       if (document.hidden) void this.ctx.suspend();
@@ -183,7 +191,24 @@ export class AudioEngine {
     this.voices++;
     const t = ctx.currentTime + 0.005;
     const p = (opts.pitch ?? 1) * (0.92 + Math.random() * 0.16);
-    const dur = this.synth(name, t, p, out);
+    // recorded variant if one is shipped and decoded, else the synthesized sound
+    const urls = this.files.sfx.get(name);
+    const buf = urls ? this.files.get(ctx, urls) : null;
+    let dur: number;
+    if (buf) {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = p;
+      src.connect(out);
+      src.start(t);
+      dur = buf.duration / p;
+      this.stats.file++;
+      this.stats.last = 'file';
+    } else {
+      dur = this.synth(name, t, p, out);
+      this.stats.synth++;
+      this.stats.last = 'synth';
+    }
     setTimeout(() => {
       this.voices--;
       out.disconnect();
@@ -515,7 +540,48 @@ export class AudioEngine {
     a.drone.gain.setTargetAtTime((1 - state.warmth) * 0.03 + state.danger * 0.04, t, 1);
     a.hum.gain.setTargetAtTime(state.machine * 0.035, t, 0.3);
     this.music.state = { danger: state.danger, warmth: state.warmth, night: state.night, combat: state.combat };
-    this.scheduleMusic();
+    // recorded ambience beds by district state (+ rain), crossfaded; synth wind/drone duck under them
+    if (this.files.amb.size) {
+      const key = state.warmth < 0.3 ? 'dormant' : state.warmth < 0.5 ? 'stabilized' : state.warmth < 0.75 ? 'powered' : 'thriving';
+      let any = false;
+      for (const k of this.files.amb.keys()) {
+        const want = k === 'rain' ? state.rain * 0.9 * indoor : k === key ? 0.8 * indoor : 0;
+        if (this.loop('amb:' + k, this.files.amb.get(k)!, this.ambBus, want)) any = any || (want > 0 && k !== 'rain');
+      }
+      if (any) {
+        a.wind.gain.setTargetAtTime(0.01 * indoor, t, k);
+        a.drone.gain.setTargetAtTime(0.004, t, 1);
+      }
+    }
+    // recorded music loop for the current mood replaces the generative score
+    const mood = state.combat > 0.5 ? 'combat' : state.night > 0.5 ? 'night' : state.warmth > 0.55 ? 'restored' : 'dormant';
+    let fileMusic = false;
+    for (const k of this.files.music.keys()) if (this.loop('music:' + k, this.files.music.get(k)!, this.musicBus, k === mood ? 0.7 : 0) && k === mood) fileMusic = true;
+    if (!fileMusic) this.scheduleMusic();
+    else this.music.nextBeat = Math.max(this.music.nextBeat, t);
+  }
+
+  /** keep a looping file source at a target gain; returns true once it is playing */
+  private loop(key: string, urls: string[], bus: AudioNode, gain: number): boolean {
+    const ctx = this.ctx!;
+    let l = this.loops.get(key);
+    if (!l) {
+      if (gain <= 0.001) return false;
+      const buf = this.files.get(ctx, urls);
+      if (!buf) return false;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      src.connect(g);
+      g.connect(bus);
+      src.start();
+      l = { src, gain: g };
+      this.loops.set(key, l);
+    }
+    l.gain.gain.setTargetAtTime(gain, ctx.currentTime, 1.2);
+    return true;
   }
 
   // ---------------- generative adaptive music ----------------

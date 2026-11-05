@@ -277,33 +277,87 @@ async function processModel(file, catSpec, outDir, id) {
   };
 }
 
+/** audio registry: stable IDs, budgets and loudness targets (assets/audio-registry.json) */
+const AUDIO_REGISTRY = path.join(REPO, 'assets', 'audio-registry.json');
+let audioReg = null;
+async function audioSpec(stableId) {
+  audioReg ??= await readJson(AUDIO_REGISTRY, { audio: [] });
+  return audioReg.audio.find((a) => a.id === stableId) ?? null;
+}
+
+function probeDuration(file) {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8' });
+  const d = parseFloat(r.stdout);
+  return Number.isFinite(d) ? d : null;
+}
+
+/** peak (dBFS) via volumedetect */
+function probePeak(file) {
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' });
+  const m = /max_volume:\s*(-?[\d.]+) dB/.exec(r.stderr);
+  return m ? parseFloat(m[1]) : null;
+}
+
+/** integrated loudness (LUFS) via ebur128 */
+function probeLufs(file) {
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' });
+  const m = /I:\s*(-?[\d.]+) LUFS\s*\n\s*Threshold/.exec(r.stderr) ?? [...r.stderr.matchAll(/I:\s*(-?[\d.]+) LUFS/g)].pop();
+  return m ? parseFloat(m[1]) : null;
+}
+
 async function processAudio(file, spec, outDir, id, ext, ffmpeg) {
-  const loop = /^(amb|music)$/.test(id.split('.')[0]);
-  if (ffmpeg) {
-    const out = path.join(outDir, id + '.m4a');
-    if (!DRY) {
-      await fs.mkdir(outDir, { recursive: true });
-      const bitrate = id.startsWith('music') ? '128k' : id.startsWith('amb') ? '96k' : '96k';
-      const r = spawnSync(
-        'ffmpeg',
-        ['-y', '-v', 'error', '-i', file, '-vn', '-ac', id.startsWith('sfx') || id.startsWith('ui') ? '1' : '2', '-c:a', 'aac', '-b:a', bitrate, out],
-        { stdio: 'pipe' },
-      );
-      if (r.status !== 0) return { errs: [`ffmpeg failed: ${String(r.stderr).slice(0, 200)}`] };
+  const stableId = id.replace(/_\d{2}$/, '');
+  const reg = await audioSpec(stableId);
+  if (!reg) return { errs: [`unknown audio ID "${stableId}" — add it to assets/audio-registry.json first (see docs/asset-requests/audio-*.md)`] };
+  if (!ffmpeg) {
+    if (ext === 'mp3' || ext === 'm4a' || ext === 'aac') {
+      const out = path.join(outDir, `${id}.${ext}`);
+      if (!DRY) {
+        await fs.mkdir(outDir, { recursive: true });
+        await fs.copyFile(file, out);
+      }
+      return { out, entry: { kind: 'audio', audioId: stableId, runtime: reg.runtime, loop: reg.loop, bytes: DRY ? 0 : (await fs.stat(out)).size }, warns: ['ffmpeg not found: copied without loudness normalisation or budget checks'] };
     }
-    const bytes = DRY ? 0 : (await fs.stat(out)).size;
-    return { out, entry: { kind: 'audio', loop, bytes }, warns: [] };
+    return { errs: [`.${ext} needs ffmpeg to convert for iOS; install ffmpeg or supply .mp3/.m4a`] };
   }
-  if (ext === 'mp3' || ext === 'm4a' || ext === 'aac') {
-    const out = path.join(outDir, `${id}.${ext}`);
-    if (!DRY) {
-      await fs.mkdir(outDir, { recursive: true });
-      await fs.copyFile(file, out);
+  // duration budget (±10%)
+  const dur = probeDuration(file);
+  if (dur === null) return { errs: ['could not read duration (corrupt file?)'] };
+  const [dMin, dMax] = reg.duration;
+  if (dur < dMin * 0.9 || dur > dMax * 1.1) return { errs: [`duration ${dur.toFixed(2)} s outside ${dMin}–${dMax} s for ${stableId}`] };
+  // loudness: short sounds peak-normalised, longer ones to an EBU R128 integrated target
+  const L = reg.loudness ?? { mode: 'peak', dbfs: -3 };
+  let filter;
+  if (L.mode === 'peak') {
+    const peak = probePeak(file);
+    if (peak === null) return { errs: ['could not measure peak level'] };
+    filter = `volume=${(L.dbfs - peak).toFixed(2)}dB`;
+  } else filter = `loudnorm=I=${L.target}:TP=-1.5:LRA=11`;
+  const mono = reg.kind === 'sfx' || reg.kind === 'ui' || reg.kind === 'vo';
+  const bitrate = reg.kind === 'music' ? '128k' : mono ? '80k' : '96k';
+  const out = path.join(outDir, id + '.m4a');
+  const encode = (af) => spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', file, '-vn', '-af', af, '-ac', mono ? '1' : '2', '-ar', '44100', '-c:a', 'aac', '-b:a', bitrate, out], { stdio: 'pipe' });
+  if (!DRY) {
+    await fs.mkdir(outDir, { recursive: true });
+    const r = encode(filter);
+    if (r.status !== 0) return { errs: [`ffmpeg failed: ${String(r.stderr).slice(0, 200)}`] };
+    // AAC can overshoot short transients by a few dB: measure the decoded file and correct once
+    if (L.mode === 'peak') {
+      const got = probePeak(out);
+      const peak = probePeak(file);
+      if (got !== null && peak !== null && got > L.dbfs + 1) {
+        const r2 = encode(`volume=${(L.dbfs - peak - (got - L.dbfs)).toFixed(2)}dB`);
+        if (r2.status !== 0) return { errs: [`ffmpeg failed: ${String(r2.stderr).slice(0, 200)}`] };
+      }
     }
-    const bytes = DRY ? 0 : (await fs.stat(out)).size;
-    return { out, entry: { kind: 'audio', loop, bytes }, warns: ['ffmpeg not found; copied without re-encoding'] };
   }
-  return { errs: [`.${ext} needs ffmpeg to convert for iOS; install ffmpeg or supply .mp3/.m4a`] };
+  const bytes = DRY ? 0 : (await fs.stat(out)).size;
+  if (!DRY && bytes > reg.maxKB * 1024) {
+    await fs.rm(out, { force: true });
+    return { errs: [`encoded size ${(bytes / 1024).toFixed(0)} KB over the ${reg.maxKB} KB budget for ${stableId} (trim it)`] };
+  }
+  const measured = DRY ? null : L.mode === 'peak' ? { peakDb: probePeak(out) } : { lufs: probeLufs(out) };
+  return { out, entry: { kind: 'audio', audioId: stableId, runtime: reg.runtime, loop: reg.loop, duration: +dur.toFixed(2), bytes, loudness: measured ?? undefined }, warns: [] };
 }
 
 async function walk(dir) {

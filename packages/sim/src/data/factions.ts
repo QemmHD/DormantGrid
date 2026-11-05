@@ -53,6 +53,8 @@ export const FACTIONS: readonly FactionDef[] = [
     trades: true,
     buys: { 'mat.wiring': 1.6, 'comp.circuit': 2, 'misc.lore_tape': 2.5, 'misc.grid_fuse': 2 },
     sells: [
+      // round 5: the first node quest needs a fuse; before this, only rare heavies dropped one
+      { item: 'misc.grid_fuse', price: 24, minRep: -10 },
       { item: 'comp.battery', price: 10, minRep: -10 },
       { item: 'seed.tomato', price: 4, minRep: -10 },
       { item: 'seed.pumpkin', price: 5, minRep: 0 },
