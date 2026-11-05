@@ -11,7 +11,7 @@ Out of scope: new maps, content packs, 3D model integration, monetization.
 - [x] 5. Audio pipeline: file-driven by stable ID via ingest (AAC/MP3, size/duration budgets, loudness normalisation), synth fallback; docs/asset-requests/audio-sfx.md (60) + audio-music.md (6); P13 left failing honestly
 - [x] 6. Co-op readiness: (a) local Worker (wrangler dev / miniflare) + 2 headless clients: join, disconnect/reconnect, duplicate join, old client refused — check; (b) diagnostics overlay (state, RTT, snapshot age, desync count, copy report) toggled in Settings; (c) docs/review/COOP_TEST.md
 - [x] 7. Saves: migration if data changed + previous-version load test
-- [ ] 8. Gates, budgets, CI deploy, live smoke both URLs; PLAN.md; final reply
+- [x] 8. Gates, budgets, CI deploy, live smoke both URLs; PLAN.md; final reply
 
 ## Findings (round 5)
 - P11 passes on a measured check (tools/review/enemies-check.mjs): silhouettes, 11/11 behaviour + counter, escalation 6 → 11 kinds.
