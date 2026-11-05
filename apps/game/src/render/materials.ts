@@ -185,15 +185,27 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
             float near = 1.0 - smoothstep(0.04, 0.16, px);
             float stain = smoothstep(0.5, 0.82, dgNoise(p * 0.09) * 0.6 + dgNoise(p * 0.41 + 3.0) * 0.4);
             float spot = smoothstep(0.74, 0.92, dgNoise(p * 0.75 + 17.0));
-            float n1 = dgNoise(p * 0.5 + vec2(dgNoise(p * 2.3), dgNoise(p * 2.3 + 7.0)) * 0.7);
-            float w1 = 0.016 + px * 0.3;
-            float crack = (1.0 - smoothstep(0.0, w1, abs(n1 - 0.5))) * smoothstep(0.38, 0.62, dgNoise(p * 0.17 + 5.0));
-            float n2 = dgNoise(p * 1.7 + 31.0);
-            crack = max(crack, (1.0 - smoothstep(0.0, w1 * 0.7, abs(n2 - 0.5))) * 0.55 * smoothstep(0.55, 0.78, dgNoise(p * 0.29 + 9.0)));
-            float speck = (dgHash(floor(p * 11.0)) - 0.5) * 0.12 * near;
-            float wear = smoothstep(0.62, 0.88, dgNoise(vec2(p.x * 0.07, p.y * 0.55) + 2.0)) * paved;
-            float k = 1.0 - stain * 0.24 - spot * 0.2 * paved - crack * 0.5 * paved * near + speck * paved;
-            diffuseColor.rgb = mix(c0, c0 * k + wear * 0.035, uGround);
+            // cracks: jittered Voronoi cell edges (slab / shrinkage cracks), wobbled so they are
+            // jagged, broken into segments by a mask, only on part of the paving
+            vec2 vp = p * 0.55 + (vec2(dgNoise(p * 2.7), dgNoise(p * 2.7 + 11.0)) - 0.5) * 0.22;
+            vec2 ip = floor(vp), fp = fract(vp);
+            float d1 = 8.0, d2 = 8.0;
+            for (int j = -1; j <= 1; j++)
+              for (int i = -1; i <= 1; i++) {
+                vec2 g = vec2(float(i), float(j));
+                vec2 r = g + vec2(dgHash(ip + g), dgHash(ip + g + 13.7)) - fp;
+                float d = dot(r, r);
+                if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+              }
+            float edge = sqrt(d2) - sqrt(d1);
+            float w1 = 0.02 + px * 0.35;
+            float seg = smoothstep(0.42, 0.6, dgNoise(p * 0.9 + 5.0)) * smoothstep(0.35, 0.6, dgNoise(p * 0.13 + 2.0));
+            float crack = (1.0 - smoothstep(0.0, w1, edge)) * seg;
+            float speck = (dgNoise(p * 13.0) - 0.5) * 0.16 * near;
+            // wear: small, non-directional scuffed (lighter, polished) patches on paving
+            float wear = smoothstep(0.66, 0.86, dgNoise(p * 0.65 + 40.0)) * smoothstep(0.4, 0.7, dgNoise(p * 0.08 + 3.0)) * paved;
+            float k = 1.0 - stain * 0.24 - spot * 0.2 * paved - crack * 0.38 * paved * near + speck * paved;
+            diffuseColor.rgb = mix(c0, c0 * (k + wear * 0.1), uGround);
           }
         }
         // roughness variation: a faint, noise-modulated grazing sheen so surfaces are not uniform

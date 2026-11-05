@@ -454,7 +454,14 @@ function journalScreen(c: ScreenCtx): () => void {
       else {
         const el = h('div.list.endings');
         for (const e of st.endings)
-          el.append(h('div', { class: `li obj ${e.reached ? 'done' : ''}`, 'data-ending-row': '' }, h('span.check', null, e.met ? '✓' : ''), h('div.main', null, h('b', null, e.title), h('small', null, e.met ? S.camp.endingMet : S.camp.endingNeeds(e.how)))));
+          el.append(
+            h(
+              'div',
+              { class: `li obj ending-row ${e.reached ? 'done' : ''} ${e.met ? 'met' : ''}`, 'data-ending-row': '' },
+              h('span.check', null, e.met ? '✓' : ''),
+              h('div.main', null, h('b', null, e.title), h('small', null, `${e.met ? S.camp.endingMet : e.need ? S.camp.endingNeeds(e.need) : ''}${e.met || e.need ? ' · ' : ''}${e.how}`)),
+            ),
+          );
         body.append(el);
       }
     }

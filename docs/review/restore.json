@@ -27,7 +27,7 @@
     "downtownState": 3,
     "nodesOnline": 3
   },
-  "pixelFrac": 0.129,
+  "pixelFrac": 0.128,
   "checks": {
     "lampsBeforeZero": true,
     "lamps": true,

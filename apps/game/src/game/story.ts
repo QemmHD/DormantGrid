@@ -18,7 +18,7 @@ export interface StoryInfo {
   next: { id: string; index: number; type: string; title: string; text: string; hint: string; have: number; need: number } | null;
   /** pending decision key the Journal can open ("toll" | "core") */
   decide: string | null;
-  endings: { title: string; how: string; met: boolean; reached: boolean }[] | null;
+  endings: { title: string; how: string; need: string; met: boolean; reached: boolean }[] | null;
   rep: { name: string; value: number }[];
   ending: string | null;
 }
@@ -244,7 +244,12 @@ export class Story {
     const met = isQuestDone(w, QUEST_MAP.get('q.first_node')!);
     const reached = String(w.flags['ending'] ?? '');
     const endings = met
-      ? endingPaths(w.factions).map((p) => ({ title: p.ending.title, how: p.how, met: p.met, reached: p.ending.id === reached }))
+      ? endingPaths(w.factions).map((p) => {
+          const need = Object.entries(p.ending.rep ?? {})
+            .map(([f, min]) => S.camp.endingNeed(S.camp.factionNames[f] ?? f, min, Math.round(w.factions[f] ?? 0)))
+            .join(', ');
+          return { title: p.ending.title, how: S.camp.endingHow[p.ending.id] ?? p.how, need, met: p.met, reached: p.ending.id === reached };
+        })
       : null;
     const rep = Object.entries(S.camp.factionNames).map(([k, name]) => ({ name, value: Math.round(w.factions[k] ?? 0) }));
     return {

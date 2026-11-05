@@ -1,0 +1,142 @@
+{
+  "p8": {
+    "target": "Crate",
+    "salvage": {
+      "prop": "crate",
+      "target": "Crate",
+      "xpBefore": 0,
+      "xpAfter": 2,
+      "ok": true
+    },
+    "levelUp": {
+      "crafted": true,
+      "xp": 103,
+      "pts": 1,
+      "badge": "1",
+      "ok": true
+    },
+    "screen": {
+      "tabs": 4,
+      "perks": 32,
+      "ok": true
+    },
+    "take": {
+      "perks": [
+        "perk.scavenger.light_fingers",
+        "perk.scavenger.pack_mule"
+      ],
+      "pts": 0,
+      "carry": 55,
+      "carryBefore": 40,
+      "tier2DisabledWithoutPoint": true,
+      "ok": true
+    },
+    "pass": true
+  },
+  "p12": {
+    "steps": [
+      "✓ q.first_light#2 build: state",
+      "✓ q.first_light#3 craft: state",
+      "✓ q.roof_over#0 build: state",
+      "✓ q.roof_over#1 build: state",
+      "✓ q.roof_over#2 build: state",
+      "✓ q.roof_over#3 survive: state",
+      "✓ q.first_neighbors#0 build: state",
+      "✓ q.first_neighbors#1 reach: state",
+      "✓ q.first_node#0 collect: state",
+      "✓ q.first_node#1 reach: state",
+      "✓ q.first_node#2 reboot: state",
+      "✓ q.guild_contact#0 talk: UI: walked up to Odile, pressed E (talk flag true)",
+      "✓ q.guild_contact#1 rep: state",
+      "✓ q.water#0 reach: state",
+      "✓ q.water#1 reboot: state",
+      "✓ q.water#2 rank: state",
+      "✓ q.toll#0 choice: UI: toll dialog opened by itself → \"Refuse and fight\"",
+      "✓ q.toll#1 survive: state",
+      "✓ q.toll#2 reboot: state",
+      "✓ q.industry#0 reboot: state",
+      "✓ q.industry#1 rank: state",
+      "✓ q.core#0 reboot: state",
+      "✓ q.core#1 talk: UI: hatch visible=true, walked up, pressed E → core choice opened",
+      "✓ q.hospital#0 reach: state",
+      "✓ q.hospital#1 reboot: state"
+    ],
+    "uiSteps": [
+      "talk:guild_factor",
+      "choice:toll",
+      "talk:grid_core",
+      "choice:core → ending screen"
+    ],
+    "journalEndingRows": 6,
+    "mainEnding": "end.fracture",
+    "endings": [
+      {
+        "want": "end.commons",
+        "choice": "commons",
+        "rep": {
+          "hearth": 70
+        },
+        "preview": "→ The Commons · Hearth 70/50",
+        "got": "end.commons",
+        "endingScreen": true,
+        "ok": true
+      },
+      {
+        "want": "end.fracture",
+        "choice": "commons",
+        "rep": {
+          "hearth": 30
+        },
+        "preview": "→ Fractured · Hearth 30/50",
+        "got": "end.fracture",
+        "endingScreen": true,
+        "ok": true
+      },
+      {
+        "want": "end.guild",
+        "choice": "guild",
+        "rep": {
+          "guild": 40
+        },
+        "preview": "→ Metered · Guild 40/40",
+        "got": "end.guild",
+        "endingScreen": true,
+        "ok": true
+      },
+      {
+        "want": "end.reavers",
+        "choice": "reavers",
+        "rep": {
+          "reavers": 35
+        },
+        "preview": "→ Under New Management · Reavers 35/30",
+        "got": "end.reavers",
+        "endingScreen": true,
+        "ok": true
+      },
+      {
+        "want": "end.sleep",
+        "choice": "sleep",
+        "rep": {},
+        "preview": "→ Lights Out",
+        "got": "end.sleep",
+        "endingScreen": true,
+        "ok": true
+      },
+      {
+        "want": "end.custodian",
+        "choice": "custodian",
+        "rep": {
+          "custodians": 5
+        },
+        "preview": "→ Maintenance Restored · Custodians 5/0",
+        "got": "end.custodian",
+        "endingScreen": true,
+        "ok": true
+      }
+    ],
+    "pass": true
+  },
+  "pageErrors": [],
+  "pass": true
+}

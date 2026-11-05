@@ -585,3 +585,4 @@ html.touch .prompt { display: none; }
 .li.choice.unmet small { color: var(--warm); }
 .dialog .ending p { margin: 0 0 10px; line-height: 1.5; }
 .li.obj.done-on .check { background: rgba(57,230,208,0.2); border-color: var(--accent); color: var(--accent); }
+.li.obj.ending-row.met .check { border-color: var(--accent); color: var(--accent); }

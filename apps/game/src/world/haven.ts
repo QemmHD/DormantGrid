@@ -252,8 +252,9 @@ export class HavenCamp {
     this.t += dt;
     this.smokeT -= dt;
     if (this.smoke && this.smokeT <= 0) {
-      this.smokeT = 0.22;
-      const f = this.flames[Math.floor(Math.random() * this.flames.length)];
+      // the cookfire (last) smokes most; barrels share the rest
+      this.smokeT = 0.13;
+      const f = Math.random() < 0.55 ? this.flames[this.flames.length - 1] : this.flames[Math.floor(Math.random() * this.flames.length)];
       if (f) this.smoke(f.position.x, f.position.y + 0.5, f.position.z);
     }
     this.updateFlames(dt);

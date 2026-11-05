@@ -1,0 +1,28 @@
+{
+  "thresholds": {
+    "smokeFrac": 0.005,
+    "hardEdge": 0.08,
+    "boxFrac": 0.0005
+  },
+  "fire": {
+    "x": 226,
+    "y": 0.3,
+    "z": 654
+  },
+  "live": {
+    "puffsAlive": 28,
+    "boxesAlive": 0
+  },
+  "smokeFrac": 0.0079,
+  "shapePx": 8383,
+  "hardEdgeRatio": 0,
+  "boxFrac": 0,
+  "checks": {
+    "smokeVisible": true,
+    "smokeSoft": true,
+    "noBoxSmoke": true,
+    "noErrors": true
+  },
+  "pass": true,
+  "pageErrors": []
+}
