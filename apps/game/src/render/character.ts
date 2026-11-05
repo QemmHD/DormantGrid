@@ -66,81 +66,148 @@ function buildGeometry(look: Look): THREE.BufferGeometry {
   const key = JSON.stringify(look);
   const cached = geoCache.get(key);
   if (cached) return cached;
-  const b = new MeshBuilder();
+  // slight per-face tone variation reads as cloth/skin instead of flat plastic
+  const b = new MeshBuilder({ jitter: 0.07 });
   const w = look.build;
-  // Hips/pelvis
+  const c = new THREE.Color();
+  const shade = (hex: number, k: number) => c.setHex(hex).multiplyScalar(k);
+  const jacket = look.shirt;
+  const under = new THREE.Color(look.shirt).lerp(new THREE.Color(0x2a2724), 0.55).getHex();
+  const seam = new THREE.Color(look.shirt).multiplyScalar(0.62).getHex();
+  // oval cross-sections: x = width, z = depth
+  const oval = (x: number, y0: number, z: number, r0: number, r1: number, h: number, depth: number, n = 8, caps = true) => {
+    b.pushTRS(x, 0, z, 0, 1, 1, depth);
+    b.cylinder(0, y0, 0, r0, r1, h, n, caps);
+    b.pop();
+  };
+
+  // ---------------- hips + legs ----------------
   b.setBone(Bone.Hips).setColor(look.pants);
-  b.bevelBox(0, 0.95, 0, 0.17 * w, 0.1, 0.11, 0.035);
-  // Spine/torso lower
-  b.setBone(Bone.Spine).setColor(look.shirt);
-  b.bevelBox(0, 1.12, 0, 0.18 * w, 0.1, 0.12, 0.04);
-  // Chest
-  b.setBone(Bone.Chest).setColor(look.shirt);
-  b.bevelBox(0, 1.33, 0, 0.21 * w, 0.14, 0.13, 0.05);
-  // collar/accent strap
-  b.setColor(look.accent);
-  b.box(0.09 * w, 1.36, 0.135, 0.025, 0.12, 0.008);
-  if (look.backpack) {
-    b.setColor(0x4d4537);
-    b.bevelBox(0, 1.3, -0.2, 0.15, 0.19, 0.08, 0.035);
-    b.setColor(0x6b5f4a);
-    b.bevelBox(0, 1.13, -0.22, 0.13, 0.05, 0.07, 0.02);
-  }
-  // Head
-  b.setBone(Bone.Head).setColor(look.skin);
-  b.bevelBox(0, 1.62, 0.0, 0.1, 0.12, 0.11, 0.04);
-  b.box(0, 1.5, 0, 0.05, 0.04, 0.05); // neck
-  // eyes (dark slits) and brow
-  b.setColor(0x1a1614);
-  b.box(-0.045, 1.635, 0.111, 0.018, 0.012, 0.004);
-  b.box(0.045, 1.635, 0.111, 0.018, 0.012, 0.004);
-  if (look.mask) {
-    b.setColor(0x8a2f2a);
-    b.bevelBox(0, 1.57, 0.02, 0.108, 0.05, 0.105, 0.02);
-  }
-  if (look.hood) {
-    b.setColor(look.shirt);
-    b.bevelBox(0, 1.68, -0.02, 0.125, 0.11, 0.13, 0.05);
-  } else if (look.hairStyle === 1) {
-    b.setColor(look.hair);
-    b.bevelBox(0, 1.73, -0.01, 0.108, 0.035, 0.118, 0.02);
-    b.box(0, 1.65, -0.1, 0.1, 0.07, 0.02);
-  } else if (look.hairStyle === 2) {
-    b.setColor(look.accent === 0xe8a65a ? 0x5a4a38 : look.accent);
-    b.bevelBox(0, 1.735, 0, 0.115, 0.04, 0.12, 0.02);
-    b.box(0, 1.705, 0.14, 0.09, 0.012, 0.05); // brim
-  } else if (look.hairStyle === 3) {
-    b.setColor(look.hair);
-    b.bevelBox(0, 1.73, -0.01, 0.105, 0.03, 0.115, 0.02);
-    b.blob(0, 1.72, -0.13, 0.055, 0.055, 0.05, 0.1, 3);
-  }
-  // Arms
-  for (const side of [-1, 1]) {
-    const ua = side < 0 ? Bone.UArmL : Bone.UArmR;
-    const la = side < 0 ? Bone.LArmL : Bone.LArmR;
-    const x = side * 0.27 * w;
-    b.setBone(ua).setColor(look.shirt);
-    b.bevelBox(x, 1.29, 0, 0.06, 0.15, 0.065, 0.025);
-    b.setBone(la).setColor(look.shirt);
-    b.bevelBox(x, 1.04, 0, 0.052, 0.12, 0.055, 0.02);
-    b.setColor(look.skin);
-    b.bevelBox(x, 0.88, 0.0, 0.045, 0.05, 0.05, 0.018);
-  }
-  // Legs
+  oval(0, 0.86, 0, 0.15 * w, 0.165 * w, 0.17, 0.72);
+  b.setColor(0x24211e); // belt
+  oval(0, 0.99, 0, 0.168 * w, 0.168 * w, 0.045, 0.72, 8, false);
+  b.setColor(0x8a7a5a);
+  b.box(0, 1.012, 0.122, 0.022, 0.018, 0.006); // buckle
   for (const side of [-1, 1]) {
     const ul = side < 0 ? Bone.ULegL : Bone.ULegR;
     const ll = side < 0 ? Bone.LLegL : Bone.LLegR;
     const x = side * 0.095 * w;
     b.setBone(ul).setColor(look.pants);
-    b.bevelBox(x, 0.7, 0, 0.075, 0.2, 0.08, 0.03);
+    b.cylinder(x, 0.5, 0, 0.062 * w, 0.085 * w, 0.42, 7); // thigh
+    b.setColor(shade(look.pants, 0.82));
+    b.box(x + side * 0.07 * w, 0.72, 0.01, 0.012, 0.07, 0.045); // cargo pocket
     b.setBone(ll).setColor(look.pants);
-    b.bevelBox(x, 0.3, 0, 0.065, 0.2, 0.07, 0.025);
+    b.cylinder(x, 0.12, 0, 0.05, 0.064, 0.4, 7); // shin
+    b.setColor(shade(look.pants, 0.8));
+    b.cylinder(x, 0.47, 0.008, 0.067, 0.067, 0.05, 7, false); // knee patch
+    // boots: upper + darker sole + toe
     b.setColor(look.shoes);
-    b.bevelBox(x, 0.05, 0.035, 0.068, 0.05, 0.11, 0.025);
+    b.bevelBox(x, 0.1, 0.012, 0.058, 0.07, 0.075, 0.022);
+    b.bevelBox(x, 0.045, 0.055, 0.056, 0.04, 0.085, 0.02);
+    b.setColor(0x151311);
+    b.box(x, 0.008, 0.035, 0.062, 0.01, 0.112);
+  }
+
+  // ---------------- torso: undershirt, jacket with hem, collar, placket, pockets ----------------
+  b.setBone(Bone.Spine).setColor(under);
+  oval(0, 1.0, 0, 0.158 * w, 0.17 * w, 0.2, 0.68);
+  b.setColor(jacket);
+  oval(0, 0.93, 0, 0.18 * w, 0.175 * w, 0.27, 0.72, 8, false); // jacket lower body, hem hangs over the belt
+  b.setColor(seam);
+  oval(0, 0.925, 0, 0.182 * w, 0.182 * w, 0.02, 0.73, 8, false); // hem band
+  b.setBone(Bone.Chest).setColor(jacket);
+  oval(0, 1.19, 0, 0.175 * w, 0.215 * w, 0.22, 0.66); // chest tapers out to the shoulders
+  b.blob(0, 1.38, 0, 0.23 * w, 0.075, 0.13, 0.05, 11); // shoulder yoke
+  b.setColor(seam);
+  b.box(0, 1.17, 0.142, 0.008, 0.2, 0.006); // front placket / zip
+  b.setColor(shade(jacket, 0.85));
+  for (const side of [-1, 1]) b.bevelBox(side * 0.085 * w, 1.24, 0.135, 0.045, 0.04, 0.01, 0.008); // chest pockets
+  b.setColor(look.accent);
+  b.box(side1(w), 1.3, 0.14, 0.012, 0.05, 0.005); // reflective tape / badge
+  b.setColor(jacket);
+  oval(0, 1.38, 0, 0.085, 0.07, 0.07, 0.95, 8, false); // collar
+  if (look.backpack) {
+    b.setColor(0x4d4537);
+    b.bevelBox(0, 1.22, -0.2, 0.14, 0.19, 0.075, 0.035);
+    b.setColor(0x3a342b);
+    b.bevelBox(0, 1.13, -0.28, 0.11, 0.06, 0.02, 0.012); // front pocket
+    b.setColor(0x6b6450);
+    b.pushTRS(0, 1.45, -0.2, 0).push(new THREE.Matrix4().makeRotationZ(Math.PI / 2));
+    b.cylinder(0, -0.15, 0, 0.055, 0.055, 0.3, 7); // bedroll
+    b.pop().pop();
+    b.setColor(0x2c2822);
+    for (const side of [-1, 1]) b.box(side * 0.1, 1.27, 0.13, 0.018, 0.14, 0.006); // straps over the chest
+  }
+
+  // ---------------- head: skull, jaw, nose, brow, eyes, mouth, ears, hair ----------------
+  b.setBone(Bone.Head).setColor(look.skin);
+  b.cylinder(0, 1.43, 0, 0.045, 0.05, 0.1, 6); // neck
+  b.blob(0, 1.62, 0, 0.098, 0.118, 0.106, 0.04, 7); // skull
+  b.bevelBox(0, 1.55, 0.03, 0.072, 0.045, 0.07, 0.03); // jaw
+  b.setColor(shade(look.skin, 1.06));
+  b.pushTRS(0, 1.6, 0.106, 0);
+  b.bevelBox(0, 0, 0, 0.016, 0.03, 0.022, 0.008); // nose (catches light)
+  b.pop();
+  for (const side of [-1, 1]) b.bevelBox(side * 0.1, 1.615, -0.005, 0.014, 0.03, 0.022, 0.008); // ears
+  b.setColor(shade(look.skin, 0.55));
+  for (const side of [-1, 1]) b.box(side * 0.04, 1.635, 0.098, 0.022, 0.014, 0.004); // eye sockets
+  b.setColor(0x15110e);
+  for (const side of [-1, 1]) b.box(side * 0.04, 1.634, 0.1, 0.01, 0.009, 0.004); // pupils
+  b.setColor(look.hair === 0x9a8a7a ? 0x6a5d50 : look.hair);
+  b.box(0, 1.66, 0.098, 0.068, 0.009, 0.008); // brow line
+  b.setColor(shade(look.skin, 0.45));
+  b.box(0, 1.555, 0.1, 0.026, 0.004, 0.004); // mouth
+  if (look.mask) {
+    b.setColor(0x8a2f2a);
+    b.blob(0, 1.565, 0.035, 0.1, 0.05, 0.09, 0.08, 5);
+  } else if (look.hairStyle === 0) {
+    b.setColor(look.hair);
+    b.blob(0, 1.548, 0.07, 0.07, 0.035, 0.05, 0.12, 9); // beard (bald heads get a beard)
+  }
+  if (look.hood) {
+    b.setColor(jacket);
+    b.blob(0, 1.655, -0.045, 0.122, 0.128, 0.118, 0.06, 13); // hood sits behind the face plane
+    b.setColor(seam);
+    b.pushTRS(0, 1.6, 0.06, 0).push(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+    b.cylinder(0, -0.02, 0, 0.118, 0.118, 0.04, 9, false); // hood rim framing the face
+    b.pop().pop();
+  } else if (look.hairStyle === 1) {
+    b.setColor(look.hair);
+    b.blob(0, 1.69, -0.012, 0.106, 0.07, 0.112, 0.08, 17);
+  } else if (look.hairStyle === 2) {
+    b.setColor(look.accent === 0xe8a65a ? 0x5a4a38 : look.accent);
+    b.blob(0, 1.705, 0, 0.11, 0.05, 0.115, 0.03, 19); // cap crown
+    b.bevelBox(0, 1.69, 0.13, 0.085, 0.012, 0.055, 0.008); // brim
+  } else if (look.hairStyle === 3) {
+    b.setColor(look.hair);
+    b.blob(0, 1.69, -0.012, 0.104, 0.065, 0.11, 0.08, 23);
+    b.blob(0, 1.7, -0.12, 0.05, 0.05, 0.045, 0.1, 3); // bun
+  }
+
+  // ---------------- arms: tapered sleeves, cuffs, hands with thumbs ----------------
+  for (const side of [-1, 1]) {
+    const ua = side < 0 ? Bone.UArmL : Bone.UArmR;
+    const la = side < 0 ? Bone.LArmL : Bone.LArmR;
+    const x = side * 0.27 * w;
+    b.setBone(ua).setColor(jacket);
+    b.blob(x, 1.37, 0, 0.07, 0.06, 0.07, 0.03, 29); // shoulder cap
+    b.cylinder(x, 1.11, 0, 0.052, 0.064, 0.28, 7); // upper sleeve
+    b.setBone(la).setColor(jacket);
+    b.cylinder(x, 0.9, 0, 0.044, 0.054, 0.23, 7); // forearm sleeve
+    b.setColor(seam);
+    b.cylinder(x, 0.89, 0, 0.049, 0.049, 0.03, 7, false); // cuff
+    b.setColor(look.skin);
+    b.bevelBox(x, 0.83, 0.008, 0.024, 0.055, 0.04, 0.016); // palm + fingers (mitten)
+    b.bevelBox(x - side * 0.022, 0.845, 0.03, 0.01, 0.026, 0.012, 0.006); // thumb
   }
   const g = b.toGeometry(false, true);
   geoCache.set(key, g);
   return g;
+}
+
+/** badge on the left chest */
+function side1(w: number): number {
+  return -0.11 * w;
 }
 
 // Bone rest positions (relative to parent) — pivots at joints.
@@ -194,7 +261,11 @@ export class CharacterRig {
   /** per-rig idle timing offset so crowds don't sway in sync */
   private readonly idleSeed = Math.random() * 100;
 
+  /** every live rig (contact shadows read this) */
+  static readonly all = new Set<CharacterRig>();
+
   constructor(public look: Look) {
+    CharacterRig.all.add(this);
     for (let i = 0; i < Bone.COUNT; i++) {
       const bone = new THREE.Bone();
       const [p, x, y, z] = REST[i];
@@ -405,6 +476,7 @@ export class CharacterRig {
 
   dispose(): void {
     // geometry is cached/shared; skeleton bone texture freed with skeleton
+    CharacterRig.all.delete(this);
     this.mesh.skeleton.dispose();
     this.root.removeFromParent();
   }

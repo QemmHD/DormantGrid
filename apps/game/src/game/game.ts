@@ -26,6 +26,7 @@ import {
   isNight,
   migrateSave,
   upgradeWorldGen,
+  PROP_HALF,
   tileAt,
   TIER_HP_MULT,
   plant as plantCrop,
@@ -70,6 +71,7 @@ import { ThirdPersonCamera } from './camera';
 import { PlayerController } from './player';
 import { CollisionWorld, type Collider } from './collision';
 import { CharacterRig, randomLook } from '../render/character';
+import { ContactShadows } from '../render/contact';
 import { audio, type Sfx } from '../audio/audio';
 import { WorldView } from '../world/world';
 import { FX } from '../render/fx';
@@ -158,6 +160,33 @@ export class Game implements GameAPI {
   private target: Target | null = null;
   private readonly playerLook = new THREE.Vector3();
   private readonly cutFocus = new THREE.Vector3();
+  private contact!: ContactShadows;
+  private contactT = 0;
+  private readonly contactIds: number[] = [];
+
+  /** soft blob shadows under characters and props near the player (4×/s) */
+  private updateContactShadows(): void {
+    const c = this.contact;
+    c.strength = this.renderer.quality.shadows ? 0.32 : 0.55;
+    c.begin();
+    for (const r of CharacterRig.all) {
+      if (!r.root.parent || !r.root.visible) continue;
+      const p = r.root.position;
+      if (Math.abs(p.x - this.player.pos.x) > 40 || Math.abs(p.z - this.player.pos.z) > 40) continue;
+      c.add(p.x, this.view.surface(p.x, p.z), p.z, 0.36, 0.36);
+    }
+    const ids = this.contactIds;
+    ids.length = 0;
+    this.view.propsNear(this.player.pos.x, this.player.pos.z, 28, ids);
+    for (const id of ids) {
+      const pr = this.layout.props[id];
+      if (this.view.removedProps.has(id)) continue;
+      const [hx, hz] = PROP_HALF[pr.kind];
+      const k = pr.kind === 'tree' || pr.kind === 'pine' ? 0.55 : 1.15;
+      c.add(pr.x, pr.y + this.view.height(pr.x, pr.z), pr.z, hx * pr.scale * k, hz * pr.scale * k, pr.rotY);
+    }
+    c.end();
+  }
   private targetTimer = 0;
   private holdT = 0;
   private holdHitT = 0;
@@ -221,6 +250,7 @@ export class Game implements GameAPI {
     this.atm.onLightning = () => setTimeout(() => audio.play('thunder', { vol: 0.8 }), 400 + Math.random() * 1500);
     this.input = new Input(this.renderer.canvas);
     this.fx = new FX(this.scene);
+    this.contact = new ContactShadows(this.scene);
     const vig = document.createElement('div');
     vig.className = 'vignette';
     document.getElementById('app')!.appendChild(vig);
@@ -235,6 +265,7 @@ export class Game implements GameAPI {
     this.camp = new HavenCamp(this.layout.spawn.x, this.layout.spawn.z, (x, z) => this.view.surface(x, z), this.collision);
     this.scene.add(this.camp.group);
     this.camp.smoke = (x, y, z) => this.fx.smoke(x, y, z);
+    this.fx.camera = this.camera.cam;
     const rig = new CharacterRig(randomLook(7, { backpack: true, hairStyle: 1, shirt: 0x46535c, accent: 0xe8a65a }));
     this.scene.add(rig.root);
     this.player = new PlayerController(rig);
@@ -1857,6 +1888,11 @@ export class Game implements GameAPI {
     this.view.update(this.player.pos.x, this.player.pos.z);
     this.fx.target.copy(this.player.pos);
     this.fx.update(simDt, (x, z) => this.view.surface(x, z));
+    this.contactT -= dt;
+    if (this.contactT <= 0) {
+      this.contactT = 0.25;
+      this.updateContactShadows();
+    }
     if (!this.input.uiBlocking && this.input.zoom) this.camera.zoomBy(this.input.zoom);
     this.camera.bob = this.player.grounded ? Math.min(1, this.player.rig.speed / 6) : 0;
     this.camera.update(dt, this.player.pos, this.input.sprinting && this.input.moveMag > 0.5 && this.player.canSprint, this.collision);

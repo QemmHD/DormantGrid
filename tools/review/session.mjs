@@ -69,18 +69,21 @@ const result = await page.evaluate(async (SIM_MIN) => {
     timeline.push({ t: now(), onb: g.onbStep, obj: (g.objectives().find((o) => !o.done) ?? {}).text ?? '', inv: inv(), pieces: w.pieces.length, hour: +w.hour.toFixed(2) });
   };
   // ---- movement: steer camera toward target and hold W ----
-  async function walkTo(x, z, stop = 1.8, maxS = 40) {
+  async function walkTo(x, z, stop = 1.8, maxS = 0) {
     act('walk');
     const start = T();
-    let lastD = 1e9, stuckT = T();
+    const d0 = Math.hypot(x - P().x, z - P().z);
+    const limit = maxS || 6 + (d0 / 3.4) * 1.8; // give up on targets that are boxed in
+    let lastD = 1e9, stuckT = T(), side = 0;
     key('KeyW', true);
-    while (T() - start < maxS) {
+    while (T() - start < limit) {
       const dx = x - P().x, dz = z - P().z, d = Math.hypot(dx, dz);
       if (d < stop) break;
       g.camera.yaw = Math.atan2(dx, dz); g.camera.syncTargets?.();
       if (d < lastD - 0.3) { lastD = d; stuckT = T(); }
-      else if (T() - stuckT > 1.5) { // sidestep around obstacles
-        key('KeyW', false); key('KeyA', true); await frames(14); key('KeyA', false); key('KeyW', true); stuckT = T();
+      else if (T() - stuckT > 1.0) { // sidestep around obstacles, alternating sides
+        const k = side++ % 2 ? 'KeyD' : 'KeyA';
+        key('KeyW', false); key(k, true); await frames(12 + 6 * (side % 3)); key(k, false); key('KeyW', true); stuckT = T();
       }
       await frames(3); watch();
     }
@@ -142,20 +145,35 @@ const result = await page.evaluate(async (SIM_MIN) => {
   }
   async function place(piece) {
     act('build');
+    const before = g.save.world.pieces.filter((p) => p.piece === piece).length;
     g.startBuild(piece, 0);
     await frames(6);
-    for (let i = 0; i < 6; i++) {
+    const reasons = [];
+    for (let i = 0; i < 8; i++) {
+      await frames(3);
+      reasons.push(g.build?.reason ?? 'ok');
       key('Enter', true); await frames(2); key('Enter', false); await frames(6);
-      if (g.save.world.pieces.some((p) => p.piece === piece && !p.__seen)) break;
-      g.camera.yaw += 0.6; g.camera.syncTargets?.(); await frames(4);
+      if (g.save.world.pieces.filter((p) => p.piece === piece).length > before) break;
+      g.camera.yaw += 0.8; g.camera.syncTargets?.(); await frames(4);
     }
     const ok = g.save.world.pieces.filter((p) => p.piece === piece).length;
+    if (ok === before) note(`place ${piece} failed; game reasons: ${[...new Set(reasons)].join(', ')}`);
     g.stopBuild?.();
     await frames(4);
     return ok;
   }
+  // equip the crowbar through its quick slot (tapping slots blindly can leave nothing held)
+  async function equip(id) {
+    const q = g.save.player.quick;
+    let i = q.indexOf(id);
+    if (i < 0) { i = 3; q[3] = id; }
+    if (g.save.player.equipped !== id) g.selectQuick(i);
+    await frames(3);
+    note(`equipped ${g.save.player.equipped}`);
+  }
   // an informed player hunting scrap by hand: these yield mat.scrap without tools (data/loot.ts)
   const scrapByHand = ['barrel', 'sign', 'bench', 'mailbox', 'rubble', 'shelf', 'debris', 'tire'];
+  const scrapWithCrowbar = ['car', 'van', 'barrel', 'sign', 'mailbox', 'dumpster'];
   const scrapKinds = ['crate', 'barrel', 'trashbag', 'tire', 'pallet', 'debris', 'cone', 'sign', 'mailbox', 'bench', 'chair', 'table', 'shelf', 'rubble', 'weeds', 'bush'];
   async function gatherUntil(pred, label, maxS = 300, kinds = scrapKinds) {
     act('grind:' + label);
@@ -180,7 +198,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   await tap('Tab'); await frames(10); g.openScreen(null); await frames(5);
   // 4 crowbar
   if (!(await craft('r.tool.crowbar'))) { await gatherUntil(() => count('mat.scrap') >= 6, 'crowbar scrap', 300, scrapByHand); await craft('r.tool.crowbar'); }
-  await tap('Digit1'); await tap('Digit2'); await tap('Digit3');
+  await equip('tool.crowbar');
   sample();
   // 5 deconstruct a building piece
   await salvagePiece();
@@ -189,11 +207,13 @@ const result = await page.evaluate(async (SIM_MIN) => {
   const s0 = g.layout.spawn;
   await walkTo(s0.x + 8, s0.z + 8, 1.0);
   for (const [piece, need] of [['foundation', 8], ['wall', 6], ['wall', 6], ['wall', 6], ['roof', 6], ['bed', 4]]) {
-    if (count('mat.scrap') < need) await gatherUntil(() => count('mat.scrap') >= need + 2, `${piece} scrap`, 240, scrapByHand);
+    if (count('mat.scrap') < need) await gatherUntil(() => count('mat.scrap') >= need, `${piece} scrap`, 240, g.save.player.equipped === 'tool.crowbar' ? scrapWithCrowbar : scrapByHand);
     await walkTo(s0.x + 8, s0.z + 8, 1.5);
+    g.camera.yaw = 0.8; g.camera.syncTargets?.();
     const n = await place(piece);
     note(`place ${piece}: now ${n}`);
     sample();
+    if (piece === 'foundation' && n === 0) { note('no foundation: skipping the rest of the shelter'); break; }
     if (now() > SIM_MIN * 60) break;
   }
   // 7 eat
@@ -213,7 +233,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
     } else {
       act('explore');
       const n = nodes[0];
-      await walkTo(n.x, n.z, 6, 240);
+      await walkTo(n.x, n.z, 6, 300);
       note(`reached node ${n.id} (district ${g.layout.districts[n.district].key})`);
       mark('reachedNode');
       act('node');

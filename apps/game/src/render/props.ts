@@ -436,11 +436,22 @@ const builders: Record<PropKind, () => Omit<PropShape, 'geo'> & { b: MeshBuilder
 
 const cache = new Map<PropKind, PropShape>();
 
+/**
+ * Art direction (review finding #1, "looks like a toy"): every prop tint is pulled toward a
+ * muted, slightly darker version of itself so cones, cars and signs stop reading as plastic.
+ */
+const hsl = { h: 0, s: 0, l: 0 };
+const tc = new THREE.Color();
+export function muteTint(hex: number): number {
+  tc.setHex(hex).getHSL(hsl);
+  return tc.setHSL(hsl.h, hsl.s * 0.6, Math.min(0.62, hsl.l * 0.9)).getHex();
+}
+
 export function propShape(kind: PropKind): PropShape {
   let s = cache.get(kind);
   if (!s) {
     const r = builders[kind]();
-    s = { geo: r.b.toGeometry(true), col: r.col, tints: r.tints, small: r.small, shadow: r.shadow };
+    s = { geo: r.b.toGeometry(true), col: r.col, tints: r.tints.map(muteTint), small: r.small, shadow: r.shadow };
     cache.set(kind, s);
   }
   return s;
