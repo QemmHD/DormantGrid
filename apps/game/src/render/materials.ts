@@ -169,6 +169,15 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
             diffuseColor.rgb *= mix(1.0, k, fade * uPattern);
           }
         }
+        // roughness variation: a faint, noise-modulated grazing sheen so surfaces are not uniform
+        // matte plastic (dusty patches stay flat, smoother patches pick up a little sky)
+        {
+          vec3 an2 = abs(vGritN);
+          vec2 rp = an2.y > 0.6 ? vGritP.xz : (an2.x > an2.z ? vGritP.zy : vGritP.xy);
+          float dgSmoothK = smoothstep(0.45, 0.85, dgNoise(rp * 0.6));
+          float fres = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
+          totalEmissiveRadiance += vec3(0.55, 0.6, 0.66) * fres * dgSmoothK * 0.07;
+        }
         if (vEmit > 1.5) {
           totalEmissiveRadiance += vec3(0.22, 0.9, 0.82) * uGrid * 1.6 + diffuseColor.rgb * 0.15;
         } else if (vEmit > 0.01) {

@@ -133,10 +133,10 @@ export class HavenCamp {
     this.group.add(mesh);
 
     // flames (additive) on fire barrels + cookfire
-    const flameGeo = new THREE.ConeGeometry(0.28, 0.75, 6);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xff7a20, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
+    const flameGeo = new THREE.ConeGeometry(0.2, 0.8, 7, 1, true);
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xff6a18, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     const coreGeo = new THREE.ConeGeometry(0.15, 0.5, 5);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffd090, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
     const fires: [number, number, number][] = [...barrels.map(([x, z]) => [x, z, 1.25] as [number, number, number]), [0, -4, 0.45]];
     for (const [x, z, h] of fires) {
       const f = new THREE.Mesh(flameGeo, flameMat);
@@ -179,14 +179,14 @@ export class HavenCamp {
     this.t += dt;
     this.smokeT -= dt;
     if (this.smoke && this.smokeT <= 0) {
-      this.smokeT = 0.35;
+      this.smokeT = 0.22;
       const f = this.flames[Math.floor(Math.random() * this.flames.length)];
       if (f) this.smoke(f.position.x, f.position.y + 0.5, f.position.z);
     }
     for (let i = 0; i < this.flames.length; i++) {
       const f = this.flames[i];
-      const s = 0.85 + Math.sin(this.t * 13 + i * 3) * 0.1 + Math.sin(this.t * 7.3 + i) * 0.08;
-      f.scale.set(s, s * (1 + Math.sin(this.t * 9 + i) * 0.15), s);
+      const s = 0.8 + Math.sin(this.t * 13 + i * 3) * 0.12 + Math.sin(this.t * 7.3 + i) * 0.1;
+      f.scale.set(s * (0.9 + Math.sin(this.t * 17 + i) * 0.1), s * (1 + Math.sin(this.t * 9 + i) * 0.25), s);
       f.rotation.y += dt * 2;
     }
     this.light.intensity = (3 + night * 13) * (0.85 + Math.sin(this.t * 11) * 0.08 + Math.sin(this.t * 4.7) * 0.07);

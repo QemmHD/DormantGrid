@@ -9,6 +9,42 @@ const v = new THREE.Vector3();
 const s = new THREE.Vector3();
 const c = new THREE.Color();
 
+interface Puff {
+  alive: boolean;
+  x: number; y: number; z: number;
+  vx: number; vy: number; vz: number;
+  size: number;
+  grow: number;
+  life: number;
+  max: number;
+  alpha: number;
+  roll: number;
+  vroll: number;
+  drag: number;
+}
+
+/** 32×32 soft radial falloff (alpha) used by smoke and dust puffs. */
+function puffTexture(): THREE.DataTexture {
+  const n = 32;
+  const d = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const dx = (x + 0.5) / n - 0.5, dy = (y + 0.5) / n - 0.5;
+      const r = Math.hypot(dx, dy) * 2;
+      // soft edge + a little lumpy noise so puffs are not perfect discs
+      const lump = 0.85 + 0.15 * Math.sin(x * 1.7 + y * 2.3) * Math.cos(x * 0.9 - y * 1.3);
+      const a = Math.max(0, 1 - r) ** 1.6 * lump;
+      const i = (y * n + x) * 4;
+      d[i] = d[i + 1] = d[i + 2] = 255;
+      d[i + 3] = Math.round(Math.min(1, a) * 255);
+    }
+  const t = new THREE.DataTexture(d, n, n, THREE.RGBAFormat);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
 interface P {
   alive: boolean;
   x: number; y: number; z: number;
@@ -49,6 +85,14 @@ export class FX {
   private readonly N = 320;
   /** player position for flyers */
   target = new THREE.Vector3();
+  /** camera the soft puffs face (set by the game) */
+  camera: THREE.Camera | null = null;
+  // soft billboard puffs (smoke, dust): camera-facing quads, per-instance alpha, no depth write
+  private puffs: THREE.InstancedMesh;
+  private puffAlpha: THREE.InstancedBufferAttribute;
+  private puffPool: Puff[] = [];
+  private puffNext = 0;
+  private readonly PN = 96;
   reduced = false;
 
   constructor(scene: THREE.Scene) {
@@ -95,6 +139,46 @@ export class FX {
     this.decals.frustumCulled = false;
     this.decals.receiveShadow = true;
     scene.add(this.decals);
+    // soft puffs
+    const pm = new THREE.MeshBasicMaterial({ map: puffTexture(), transparent: true, depthWrite: false, fog: true });
+    pm.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aAlpha;\nvarying float vPuffA;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPuffA = aAlpha;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vPuffA;')
+        .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.a *= vPuffA;');
+    };
+    pm.customProgramCacheKey = () => 'dg-puff';
+    this.puffs = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), pm, this.PN);
+    this.puffAlpha = new THREE.InstancedBufferAttribute(new Float32Array(this.PN), 1);
+    this.puffAlpha.setUsage(THREE.DynamicDrawUsage);
+    this.puffs.geometry.setAttribute('aAlpha', this.puffAlpha);
+    this.puffs.frustumCulled = false;
+    this.puffs.renderOrder = 2;
+    for (let i = 0; i < this.PN; i++) {
+      this.puffPool.push({ alive: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, size: 0, grow: 0, life: 0, max: 1, alpha: 0, roll: 0, vroll: 0, drag: 0 });
+      m4.makeScale(0, 0, 0);
+      this.puffs.setMatrixAt(i, m4);
+      this.puffs.setColorAt(i, c.setRGB(1, 1, 1));
+    }
+    scene.add(this.puffs);
+  }
+
+  private puff(x: number, y: number, z: number, color: number, size: number, grow: number, life: number, alpha: number, vx: number, vy: number, vz: number, drag: number): void {
+    const i = this.puffNext++ % this.PN;
+    const p = this.puffPool[i];
+    p.alive = true;
+    p.x = x; p.y = y; p.z = z;
+    p.vx = vx; p.vy = vy; p.vz = vz;
+    p.size = size; p.grow = grow;
+    p.life = 0; p.max = life;
+    p.alpha = alpha;
+    p.roll = Math.random() * 6.28;
+    p.vroll = (Math.random() - 0.5) * 0.6;
+    p.drag = drag;
+    this.puffs.setColorAt(i, c.setHex(color).multiplyScalar(0.92 + Math.random() * 0.16));
+    if (this.puffs.instanceColor) this.puffs.instanceColor.needsUpdate = true;
   }
 
   private alloc(): number {
@@ -149,13 +233,14 @@ export class FX {
   dust(x: number, y: number, z: number, n = 4, color = 0x9a958a): void {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      this.spawn(1, x + Math.cos(a) * 0.3, y + 0.1, z + Math.sin(a) * 0.3, color, 0.35 + Math.random() * 0.3, 0.9 + Math.random() * 0.6, Math.cos(a) * 0.8, 0.5 + Math.random() * 0.6, Math.sin(a) * 0.8);
+      this.puff(x + Math.cos(a) * 0.3, y + 0.15, z + Math.sin(a) * 0.3, color, 0.45 + Math.random() * 0.3, 1.2, 0.9 + Math.random() * 0.6, 0.55, Math.cos(a) * 0.9, 0.35 + Math.random() * 0.4, Math.sin(a) * 0.9, 2);
     }
   }
 
   /** Rising smoke puff (camp fires, chimneys). */
-  smoke(x: number, y: number, z: number, color = 0x7a7670): void {
-    this.spawn(1, x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, color, 0.35 + Math.random() * 0.25, 3 + Math.random() * 1.5, (Math.random() - 0.5) * 0.3 + 0.25, 0.9 + Math.random() * 0.4, (Math.random() - 0.5) * 0.3);
+  smoke(x: number, y: number, z: number, color = 0x5e5a55): void {
+    // soft, growing, fading puff drifting up and downwind (was an opaque box, review finding #2)
+    this.puff(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, color, 0.5 + Math.random() * 0.3, 0.7, 3.2 + Math.random() * 1.6, 0.62, (Math.random() - 0.5) * 0.3 + 0.25, 0.8 + Math.random() * 0.35, (Math.random() - 0.5) * 0.3, 0.25);
   }
 
   sparks(x: number, y: number, z: number, n = 8, color = 0xffc070): void {
@@ -290,6 +375,42 @@ export class FX {
     if (anyGlow) {
       this.glow.instanceMatrix.needsUpdate = true;
       if (this.glow.instanceColor) this.glow.instanceColor.needsUpdate = true;
+    }
+    this.updatePuffs(dt);
+  }
+
+  private updatePuffs(dt: number): void {
+    const cq = this.camera ? this.camera.quaternion : null;
+    let any = false;
+    for (let i = 0; i < this.PN; i++) {
+      const p = this.puffPool[i];
+      if (!p.alive) continue;
+      any = true;
+      p.life += dt;
+      const t = p.life / p.max;
+      if (t >= 1 || !cq) {
+        p.alive = false;
+        m4.makeScale(0, 0, 0);
+        this.puffs.setMatrixAt(i, m4);
+        this.puffAlpha.setX(i, 0);
+        continue;
+      }
+      const k = 1 - Math.min(1, p.drag * dt);
+      p.vx *= k; p.vz *= k; p.vy *= 1 - Math.min(1, p.drag * 0.5 * dt);
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      p.roll += p.vroll * dt;
+      const sz = p.size * (1 + p.grow * t * 2.2);
+      // fade in quickly, out slowly
+      const a = p.alpha * Math.min(1, t * 6) * (1 - t) * (1 - t);
+      q.setFromAxisAngle(v.set(0, 0, 1), p.roll);
+      q.premultiply(cq);
+      m4.compose(v.set(p.x, p.y, p.z), q, s.set(sz, sz, sz));
+      this.puffs.setMatrixAt(i, m4);
+      this.puffAlpha.setX(i, a);
+    }
+    if (any) {
+      this.puffs.instanceMatrix.needsUpdate = true;
+      this.puffAlpha.needsUpdate = true;
     }
   }
 }
