@@ -225,6 +225,25 @@ export const S = {
     ownedCount: (n: number, total: number) => `${n} of ${total} perks learned`,
   },
 
+  // enemies: name + counter, shown the first time each is seen and in the Journal
+  enemy: {
+    raider: { name: 'Reaver Grunt', counter: 'Dodge the swing and hit back. Barricades hold it off your walls.' },
+    scout: { name: 'Reaver Scout', counter: 'Flanks fast with a spear. Bear traps pin it twice as long; the Shadow perk keeps you unseen.' },
+    brute: { name: 'Reaver Sapper', counter: 'Ignores you and plants charges on buildings. Hit it while it plants; turrets and barricades keep it off your walls.' },
+    sniper: { name: 'Reaver Marksman', counter: 'Fires only with a clear line. Break line of sight behind cover, or rush it. Dodge when the red line locks.' },
+    captain: { name: 'Reaver Captain', counter: 'Raiders near the banner are faster and hit harder. Drop the captain and the rest break and run.' },
+    drone: { name: 'Patrol Drone', counter: 'Circles out of reach and calls others. Hit it when it dips to fire, or shoot it; turrets track it.' },
+    bot: { name: 'Guard Unit', counter: 'Riot shield in front. Roll behind it, or let turrets and traps hit its sides.' },
+    crawler: { name: 'Swarm Crawler', counter: 'Comes in swarms. Swings cut through the pack; spike strips shred them.' },
+    heavy: { name: 'Custodian Heavy', counter: 'Slams the ground: leave the red ring. The glowing core on its back takes double damage.' },
+    hound: { name: 'Feral Hound', counter: 'Packs circle to bite from behind. At night they will not come into firelight or a powered floodlight.' },
+    boar: { name: 'Wild Boar', counter: 'Paws the ground, then charges in a straight line. Sidestep it into a wall or a bear trap and it stuns itself.' },
+  } as Record<string, { name: string; counter: string }>,
+  enemyNew: (name: string, counter: string) => `New threat: ${name}. ${counter}`,
+  enemyBlocked: 'Blocked',
+  enemyRout: 'The captain is down. The raiders break and run.',
+  threatsTitle: 'Threats you have met',
+
   // Grid power + water (machines, Ledger chain)
   power: {
     noPower: (name: string) => `${name}: no power. Fully reboot any district (all its nodes) to feed Haven.`,

@@ -426,6 +426,7 @@ function journalScreen(c: ScreenCtx): () => void {
   c.title.textContent = S.journal;
   const render = () => {
     clear(body);
+    const flags0 = api.save.world.flags ?? {};
     const st = c.ui.storySource?.();
     if (st) {
       // the one thing to do next, always visible at the top
@@ -464,6 +465,13 @@ function journalScreen(c: ScreenCtx): () => void {
           );
         body.append(el);
       }
+    }
+    const seen = Object.keys(S.enemy).filter((k) => flags0[`seen:${k}`]);
+    if (seen.length) {
+      body.append(h('h3.section', null, S.threatsTitle));
+      const tl = h('div.list.threats');
+      for (const k of seen) tl.append(h('div', { class: 'li obj', 'data-threat': k }, h('div.main', null, h('b', null, S.enemy[k].name), h('small', null, S.enemy[k].counter))));
+      body.append(tl);
     }
     body.append(h('h3.section', null, S.lore));
     const flags = api.save.world.flags ?? {};

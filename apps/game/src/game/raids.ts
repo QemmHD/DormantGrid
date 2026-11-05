@@ -17,12 +17,10 @@ import {
 import { RAID_WARNINGS } from '../content/factions';
 import { audio } from '../audio/audio';
 import type { Game } from './game';
-import type { EnemyKind, Enemies } from './enemies';
+import { KIND_OF, type EnemyKind, type Enemies } from './enemies';
 
-const KIND: Record<string, EnemyKind> = {
-  raider_grunt: 'raider', raider_scout: 'raider', raider_brute: 'raider', raider_sniper: 'raider', raider_leader: 'raider',
-  drone: 'drone', guard_bot: 'bot', crawler: 'crawler', custodian_heavy: 'bot', hound: 'hound', boar: 'hound',
-};
+/** every sim enemy id spawns as its own client kind (round 5: was 5 look-alikes) */
+const KIND: Record<string, EnemyKind> = KIND_OF;
 
 export class Raids {
   private lastHour = -1;

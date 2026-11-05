@@ -179,7 +179,8 @@ export function makeChunkMaterial(): THREE.MeshLambertMaterial & { userData: { u
             vec2 p = vGritP.xz;
             vec3 c0 = diffuseColor.rgb;
             float sat = max(c0.r, max(c0.g, c0.b)) - min(c0.r, min(c0.g, c0.b));
-            float paved = 1.0 - smoothstep(0.05, 0.14, sat);
+            // paved = grey and not greenish (pale, fogged grass is low-saturation too)
+            float paved = (1.0 - smoothstep(0.05, 0.14, sat)) * (1.0 - smoothstep(0.0, 0.035, c0.g - max(c0.r, c0.b)));
             vec2 fwp = fwidth(p);
             float px = max(fwp.x, fwp.y);
             float near = 1.0 - smoothstep(0.04, 0.16, px);

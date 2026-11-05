@@ -22,6 +22,7 @@ const content = J('docs/review/content.json');
 const restore = J('docs/review/restore.json');
 const smoke = J('docs/review/smoke.json');
 const progress = J('docs/review/progress.json');
+const enemies = J('docs/review/enemies.json');
 // unit tests that back P9/P10 (run here, so the result is always current)
 const vitest = (file) => {
   const out = join(mkdtempSync(join(tmpdir(), 'accept-')), 'v.json');
@@ -84,9 +85,13 @@ const checks = {
     return [ok, ok ? 'town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one' : 'town.ts ctx() does not pass irrigation'];
   },
   'P11-enemy-variety': () => {
+    // measured (tools/review/enemies-check.mjs): silhouettes at 30 m, behaviour + counter per kind, escalation
     const m = src('apps/game/src/game/enemies.ts').match(/export type EnemyKind = ([^;]+);/)?.[1] ?? '';
     const n = (m.match(/'/g) ?? []).length / 2;
-    return [n >= 9, `client enemy kinds: ${n} (target ≥ 9 of the 11 sim types)`];
+    if (!enemies) return [false, `client enemy kinds: ${n}; run node tools/review/enemies-check.mjs`];
+    const ok = Object.values(enemies.behaviour).filter((b) => b.pass).length;
+    const w = enemies.silhouettes.worstPairs[0];
+    return [enemies.pass && n >= 11, `client kinds ${n}/11; behaviour+counter ${ok}/11; silhouettes at 30 m: smallest ${Math.min(...Object.values(enemies.silhouettes.px))} px, most similar pair ${w[0]}/${w[1]} IoU ${w[2]} (≤ ${enemies.thresholds.maxIoU}); escalation tier 0 → 4: ${enemies.escalation.tier0.length} → ${enemies.escalation.tier4.length} kinds`];
   },
   'P12-endings-reachable': () => {
     if (!progress) return [false, 'run node tools/review/progress-check.mjs first'];
