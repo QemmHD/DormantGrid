@@ -1,0 +1,218 @@
+{
+  "steps": [
+    {
+      "k": "fuse step guided to Odile",
+      "ok": true,
+      "detail": {
+        "card": "Get a Grid fuse.",
+        "beacon": "Odile · Grid fuse",
+        "beaconAt": [
+          235,
+          656
+        ],
+        "minimap": {
+          "pinned": false,
+          "label": "Odile · Grid fuse"
+        }
+      }
+    },
+    {
+      "k": "fuse bought from Odile (24 chits); Escape closes the trade",
+      "ok": true,
+      "detail": {
+        "price": 24,
+        "dialogOpened": true,
+        "closedAfter": true
+      }
+    },
+    {
+      "k": "node step guided (card, beacon, minimap)",
+      "ok": true,
+      "detail": {
+        "card": "Reach the control node in Old Downtown.",
+        "beacon": "Control node",
+        "beaconAt": [
+          488,
+          568
+        ],
+        "minimap": {
+          "pinned": true,
+          "label": "Control node"
+        },
+        "nodeDist": 268
+      }
+    },
+    {
+      "k": "walked from Haven to the node",
+      "ok": true,
+      "detail": {
+        "seconds": 100,
+        "remaining": 1.4
+      }
+    },
+    {
+      "k": "one-time reboot explainer shown near the node",
+      "ok": true,
+      "detail": {
+        "dist": 19.4,
+        "text": "Rebooting a control nodeTap Reboot node at the mast. Three relay boxes nearby light up: hold Interact on each to route power.Then hold Interact at the node to sync. Stay within 14 m: Custodian machine"
+      }
+    },
+    {
+      "k": "prompt reads \"Reboot node\"",
+      "ok": true,
+      "detail": {
+        "prompt": "EReboot node Control nodestarts the reboot · machines will notice"
+      }
+    },
+    {
+      "k": "E starts the reboot",
+      "ok": true,
+      "detail": {
+        "phase": "routing"
+      }
+    },
+    {
+      "k": "three relays routed",
+      "ok": true,
+      "detail": {
+        "phase": "syncing"
+      }
+    },
+    {
+      "k": "sync + defence → node online",
+      "ok": true,
+      "detail": {
+        "seconds": 139,
+        "swings": 292
+      }
+    }
+  ],
+  "paths": [
+    {
+      "from": [
+        226,
+        658
+      ],
+      "to": [
+        235,
+        655
+      ],
+      "replans": 0,
+      "blockedAt": [],
+      "remaining": 0.9
+    },
+    {
+      "from": [
+        234,
+        654
+      ],
+      "to": [
+        488,
+        568
+      ],
+      "replans": 3,
+      "blockedAt": [
+        {
+          "at": [
+            371,
+            596
+          ],
+          "hp": 100,
+          "mode": "play",
+          "screen": "",
+          "foes": 0,
+          "props": [
+            "rock"
+          ]
+        },
+        {
+          "at": [
+            369,
+            598
+          ],
+          "hp": 100,
+          "mode": "play",
+          "screen": "",
+          "foes": 0,
+          "props": [
+            "rock"
+          ]
+        },
+        {
+          "at": [
+            418,
+            598
+          ],
+          "hp": 100,
+          "mode": "play",
+          "screen": "",
+          "foes": 0,
+          "props": [
+            "crate"
+          ]
+        }
+      ],
+      "remaining": 1.4
+    },
+    {
+      "from": [
+        487,
+        569
+      ],
+      "to": [
+        497,
+        570
+      ],
+      "replans": 0,
+      "blockedAt": [],
+      "remaining": 0.9
+    },
+    {
+      "from": [
+        496,
+        569
+      ],
+      "to": [
+        483,
+        575
+      ],
+      "replans": 0,
+      "blockedAt": [],
+      "remaining": 1.1
+    },
+    {
+      "from": [
+        484,
+        575
+      ],
+      "to": [
+        485,
+        560
+      ],
+      "replans": 0,
+      "blockedAt": [],
+      "remaining": 0.3
+    },
+    {
+      "from": [
+        485,
+        560
+      ],
+      "to": [
+        488,
+        568
+      ],
+      "replans": 0,
+      "blockedAt": [],
+      "remaining": 1.4
+    }
+  ],
+  "rebootCardSeen": {
+    "dist": 19.4,
+    "text": "Rebooting a control nodeTap Reboot node at the mast. Three relay boxes nearby light up: hold Interact on each to route power.Then hold Interact at the node to sync. Stay within 14 m: Custodian machine"
+  },
+  "walkSeconds": 100,
+  "pageErrors": [],
+  "pass": true
+}

@@ -2,6 +2,7 @@
 // a next step always visible, and schema-2 saves still load (with credit).
 import { describe, expect, it } from 'vitest';
 import { DISTRICT_KEYS, SAVE_SCHEMA_VERSION, type GameSave, type SurvivorSave } from '@dg/shared';
+import { ONB_PLANT_STEP } from '../src/save';
 import { migrateSave, newGame, validateSave } from '../src/save/index';
 import { ENDINGS, QUESTS, type Objective } from '../src/data/quests';
 import { PERKS, canTakePerk } from '../src/data/perks';
@@ -219,6 +220,25 @@ describe('perk effects in the sim', () => {
     };
     expect(ate(0)).toBe(true);
     expect(ate(-0.4)).toBe(false);
+  });
+});
+
+describe('round 6 loads round-5 saves (schema 3 → 4)', () => {
+  it('shifts the tutorial step index past the new "plant a first crop" step', async () => {
+    const { SAVE_V3 } = await import('./fixtures/save-v3');
+    const at = (onb: number) => {
+      const raw = JSON.parse(JSON.stringify(SAVE_V3)) as { world: { flags: Record<string, unknown> } };
+      raw.world.flags['onb'] = onb;
+      return migrateSave(raw).world.flags['onb'];
+    };
+    expect(at(0)).toBe(0); // before the new step: unchanged
+    expect(at(ONB_PLANT_STEP - 1)).toBe(ONB_PLANT_STEP - 1); // on "bed": unchanged, "plant" comes next
+    expect(at(ONB_PLANT_STEP)).toBe(ONB_PLANT_STEP + 1); // was on "eat": still on "eat"
+    expect(at(16)).toBe(17); // was on "morning" (last of 17): still last
+    expect(at(17)).toBe(18); // finished the 17-step tutorial: finished the 18-step one
+    const s = migrateSave(JSON.parse(JSON.stringify(SAVE_V3)));
+    expect(s.schema).toBe(4);
+    expect(s.world.flags['onb']).toBe(100); // round-5 fixture had skipped (99)
   });
 });
 

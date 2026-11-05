@@ -1,0 +1,186 @@
+{
+  "steps": [
+    {
+      "k": "raid #1 is small with no defences (Reavers)",
+      "ok": true,
+      "detail": {
+        "units": [
+          {
+            "enemy": "raider_grunt",
+            "count": 2
+          }
+        ],
+        "strength": 24
+      }
+    },
+    {
+      "k": "warning card: who, compass direction, countdown",
+      "ok": true,
+      "detail": {
+        "text": "Raid: Reavers from the eastArrives in 3 h 58 m (game time)○ Place a wall or barricade○ Set a trap (spike strip or bear trap)○ Equip a weapon"
+      }
+    },
+    {
+      "k": "prep checklist: wall, trap, weapon (all open)",
+      "ok": true,
+      "detail": [
+        {
+          "t": "○ Place a wall or barricade",
+          "done": false
+        },
+        {
+          "t": "○ Set a trap (spike strip or bear trap)",
+          "done": false
+        },
+        {
+          "t": "○ Equip a weapon",
+          "done": false
+        }
+      ]
+    },
+    {
+      "k": "minimap chevron shows the raid direction",
+      "ok": true,
+      "detail": {
+        "x": 215,
+        "y": 181.9379779473694
+      }
+    },
+    {
+      "k": "checklist ticks as the player prepares",
+      "ok": true,
+      "detail": [
+        {
+          "t": "✓ Place a wall or barricade",
+          "done": true
+        },
+        {
+          "t": "✓ Set a trap (spike strip or bear trap)",
+          "done": true
+        },
+        {
+          "t": "✓ Equip a weapon",
+          "done": true
+        }
+      ]
+    },
+    {
+      "k": "away from Haven during a warning: beacon leads home",
+      "ok": true,
+      "detail": {
+        "beacon": "Haven · raid incoming"
+      }
+    },
+    {
+      "k": "raid #1 repelled with starter gear (bot, no top-ups)",
+      "ok": true,
+      "detail": {
+        "label": "raid #1",
+        "won": true,
+        "lost": false,
+        "deaths": 0,
+        "minHp": 88,
+        "swings": 9,
+        "bandages": 0,
+        "spawned": 2,
+        "seconds": 16,
+        "hpEnd": 88
+      }
+    },
+    {
+      "k": "raid #2 is sized to preparation and still early",
+      "ok": true,
+      "detail": {
+        "faction": "reavers",
+        "units": [
+          {
+            "enemy": "raider_grunt",
+            "count": 2
+          },
+          {
+            "enemy": "raider_scout",
+            "count": 1
+          }
+        ],
+        "strength": 34
+      }
+    },
+    {
+      "k": "raid #2 repelled with starter gear (bot, no top-ups)",
+      "ok": true,
+      "detail": {
+        "label": "raid #2",
+        "won": true,
+        "lost": false,
+        "deaths": 0,
+        "minHp": 88,
+        "swings": 12,
+        "bandages": 0,
+        "spawned": 3,
+        "seconds": 14,
+        "hpEnd": 88
+      }
+    },
+    {
+      "k": "raid lost while away → soft failure (≤10% stores, nobody hurt)",
+      "ok": true,
+      "detail": {
+        "outcome": {
+          "won": false,
+          "early": true,
+          "stockLoss": 0.1,
+          "lostItems": 18,
+          "injuries": 0
+        },
+        "injured": 0
+      }
+    },
+    {
+      "k": "recovery objective on the card + Haven beacon",
+      "ok": true,
+      "detail": {
+        "ob": "Patch Haven: place a wall, barricade or trap (0/1)",
+        "beacon": "Haven · patch the defences"
+      }
+    },
+    {
+      "k": "no raid for days after a loss (no death spiral)",
+      "ok": true,
+      "detail": {}
+    },
+    {
+      "k": "placing a defence completes recovery and returns supplies",
+      "ok": true,
+      "detail": {
+        "returned": 13,
+        "of": 18,
+        "obAfter": "Get a Grid fuse."
+      }
+    },
+    {
+      "k": "Settings → Difficulty: Relaxed / Standard / Hard, Standard default",
+      "ok": true,
+      "detail": {
+        "labels": [
+          "Relaxed",
+          "Standard",
+          "Hard"
+        ],
+        "onBefore": "Standard",
+        "diff": "chill",
+        "relaxedRaid": 4,
+        "hardRaid": 8
+      }
+    },
+    {
+      "k": "Relaxed raids are smaller than Hard",
+      "ok": true,
+      "detail": {
+        "relaxed": 4,
+        "hard": 8
+      }
+    }
+  ],
+  "pageErrors": [],
+  "pass": true
+}

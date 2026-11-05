@@ -79,6 +79,7 @@ export class UI {
   jobAssign: (id: number, job: string) => void = () => {};
   quitHandler: () => void = () => {};
   respawnHandler: () => void = () => {};
+  private deathBody: HTMLElement | null = null;
   deviceReport: () => string = () => '';
   private external = new Map<ScreenId, ExternalScreen>();
   buildPiece: string | null = null;
@@ -235,7 +236,12 @@ export class UI {
     this.refreshQuick();
     this.listen();
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && this.dialogEl) this.closeDialog();
+      if (e.code === 'Escape' && this.dialogEl) {
+        this.closeDialog();
+        // the same Escape must not also open the pause menu on the next frame
+        this.api.input.consume('menu');
+        this.api.input.consume('cancel');
+      }
     });
   }
 
@@ -298,14 +304,29 @@ export class UI {
   /** Per-frame. Call BEFORE input.endFrame() so UI sees this frame's actions. */
   update(dt: number): void {
     const inp = this.api.input;
+    if (this.deathEl && (inp.consume('interact') || inp.consume('jump'))) {
+      this.hideDeath();
+      this.respawnHandler();
+    }
     if (!this.menuEl) {
       if (inp.wasPressed('menu') || inp.wasPressed('cancel')) {
-        if (this.dialogEl) this.closeDialog();
-        else if (this.stack.length) this.close();
-        else if (inp.wasPressed('menu') && this.mode !== 'build' && this.mode !== 'dead') this.open('pause');
+        const menu = inp.wasPressed('menu');
+        // consume: tickers can run several fixed steps per frame; one Escape must not close a dialog AND open pause
+        if (this.dialogEl) {
+          this.closeDialog();
+          inp.consume('menu');
+          inp.consume('cancel');
+        } else if (this.stack.length) {
+          this.close();
+          inp.consume('menu');
+          inp.consume('cancel');
+        } else if (menu && this.mode !== 'build' && this.mode !== 'dead') {
+          this.open('pause');
+          inp.consume('menu');
+        }
       }
       for (const [a, id] of SCREEN_ACTIONS) {
-        if (inp.wasPressed(a)) {
+        if (inp.consume(a)) {
           if (this.openScreen === id) this.close();
           else if (this.mode !== 'dead') this.open(id);
         }
@@ -490,18 +511,20 @@ export class UI {
   showDeath(cause?: string): void {
     if (this.deathEl) return;
     this.closeAll(true);
+    this.closeDialog();
+    const body = h('div.recap', { 'data-death-recap': '' }, h('p', null, cause ?? S.causeUnknown));
     const el = h(
       'div.screen.death',
       null,
       h(
         'div.dialog.panel',
         null,
-        h('h2', null, S.deadTitle),
-        h('p', null, S.deadBody(cause ?? S.causeUnknown)),
+        h('h2', null, S.death.title),
+        body,
         h(
           'div.row',
           null,
-          btn(S.respawn, 'primary', () => {
+          btn(S.death.getUp, 'primary', () => {
             this.hideDeath();
             this.respawnHandler();
           }),
@@ -510,10 +533,24 @@ export class UI {
     );
     shield(el);
     this.deathEl = el;
+    this.deathBody = body;
     this.root.append(el);
     requestAnimationFrame(() => el.classList.add('show'));
     this.api.input.uiBlocking = true;
     this.api.input.exitPointerLock();
+  }
+
+  /** fill the death screen: cause + where, one tip, what was kept / dropped */
+  showDeathRecap(r: { cause: string; where: string; tip: string; kept: string; dropped: string }): void {
+    if (!this.deathEl) this.showDeath();
+    const b = this.deathBody;
+    if (!b) return;
+    b.replaceChildren(
+      h('p.cause', null, h('b', null, r.cause), ` · ${r.where}`),
+      h('p.tip', null, h('b', null, `${S.death.tipLabel} `), r.tip),
+      h('p.kept', null, r.kept),
+      h('p.kept', null, r.dropped),
+    );
   }
 
   hideDeath(): void {

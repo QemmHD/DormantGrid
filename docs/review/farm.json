@@ -1,0 +1,191 @@
+{
+  "steps": [
+    {
+      "k": "tutorial step \"A first crop\" starts with seeds + compost + timber",
+      "ok": true,
+      "detail": {
+        "title": "Tutorial 14/18 · A first crop",
+        "body": "Seeds and compost are in your pack. Build a Farm Plot (B → Farm Plot) beside your shelter, then press E on it to plant.",
+        "seeds": 4,
+        "compost": 6,
+        "timber": 4,
+        "gift": true,
+        "beacon": [
+          8,
+          14
+        ]
+      }
+    },
+    {
+      "k": "beacon points at the plot spot",
+      "ok": true,
+      "detail": {
+        "beacon": [
+          8,
+          14
+        ],
+        "onPlot": 0
+      }
+    },
+    {
+      "k": "E on the plot plants the first crop; tutorial moves on",
+      "ok": true,
+      "detail": {
+        "planted": "carrot",
+        "onbStep": 14,
+        "nextTitle": "Tutorial 15/18 · Look after yourself",
+        "seasonCard": true,
+        "promptBefore": "EPlant Farm Plothold: dismantle"
+      }
+    },
+    {
+      "k": "one-time seasons card on first planting",
+      "ok": true,
+      "detail": {
+        "text": "A year is 28 days: spring, summer, autumn, winter, 7 days each. It is spring now.Each seed grows only in the seasons on "
+      }
+    },
+    {
+      "k": "growth timer on the plot prompt",
+      "ok": true,
+      "detail": {
+        "prompt": "ECheck Farm Plot0% · ripe in 4 d 11 h (about 1.8 h of play)"
+      }
+    },
+    {
+      "k": "growth timer on the objective card",
+      "ok": true,
+      "detail": {
+        "card": "🌱 Carrots: 0% grown · ripe in 4 d 11 h (about 1.8 h of play)"
+      }
+    },
+    {
+      "k": "crop ripens through the hourly town sim",
+      "ok": true,
+      "detail": {
+        "gameHours": 102,
+        "timeline": [
+          "carrot:14",
+          "carrot:21",
+          "carrot:34",
+          "carrot:46",
+          "carrot:58",
+          "carrot:69",
+          "carrot:82",
+          "carrot:83",
+          "carrot:84",
+          "carrot:85",
+          "carrot:86",
+          "carrot:87",
+          "carrot:88",
+          "carrot:89",
+          "carrot:90",
+          "carrot:90",
+          "carrot:91",
+          "carrot:92",
+          "carrot:93",
+          "carrot:95",
+          "carrot:96",
+          "carrot:97",
+          "carrot:98",
+          "carrot:99",
+          "carrot:100"
+        ]
+      }
+    },
+    {
+      "k": "harvest reminder shown once",
+      "ok": true,
+      "detail": {
+        "toast": "Your carrots are ripe. Harvest the plot at Haven before it spoils.",
+        "reminders": 1
+      }
+    },
+    {
+      "k": "beacon leads to the ripe plot; card says harvest",
+      "ok": true,
+      "detail": {
+        "beacon": "Ripe carrots",
+        "card": "🌱 Carrots: 100% grown · ripe — harvest it!"
+      }
+    },
+    {
+      "k": "E harvests carrots",
+      "ok": true,
+      "detail": {
+        "harvested": 8,
+        "prompt": "EHarvest Farm Plot100% · ripe — harvest it!"
+      }
+    }
+  ],
+  "raw": {
+    "step1": {
+      "title": "Tutorial 14/18 · A first crop",
+      "body": "Seeds and compost are in your pack. Build a Farm Plot (B → Farm Plot) beside your shelter, then press E on it to plant.",
+      "seeds": 4,
+      "compost": 6,
+      "timber": 4,
+      "gift": true,
+      "beacon": [
+        8,
+        14
+      ]
+    },
+    "beaconOnPlot": 0,
+    "promptBefore": "EPlant Farm Plothold: dismantle",
+    "step2": {
+      "planted": "carrot",
+      "onbStep": 14,
+      "nextTitle": "Tutorial 15/18 · Look after yourself",
+      "seasonCard": true,
+      "seasonText": "A year is 28 days: spring, summer, autumn, winter, 7 days each. It is spring now.Each seed grows only in the seasons on its label. Out of season it stalls, and winter frost kills tender crops.Plant before a season ends so the crop can ripen. Watered, tended soil grows faster."
+    },
+    "step3": {
+      "prompt": "ECheck Farm Plot0% · ripe in 4 d 11 h (about 1.8 h of play)",
+      "card": "🌱 Carrots: 0% grown · ripe in 4 d 11 h (about 1.8 h of play)",
+      "cardShown": true
+    },
+    "step4": {
+      "jumps": 25,
+      "gameHours": 102,
+      "timeline": [
+        "carrot:14",
+        "carrot:21",
+        "carrot:34",
+        "carrot:46",
+        "carrot:58",
+        "carrot:69",
+        "carrot:82",
+        "carrot:83",
+        "carrot:84",
+        "carrot:85",
+        "carrot:86",
+        "carrot:87",
+        "carrot:88",
+        "carrot:89",
+        "carrot:90",
+        "carrot:90",
+        "carrot:91",
+        "carrot:92",
+        "carrot:93",
+        "carrot:95",
+        "carrot:96",
+        "carrot:97",
+        "carrot:98",
+        "carrot:99",
+        "carrot:100"
+      ],
+      "ripe": true,
+      "reminderToast": "Your carrots are ripe. Harvest the plot at Haven before it spoils.",
+      "reminders": 1,
+      "beacon": "Ripe carrots",
+      "card": "🌱 Carrots: 100% grown · ripe — harvest it!",
+      "remindersAfter": 1
+    },
+    "harvestPrompt": "EHarvest Farm Plot100% · ripe — harvest it!",
+    "harvested": 8,
+    "seasonCardAgain": false
+  },
+  "pageErrors": [],
+  "pass": true
+}

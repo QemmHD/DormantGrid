@@ -2,7 +2,7 @@
   "cases": {
     "touch-tap": {
       "stepBefore": 4,
-      "cardText": "Tutorial 1/17 · Get movingDrag anywhere on the left side to walk.Rank 130/40Next: Brick bu",
+      "cardText": "Tutorial 1/18 · Get movingDrag anywhere on the left side to walk.Rank 130/40Next: Brick bu",
       "opened": "inventory",
       "stepAfter": 5,
       "pass": true,
@@ -10,7 +10,7 @@
     },
     "Tab": {
       "stepBefore": 4,
-      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
+      "cardText": "Tutorial 1/18 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
       "opened": "inventory",
       "stepAfter": 5,
       "pass": true,
@@ -18,7 +18,7 @@
     },
     "KeyI": {
       "stepBefore": 4,
-      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
+      "cardText": "Tutorial 1/18 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
       "opened": "inventory",
       "stepAfter": 5,
       "pass": true,
@@ -26,7 +26,7 @@
     },
     "early-open": {
       "stepBefore": 3,
-      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
+      "cardText": "Tutorial 1/18 · Get movingWalk with W A S D.Rank 130/40Next: Brick building tier · Machini",
       "opened": "inventory",
       "stepAfter": 5,
       "pass": true,

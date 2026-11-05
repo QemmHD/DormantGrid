@@ -9,6 +9,7 @@
 - Baseline at review (2026-11-04): **0/13 pass**.
 - **After round 3 (2026-11-05): 7/13 pass.** P1–P7 pass; P8–P13 were out of scope this round. Output is in "Round 3 status" below.
 - **After round 5 (2026-11-05): 12/13 pass.** P11 passes on a measured enemy check. P13 (recorded audio) fails on purpose: the pipeline is ready but no recorded files exist. New checks: perks, Town Rank, co-op localhost, pacing. Output is in "Round 5 status" below.
+- **After round 6 (2026-11-05): 12/13 pass** (P13 waits on recorded audio, out of scope). Six new round-6 checks pass: reboot, raid, death, farm, trader, layout. Output is in "Round 6 status" below.
 - **After round 4 (2026-11-05): 11/13 pass** (P1–P10, P12), plus the new P15 restoration check. P11 (enemy variety) and P13 (recorded audio) were out of scope. P2, P8, P9, P10 and P12 now assert measured behaviour (pixels, real UI, unit tests), not grep counts. Output is in "Round 4 status" below.
 
 | Rank | Fix | Findings | Effort | Acceptance check (must pass) |
@@ -412,3 +413,162 @@ Flag rule from the brief: ⚠ marks a step under 30 s or over 10 min of bot time
   - Review checks: enemies, perks, rank, progress, pack-step, smoke, restore, controls2, session 30.
   - coop-local: 18/18.
 - smoke and feel failed once while the pacing bot ran beside them. Both pass alone; the feel failure was the real objective-card bug and is fixed above.
+
+## Round 6 status (2026-11-05)
+
+Scope: make the first hour reliable and fair for real players. Covers the reboot flow, first-raid fairness and a difficulty setting, deaths, the first crop, the trader, Act I pacing and the iPhone layout. The rule this round: **difficulty is not tuned to the bot.** The bot finds dead ends, stalls and unclear steps; human-plausible play sets difficulty. Out of scope: audio files (P13), 3D model integration, new maps or content, monetization.
+
+`node tools/review/accept.mjs` on the round-6 build (evidence refreshed: `session.mjs 30`, `controls2.mjs`, progress/enemies/restore/smoke checks re-run):
+
+```
+PASS P1-tutorial-scrap: first craft at 10.5 s (target ≤ 90 s; run session.mjs 10)
+PASS P2-smoke: smoke covers 1.04% of the frame (≥ 0.5%), hard-edge pixels 0.0% (≤ 8%), box pool adds 0.000% (≤ 0.05%)
+PASS P3-targeting: wrong target 0/60 = 0% (target ≤ 5%)
+PASS P4-camera-wall: camera behind wall 0/1080 frames = 0.0% (target ≤ 2%)
+PASS P5-threat-timing: first threat at 265.3 s (target ≤ 600 s in a 30-min session)
+PASS P6-new-survivor: first new survivor at 509.5 s (target ≤ 900 s)
+PASS P7-first-build: first piece placed at 57.6 s (target ≤ 420 s)
+PASS P8-perks-reachable: real salvage XP 0→2; craft level-up → 1 perk point, ★ badge "1"; Perks screen 4 tracks × 32 perks; Take → 2 learned, carry 40→55
+PASS P9-power-gating: 6/6 power+water unit tests pass; client needsPower gates: 5 (stations, turrets, floodlights via sim districtPowered)
+PASS P10-irrigation: town ctx passes irrigation = irrigationOn(world); unit test: irrigated crop water ≥ 0.85 and grows faster than a dry one
+PASS P11-enemy-variety: client kinds 11/11; behaviour+counter 11/11; silhouettes at 30 m: smallest 82 px, most similar pair bot/heavy IoU 0.498 (≤ 0.8); escalation tier 0 → 4: 6 → 11 kinds
+PASS P12-endings-reachable: campaign walked: 27 steps, next step shown in Journal at 27/27; via UI: talk:guild_factor, talk:guild_factor, choice:toll, talk:grid_core, choice:core → ending screen; endings reached through the UI: 6/6 (end.commons, end.fracture, end.guild, end.reavers, end.sleep, end.custodian)
+FAIL P13-recorded-audio: recorded audio files shipped and played: 0 (target ≥ 10). Pipeline ready: 66 IDs, 46 with a runtime hook; files needed are listed in docs/asset-requests/audio-sfx.md and audio-music.md
+PASS P15-restoration-payoff: lamps 0→72, decor 104, walkers 3, hazards near player 42→10, pixels changed 13.1% (thresholds: lamps 0→≥6, decor ≥10, walkers ≥2, cleared ≥5, pixels ≥12%)
+
+1 failing
+```
+
+P6 first read 929 s. Round 6 removed the auto-respawn so the death recap can be read, and `session.mjs` sat on the death screen while the opening timer (play time) stood still. The bot now presses "Get back up" like a player: 509 s.
+
+### New checks (all pass; output in `docs/review/*.json`)
+
+| Item | Check | What it proves |
+|---|---|---|
+| 1 Reboot | `node tools/review/reboot-check.mjs` | From Act II, with real inputs: the card, beacon and minimap all lead to Odile for the fuse. Escape closes the trade. They then lead to the node ("Control node", 268 m). The bot walks there on the nav path (100 s). The one-time explainer appears at ~20 m and the prompt reads "Reboot node". E starts the reboot; three relays are routed (held E); sync and defence complete; the node comes online. Health is topped up during the defence: this checks reachability, not combat. |
+| 2 First raids | `node tools/review/raid-check.mjs` | Raid #1 with no defences = 2 grunts. The warning card names who, the compass direction and the countdown. The checklist ticks for a wall, a trap and a weapon; a minimap chevron shows the direction; away from Haven, the beacon leads home. Raids #1 and #2 (2 grunts + 1 scout) are repelled with a lead pipe and no top-ups (min HP 75–96). A raid lost while away takes ≤ 10% of stores and hurts nobody; a recovery objective and beacon appear; there is no raid for 60 h. Placing a defence completes the recovery and returns supplies. Settings → Difficulty: Relaxed / Standard (default) / Hard; Relaxed raids are smaller than Hard. |
+| 3 Deaths | `node tools/review/death-check.mjs` | The recap names the killer and the place ("Killed by a Reaver Grunt · in Old Downtown, 150 m from Haven") with exactly one tip. Gear is kept (the weapon stays equipped; bandages, fuse, quick-bar food); the haul drops in a satchel. E gets you up at Haven. The satchel is the beacon and minimap target until picked up. Bleed-outs name the hound; starvation is named. The safe zone: an ambient raider never reaches a player in Haven and backs off, while the control case (outside) attacks; 194 ambient spawns, none within 78 m of Haven. |
+| 4 First crop | `node tools/review/farm-check.mjs` | Finishing "bed" starts "A first crop": seeds, compost and timber are handed over, and the beacon points at the plot spot. E on the plot plants (the step completes) and the one-time seasons card appears. A growth timer shows on the prompt and the card ("ripe in 4 d 11 h (about 1.8 h of play)"). The crop ripens through the hourly town sim (102 game hours, watered); there is one reminder; the beacon reads "Ripe carrots"; E harvests 9 carrots. |
+| 5 Trader | `node tools/review/trader-check.mjs` | Minute 0: Odile's coin is on the minimap, 8.7 m from the spawn. A survivor mentions her once the tutorial reaches crafting, and her coin pulses until the visit. She calls out once within 14 m. E opens trade with a free welcome trade (2 beans, 1 bandage, 6 chits, once). First contact is stamped before minute 15. With the tutorial stalled, the mention still comes by minute 4. |
+| 7 Layout | `node tools/review/layout-check.mjs` | iPhone SE 3rd gen 667×375, 13 844×390 and 15 Pro Max 932×430, as a Home Screen PWA with notch / Dynamic Island insets (0 / 47 / 59 px sides, 21 px bottom). Both the plain HUD and a raid warning (the tallest card) show no overlaps, nothing off-screen or outside the safe area, nothing tappable in the stick's thumb zone, and every target ≥ 44 px. Emulation only. |
+
+Unit tests added: early-raid sizing, difficulty scaling, soft loss, grace and compass (`systems.test.ts`); `hoursToRipe`; farmers wait on the player's ripe crop (`soak.test.ts`); v3 → v4 save migration (`campaign.test.ts`).
+
+### What changed
+1. **Reboot flow.** *Diagnosis:* both a bot limit and a game gap.
+   - **Bot limit:** it walked in straight lines and stuck on props. It now walks `findPath` and replans around blockers.
+   - **Game gap:** after the tutorial, quest objectives had no world beacon and no minimap marker. Now the objective drives both. The prompt reads "Reboot node", and a one-time card explains relays, sync, the 14 m defence and the rewards.
+   - **Proof in real play:** the round-6 pacing bot started the reboot (round 5 never did).
+2. **First raid fairness.**
+   - The first two raids are sized to Haven's preparation (walls, traps, turrets, guards, a weapon in hand), with caps.
+   - **Warning card:** who, compass direction and a game-time countdown, plus a three-item prep checklist and a red minimap chevron. The beacon leads home if you are away.
+   - **Soft failure:** ≤ 10% of stores taken and nobody hurt, plus a recovery objective that returns half and a 24 h grace before the next raid.
+   - **Difficulty setting:** Relaxed / Standard / Hard scales raid size and frequency, enemy damage and hunger/thirst.
+3. **Deaths.**
+   - A 48 m Haven safe zone for ambient enemies.
+   - Gear is kept on death; the haul drops in a satchel that is marked on the map.
+   - The death recap names the cause and place and gives one tip. Respawn waits for the player.
+4. **First crop.**
+   - The tutorial gained "A first crop" (seed pouch). Save v4 shifts the tutorial index.
+   - A growth timer on the prompt and the objective card.
+   - A harvest reminder, and the beacon leads to the ripe plot.
+   - A one-time seasons card.
+   - Farmers now wait 6 h before harvesting the player's own crop: before, they took it the hour it ripened, so a player never saw a ripe crop.
+5. **Trader:** a survivor mentions Odile, her coin is on the minimap, she calls out, and the first visit has a free trade.
+6. **Act I pacing:** "three residents" completed itself (three are seeded), so it is now four. Re-measured below.
+7. **iPhone layout:**
+   - Jump moved above Attack (it was over quick slot 4 on SE).
+   - Zoom is now a 45 px target.
+   - The clock moved under the top bar.
+   - The objective card now sits below the meters, puts its buttons first, passes touches to the stick and is height-capped.
+
+### Real-play pacing (round 6, item 6)
+
+**How it was measured.** `PACING_DIST=<frozen build> node tools/review/pacing.mjs 130 docs/review/pacing-r6.json` plays from a fresh game through gameplay only:
+- It never sets quest state.
+- It now walks nav paths and reacts to the trader mention like a player following the hint.
+- It does not follow the tutorial, so the tutorial crop is covered by `farm-check`, not here.
+
+Times are in-game minutes at the default 24-minute day. **Every bot number is an upper bound:** the bot fights worse than a person (it only swings at targets within 3 m, so it can never hit a drone) and builds slowly. The human column is an **estimate, not a measurement**:
+- **Night gate:** sleep is allowed from 19:00, about 11 real minutes after the 08:00 start.
+- **Pre-night work:** the shelter and bed need to be done by then.
+- **After the night:** the farm plots (one comes from the tutorial), a walk of about 250 m to the Residential Rows and back, and a fourth resident. The newcomer needs a spare bed and food stock, and arrives with a 40% chance per game hour.
+
+| Milestone | Target | Round-5 bot (Run A / Run B) | **Round-6 bot (upper bound)** | Human (estimate, unconfirmed) | Verdict |
+|---|---|---|---|---|---|
+| First perk chosen | ≤ 5 min | 1.2 / 1.2 min | **1.4 min** | ~1 min | ✅ |
+| Trader introduced (survivor mentions Odile) | ≤ 10 min | — | **4.1 min** (minute-4 fallback: the bot skips the tutorial) | 2–4 min (at the crafting step) | ✅ |
+| First contact with Odile | ≤ 15 min | 35 / 103 min | **6.0 min** | 3–6 min | ✅ |
+| First crop planted | ≤ 20 min | — | not measured (bot skips the tutorial) | ~10–15 min (tutorial step 14 of 18) | ✅ by `farm-check` |
+| First night survived | 20–30 min | 22 / 22 min | **22.2 min** | 12–20 min | ✅ |
+| **End of Act I** | **25–45 min** | 29 / 103 min | **62.4 min** | **~20–32 min** | ⚠ bot over; human estimate straddles the 25-min floor (see below) |
+| First raid repelled | day 3–5 | 0 of 3 repelled | **61.5 min (day 4; wild raid, 4 hounds); 2 raids, 2 repelled, 0 lost** | — | ✅ |
+| First district reboot | 35–60 min | not reached | **started at 105 min; not completed** (the bot died to drones 4 times while routing relays) | unconfirmed | ❌ bot (`reboot-check` proves the path; the fight is untested by a person) |
+| First harvest | 45–75 min | none | not reached (the bot skips the tutorial crop) | ~100–110 min: the tutorial carrot takes 102 game hours, measured in `farm-check` | ❌ timing (logged below) |
+
+**Steps the bot measured** (round 6; round-5 Run A in brackets):
+
+| Step | Bot time |
+|---|---|
+| Strip for parts (6 scrap) | 23 s [22 s] |
+| Gather timber (6) | 15 s [15 s] |
+| Campfire | 35 s [30 s] |
+| Crowbar | 4 s [2 s] |
+| Lay four foundations | 4.6 min [3.1 min] |
+| Raise walls (6) | 15.1 min [4.9 min] |
+| Put a roof on it (4) | 18.6 min [9.1 min] |
+| Bed + sleep through the night | 6.3 min [8.1 min] |
+| Workbench + 2 farm plots | 5.5 min [2.9 min] |
+| Reach the Residential Rows | 11.0 min [—] |
+| Four residents | 0 s: arrivals had already happened |
+
+**What this says.**
+1. Act I's bot time (62 min) is dominated by the bot's building: walls plus roof took 34 min, against 14 min in Run A, because it gathers and re-paths for each piece. That says nothing about a person. The fixed floor for anyone is the night gate at about 11–12 minutes.
+2. **Estimate risk:** a fast player who builds the shelter before dusk and gets an early newcomer could finish Act I in about 20 minutes, under the 25-minute floor. The four-resident step adds the spare bed and the arrival roll. **Unconfirmed.** If the device test shows under 25 minutes, the next lever is to make the 4th resident the Residential woman, arriving at the next dawn.
+3. **Deaths audit** (15 bot deaths in 130 min; `deathLog` in `pacing-r6.json`):
+
+   | Cause | Deaths | Notes |
+   |---|---|---|
+   | Patrol drones (8 direct, 2 bleed-outs after drone hits) | 10 | 8 at the downtown node during reboot attempts, 276 m out |
+   | Thirst | 2 | The bot only drinks what it carries |
+   | Raid units inside Haven | 2 | A crawler and a hound bite → bleed-out |
+   | Bleed with no recent attacker | 1 | |
+
+   - **No ambient-enemy death inside the 48 m safe zone.** The two Haven deaths were raid units, which the safe zone exempts by design.
+   - The drone deaths are mostly a bot limit (it never attacks a drone).
+   - The first node defence with drones is the most likely place a new person dies too. **Unconfirmed;** first item for the device test.
+
+### Bugs found and fixed this round
+- **Escape on a dialog** (trade, cards) closed it *and* opened the pause menu, because a raw keydown listener closed the dialog first. Fixed with `Input.consume`; screen hotkeys are consumed once too.
+- **Town farmers harvested a crop the hour it ripened.** A player never saw their crop ripe, and a harvest reminder could never land.
+- **"Bring Haven to three residents"** completed itself.
+- **Quest objectives after the tutorial** had no beacon and no minimap marker.
+- **Bundle:** a dynamic `import('three')` pulled in the whole library (+44 KB gzip). It is reverted, and the payload is 0.63 MB.
+- **Layout** (measured before the fixes):
+  - Jump × quick slot 4 (SE).
+  - Meters × objective card (all three phones).
+  - Top bar × clock (SE, 15 Pro Max).
+  - Zoom target 41 px.
+  - Objective buttons in the stick's thumb zone (15 Pro Max).
+- **Crop names:** "Potatos" / "Ripe carrot" → a plural helper.
+
+### Logged, not fixed
+- **First harvest timing:** the tutorial carrot takes about 102 game hours (≈ 1.7 h of play) even watered. That is far past the 45–75 min target. Crop timings were not part of this round's brief; next lever: a fast tutorial crop, or growth bonuses for a tended first plot.
+- **First node defence vs drones** (pacing deaths). Check on device whether a person can hold the node with starter gear; if not, use a smaller first wave or no drones in wave 1.
+- **Bot survival:** thirst deaths are bot behaviour. It drinks only from its pack; it never boils water.
+
+### Not confirmed without a real iPhone or human play
+- Every layout number is Playwright emulation with emulated safe-area insets. Real notch and Dynamic Island rendering, the Home Screen PWA chrome and thumb comfort were **not** tested on a device.
+- The human Act I time, first-node defence difficulty and first-raid difficulty for a person are estimates. The raid bar was set from a lead pipe and no armour; the bot cleared it without top-ups.
+- How the death recap, the raid card and the crop line read at arm's length on an SE.
+
+### Verification
+- `npm run check`: typecheck; lint with 0 warnings; 112 sim + 37 game + 61 server tests; build; bundle 0.63 MB gzip (baseline 0.61, under the 10% guard); GLB ingest; secret scan clean.
+- **Playwright, passing:**
+  - feel, guide, systems-flow, grid-flow, raid-flow, defense-flow, walk, models-flow, audio-flow.
+  - budget-tris: worst main pass 246k tris / 60 calls at medium (market).
+  - Review checks: perks, rank, pack-step, smoke-check, restore, progress, enemies.
+  - The six new round-6 checks.
+- **`tests/smoke.mjs` fails "salvage a crate" in this container.** The live round-5 build fails it the same way here: this container's software GPU now renders ~2 fps at 1280×720, so a 20 s hold never finishes. All its other steps pass: load, move, clock, inventory, save/reload, draw calls, zero console errors. The CI runner and live smoke are the gate for salvage; the CI run is in "Deploy" below.
+- The review checks' screenshot wait went from 30 s to 120 s for the same reason. Their assertions are unchanged.
+- **Saves:** schema 4 with a v3 → v4 migration. Test: a frozen round-5 (v3) save loads; the tutorial index shifts only at or past the new step. Difficulty and the new crop fields are optional or already stored, so they need no migration.

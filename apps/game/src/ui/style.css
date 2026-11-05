@@ -636,3 +636,58 @@ html.touch .prompt { display: none; }
   .objective .op { order: 3; }
   .objective .orank { order: 4; }
 }
+.reboot-card p { margin: 0 0 8px; line-height: 1.45; }
+/* round 6: raid warning inside the objective card — who, from where, countdown, prep checklist */
+.objective.raid { border-left-color: #ff6a4a; }
+.objective.raid .orank { display: none; }
+.objective .oraid { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,74,58,0.14); border: 1px solid rgba(255,106,74,0.45); }
+.objective .oraid b { display: block; color: #ff9a7a; font-size: calc(12px * var(--text-scale)); }
+.objective .oraid .rtime { display: block; color: var(--text); font-size: calc(11.5px * var(--text-scale)); margin-top: 1px; font-variant-numeric: tabular-nums; }
+.objective .oraid .rprep { list-style: none; margin: 4px 0 0; padding: 0; font-size: calc(11px * var(--text-scale)); color: var(--text-dim); }
+.objective .oraid .rprep li.done { color: var(--ok); }
+@media (max-height: 420px) { #ui .objective .oraid { order: 3; padding: 4px 6px; } #ui .objective.raid .op { display: none; } }
+/* round 6: death recap */
+.death .recap p { margin: 0 0 8px; line-height: 1.45; }
+.death .recap .cause b { color: #ff9a7a; }
+.death .recap .tip { padding: 8px 10px; border-radius: 8px; background: rgba(57,230,208,0.1); border-left: 3px solid var(--accent); }
+.death .recap .tip b { color: var(--accent); }
+.death .recap .kept { color: var(--text-dim); font-size: calc(12.5px * var(--text-scale)); }
+/* round 6: first-crop growth line */
+.objective .ocrop { margin-top: 4px; font-size: calc(11px * var(--text-scale)); color: #b4dc5a; line-height: 1.3; }
+.objective .ocrop.ripe { color: #ffd27a; font-weight: 700; }
+@media (max-height: 420px) { #ui .objective .ocrop { order: 3; } }
+/* round 6: Odile's free first trade */
+.welcome-trade { border: 1px solid rgba(255,210,122,0.55); background: rgba(255,210,122,0.08); border-radius: 10px; }
+.welcome-trade b { color: #ffd27a; }
+/* ===== round 6: landscape phone layout (tools/review/layout-check.mjs: SE 3rd gen, 13, 15 Pro Max as a
+   Home Screen PWA with notch / Dynamic Island insets). #ui-scoped: the minifier merges same-query
+   @media blocks ahead of base rules. ===== */
+/* Jump sat at the bottom-left of the cluster and covered quick slot 4 on the SE; it now sits above
+   Attack, left of Sprint. Zoom grows to a 45 px target after the 0.9 cluster scale. */
+#ui .act.jump { right: 160px; bottom: 148px; }
+#ui .act.zoom { width: 50px; height: 50px; right: 168px; bottom: 88px; }
+@media (max-height: 500px) {
+  /* clock under the top bar, left of the minimap (8 top-bar buttons cover a centred clock) */
+  #ui .clock { top: calc(var(--safe-t) + 62px); left: auto; right: calc(var(--safe-r) + 136px); transform: none; text-align: right; }
+  /* objective card: below the meters, text passes touches to the stick, buttons first, never taller
+     than the space above the bottom inset */
+  #ui .objective { top: calc(var(--safe-t) + 126px); display: flex; flex-direction: column; pointer-events: none;
+    max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 134px); overflow: hidden; }
+  #ui .objective .orow { order: -1; margin: 0 0 4px; pointer-events: auto; }
+  #ui .objective .ot { order: 0; }
+  #ui .objective .ob { order: 2; }
+  #ui .objective .op { order: 3; }
+  #ui .objective .oraid { order: 4; }
+  #ui .objective .ocrop { order: 5; }
+  #ui .objective .orank { order: 6; }
+  /* a raid outranks the quest text on short screens */
+  #ui .objective.raid .ob, #ui .objective.raid .op { display: none; }
+}
+/* SE-class width: the card must end left of the centred quick bar (slot 1 starts at ~206 px) */
+@media (max-height: 500px) and (max-width: 700px) {
+  #ui .objective { width: 186px; }
+}
+/* 568×320-class screens (1st-gen SE Safari tab): keep the round-5 narrow card left of the quick bar */
+@media (max-width: 600px) and (max-height: 340px) {
+  #ui .objective { width: 136px; top: calc(var(--safe-t) + 108px); max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 116px); }
+}

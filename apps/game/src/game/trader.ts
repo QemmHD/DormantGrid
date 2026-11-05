@@ -6,6 +6,7 @@ import { Rng } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import { LORE_TERMINALS } from '../content/lore';
 import { audio } from '../audio/audio';
+import { S } from '../ui/strings';
 import type { Game, ProviderPrompt } from './game';
 
 const CHIT = 'misc.guild_chit';
@@ -68,6 +69,7 @@ export class Trader {
       const f = FACTION_MAP.get(FACTION);
       // campaign: "Talk to Odile, the Meridian Guild factor"
       this.game.save.world.flags['talk:guild_factor'] = true;
+      this.noteMet();
       this.game.bus.emit({ type: 'subtitle', who: 'Odile', text: f?.lines.greet ?? 'Show me what you found.' });
       this.onOpen?.();
     }
@@ -206,7 +208,55 @@ export class Trader {
     this.onLore?.(pick.title, pick.header, pick.body);
   }
 
+  /** Round 6: introduce Odile early. A survivor mentions her once the tutorial reaches crafting
+   *  (or after 4 minutes of play), she calls out when you come near, and the first visit has a free trade. */
+  private introT = 0;
+  private introduce(dt: number): void {
+    const g = this.game;
+    this.introT -= dt;
+    if (this.introT > 0 || !g.save || g.mode !== 'play') return;
+    this.introT = 1;
+    const f = g.save.world.flags;
+    if (f['trader:met']) return;
+    const playMin = (g.save.playtime + g.playtime) / 60;
+    if (!f['trader:mentioned'] && (g.onbStep >= 5 || playMin >= 4)) {
+      const s = g.save.world.survivors.filter((x) => x.alive).sort((a, b) => Math.hypot(a.x - g.player.pos.x, a.z - g.player.pos.z) - Math.hypot(b.x - g.player.pos.x, b.z - g.player.pos.z))[0];
+      const who = s?.name ?? 'A neighbour';
+      f['trader:mentioned'] = Math.round(playMin * 10) / 10;
+      g.bus.emit({ type: 'subtitle', who, text: S.trader.mention });
+      g.toast(S.trader.mentionToast(who), 'warm');
+      audio.play('node', { vol: 0.35 });
+    }
+    if (f['trader:mentioned'] && !f['trader:called'] && g.player.pos.distanceTo(this.pos) < 14) {
+      f['trader:called'] = true;
+      g.bus.emit({ type: 'subtitle', who: 'Odile', text: S.trader.callout });
+    }
+  }
+
+  /** first visit: mark met (minute of play) — the free welcome trade is offered in the trade dialog */
+  noteMet(): void {
+    const g = this.game;
+    const f = g.save.world.flags;
+    if (!f['trader:met']) f['trader:met'] = Math.round(((g.save.playtime + g.playtime) / 60) * 10) / 10;
+  }
+
+  /** the free first trade; false once taken */
+  welcomeGift(): boolean {
+    const f = this.game.save.world.flags;
+    if (f['trader:gift']) return false;
+    f['trader:gift'] = true;
+    const inv = this.game.save.player.inventory;
+    addItem(inv, 'food.canned_beans', 2);
+    addItem(inv, 'med.bandage', 1);
+    addItem(inv, CHIT, 6);
+    audio.play('craft');
+    this.game.bus.emit({ type: 'subtitle', who: 'Odile', text: S.trader.giftThanks });
+    this.game.bus.emit({ type: 'inventory' });
+    return true;
+  }
+
   private update(dt: number): void {
+    this.introduce(dt);
     this.lookT -= dt;
     this.rig.speed = 0;
     if (this.near()) {

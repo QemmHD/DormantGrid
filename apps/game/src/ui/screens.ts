@@ -611,6 +611,9 @@ function settingsScreen(c: ScreenCtx): () => void {
       row(S.sSubtitles, toggle('subtitles')),
       row(S.sHints, toggle('hints')),
       section(S.sGame),
+      api.save
+        ? row(S.difficulty.label, seg(api.save.world.difficulty, [['chill', S.difficulty.chill], ['standard', S.difficulty.standard], ['hard', S.difficulty.hard]], (v) => api.setDifficulty(v)), S.difficulty.hint)
+        : row(S.difficulty.label, h('small', null, S.difficulty.noSave)),
       row(S.sDay, seg(String(s.dayMinutes), [['12', S.sDayVal(12)], ['24', S.sDayVal(24)], ['48', S.sDayVal(48)]], (v) => set('dayMinutes', Number(v)))),
       section(S.sData),
       h(

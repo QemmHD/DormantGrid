@@ -23,7 +23,8 @@ import { cropStage, harvest, plant, tickCrop } from '../src/systems/farming';
 import { RELAYS_PER_NODE, restorationFor, routeRelay, startReboot, tickReboot, type NodeEvent } from '../src/systems/grid';
 import { grantXp, townRank, survivorCap } from '../src/systems/rank';
 import { changeRep, buyPrice, sellPrice, generateContract } from '../src/systems/factions';
-import { maybeScheduleRaid, newRaidState, raidPhase, resolveRaidCoarse } from '../src/systems/raids';
+import { hoursToRipe } from '../src/systems/farming';
+import { EARLY_RAIDS, earlyRaidBudget, finishRaid, maybeScheduleRaid, newRaidState, raidCompass, raidPhase, raidStrength, resolveRaidCoarse } from '../src/systems/raids';
 import { dayOf, seasonOf, sunAt, weatherAt, isNight } from '../src/systems/time';
 import { townBoard } from '../src/systems/townboard';
 
@@ -382,6 +383,62 @@ describe('rank, factions, raids, time', () => {
     expect(lost.won).toBe(false);
     expect(lost.stockLoss).toBeLessThanOrEqual(0.3);
     expect(resolveRaidCoarse(plan!, plan!.strength * 3, new Rng(1)).won).toBe(true);
+  });
+  it('early raids are sized to preparation, scale with difficulty, and fail softly', () => {
+    const none = { walls: 0, traps: 0, turrets: 0, guards: 0, weapon: false };
+    const ready = { walls: 6, traps: 2, turrets: 0, guards: 1, weapon: true };
+    const plan = (raidIndex: number, difficulty: 'chill' | 'standard' | 'hard', prep = none, seed = 4) => {
+      const st = newRaidState();
+      const rng = new Rng(seed);
+      for (let d = 3; d < 60; d++) {
+        const p = maybeScheduleRaid(st, d * 24 + 6, rng, { pressure: { reavers: 1, custodians: 1 }, rank: 4, difficulty, raidIndex, prep });
+        if (p) return p;
+      }
+      throw new Error('no raid');
+    };
+    // first raid with no defences: at most two grunts' worth, whatever the faction or rank
+    for (let seed = 1; seed < 12; seed++) {
+      const p = plan(0, 'standard', none, seed);
+      expect(p.early).toBe(true);
+      expect(p.strength).toBeLessThanOrEqual(26);
+    }
+    // preparation grows the raid a little, bounded
+    expect(earlyRaidBudget(0, ready)).toBeGreaterThan(earlyRaidBudget(0, none));
+    expect(earlyRaidBudget(0, { walls: 99, traps: 99, turrets: 9, guards: 9, weapon: true })).toBeLessThanOrEqual(34);
+    expect(earlyRaidBudget(1, none)).toBeGreaterThan(earlyRaidBudget(0, none));
+    // difficulty scales the squad size
+    const n = (p: { units: { count: number }[] }) => p.units.reduce((s, u) => s + u.count, 0);
+    expect(n(plan(0, 'chill', ready))).toBeLessThan(n(plan(0, 'hard', ready)));
+    expect(n(plan(EARLY_RAIDS, 'chill'))).toBeLessThan(n(plan(EARLY_RAIDS, 'hard')));
+    // later raids are not early and are bigger than the first
+    expect(plan(EARLY_RAIDS, 'standard').early).toBe(false);
+    expect(raidStrength(plan(EARLY_RAIDS, 'standard').units)).toBeGreaterThan(raidStrength(plan(0, 'standard').units));
+    // soft failure on an early raid: ≤10% stores, nobody hurt
+    const lost = resolveRaidCoarse(plan(0, 'standard'), 0, new Rng(1));
+    expect(lost.won).toBe(false);
+    expect(lost.stockLoss).toBeLessThanOrEqual(0.1);
+    expect(lost.injuries).toBe(0);
+    // grace after a loss: no raid for at least 3 days
+    const st = newRaidState();
+    finishRaid(st, 100, true);
+    expect(maybeScheduleRaid(st, 100 + 24 * 2.5, new Rng(1), { pressure: { reavers: 5, custodians: 5 }, rank: 4, difficulty: 'hard', raidIndex: 1, prep: none })).toBe(null);
+    // compass: x+ is east, z- is north
+    expect(raidCompass(0)).toBe('E');
+    expect(raidCompass(-Math.PI / 2)).toBe('N');
+    expect(raidCompass(Math.PI / 2)).toBe('S');
+    expect(raidCompass(Math.PI)).toBe('W');
+  });
+  it('hoursToRipe: a fresh watered carrot in spring ripens in about its grow days, faster when tended', () => {
+    const c = plant(1, 'seed.carrot', 2 * 24)!;
+    c.water = 1;
+    c.nutrients = 1;
+    const env = { hour: 2 * 24, weather: 'clear' as const, tended: 0 };
+    const h = hoursToRipe(c, env);
+    expect(h).toBeGreaterThan(3 * 24);
+    expect(h).toBeLessThan(3 * 24 * 1.5);
+    expect(hoursToRipe(c, { ...env, tended: 1 })).toBeLessThan(h);
+    c.growth = 1;
+    expect(hoursToRipe(c, env)).toBe(0);
   });
   it('time: seasons, sun, deterministic weather', () => {
     expect(seasonOf(0)).toBe('spring');

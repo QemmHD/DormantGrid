@@ -185,6 +185,10 @@ export class Input {
   wasPressed(a: Action): boolean {
     return this.pressed.has(a);
   }
+  /** Handle a press once: later readers in the same frame (fixed-step tickers) no longer see it. */
+  consume(a: Action): boolean {
+    return this.pressed.delete(a);
+  }
   wasReleased(a: Action): boolean {
     return this.released.has(a);
   }

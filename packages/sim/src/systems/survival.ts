@@ -10,10 +10,14 @@ import { RECIPES } from '../data/recipes';
 const COOKED: ReadonlySet<string> = new Set(RECIPES.filter((r) => (r.station === 'campfire' || r.station === 'kitchen') && r.out.startsWith('food.')).map((r) => r.out));
 
 
-export const DIFFICULTY: Record<Difficulty, { drain: number; damageTaken: number; raid: number; loot: number }> = {
-  chill: { drain: 0.6, damageTaken: 0.6, raid: 0.5, loot: 1.25 },
-  standard: { drain: 1, damageTaken: 1, raid: 1, loot: 1 },
-  hard: { drain: 1.35, damageTaken: 1.4, raid: 1.5, loot: 0.85 },
+/**
+ * Difficulty (player-facing: Relaxed / Standard / Hard). drain = hunger/thirst rate,
+ * damageTaken = enemy damage, raid = raid frequency, raidSize = raid squad size, loot = loot rolls.
+ */
+export const DIFFICULTY: Record<Difficulty, { drain: number; damageTaken: number; raid: number; raidSize: number; loot: number }> = {
+  chill: { drain: 0.6, damageTaken: 0.6, raid: 0.5, raidSize: 0.7, loot: 1.25 },
+  standard: { drain: 1, damageTaken: 1, raid: 1, raidSize: 1, loot: 1 },
+  hard: { drain: 1.35, damageTaken: 1.4, raid: 1.5, raidSize: 1.35, loot: 0.85 },
 };
 
 /** Per game-hour base drains. */
@@ -263,9 +267,24 @@ export function fallDamage(vy: number): number {
 }
 
 /** Respawn after death: carried items go to a drop pile (caller creates DropPile). */
+/** item categories a player keeps through death (gear); the haul (materials, food, parts) drops in a satchel */
+export const KEPT_ON_DEATH: ReadonlySet<string> = new Set(['tool', 'weapon', 'ammo', 'medicine', 'blueprint', 'misc']);
+
+/**
+ * Respawn at `at`. The player keeps their gear (tools, weapons, ammo, medicine, blueprints, key items)
+ * and whatever is on the quick bar; the rest is returned so the caller can drop it as a satchel.
+ */
 export function respawnPlayer(p: PlayerSave, at: { x: number; z: number }): (ItemStack | null)[] {
-  const dropped = p.inventory;
-  p.inventory = new Array<ItemStack | null>(dropped.length).fill(null);
+  const quick = new Set(p.quick.filter((q): q is string => !!q));
+  const dropped = new Array<ItemStack | null>(p.inventory.length).fill(null);
+  for (let i = 0; i < p.inventory.length; i++) {
+    const s = p.inventory[i];
+    if (!s) continue;
+    const cat = getItem(s.id)?.category ?? 'material';
+    if (KEPT_ON_DEATH.has(cat) || quick.has(s.id)) continue;
+    dropped[i] = s;
+    p.inventory[i] = null;
+  }
   p.health = 60;
   p.hunger = Math.max(p.hunger, 50);
   p.thirst = Math.max(p.thirst, 50);

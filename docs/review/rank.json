@@ -5,9 +5,9 @@
         "text": "Rank 130/40Next: Brick building tier · Machinist’s Bench · Kitchen",
         "box": [
           25,
-          225,
+          221,
           139,
-          293
+          289
         ],
         "onScreen": true,
         "visible": true,
@@ -19,9 +19,9 @@
         "text": "Rank 226/60Next: Chem Station · Livestock Pen · Cutting Torch",
         "box": [
           25,
-          225,
+          221,
           139,
-          293
+          289
         ],
         "onScreen": true,
         "visible": true,
@@ -43,9 +43,9 @@
         "text": "Rank 130/40Next: Brick building tier · Machinist’s Bench · Kitchen",
         "box": [
           25,
-          263,
+          273,
           203,
-          317
+          327
         ],
         "onScreen": true,
         "visible": true,
@@ -57,9 +57,9 @@
         "text": "Rank 226/60Next: Chem Station · Livestock Pen · Cutting Torch",
         "box": [
           25,
-          263,
+          273,
           203,
-          317
+          327
         ],
         "onScreen": true,
         "visible": true,

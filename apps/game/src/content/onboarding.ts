@@ -15,6 +15,7 @@ export type OnboardingTrigger =
   | 'placedWalls' // 3+ walls
   | 'placedRoof'
   | 'placedBed'
+  | 'plantedCrop' // planted any seed in a farm plot
   | 'ateOrDrank'
   | 'nightfall'
   | 'slept'
@@ -28,7 +29,7 @@ export interface OnboardingStep {
   touch: string;
   desktop: string;
   /** optional world marker target hint for the client */
-  marker?: 'nearestCrate' | 'nearestRuin' | 'havenPlot' | 'workbench' | 'bed' | null;
+  marker?: 'nearestCrate' | 'nearestRuin' | 'havenPlot' | 'workbench' | 'bed' | 'farmPlot' | null;
   /** seconds before the hint gently pulses again if not done */
   nudgeAfter?: number;
 }
@@ -142,6 +143,16 @@ export const ONBOARDING: readonly OnboardingStep[] = [
     desktop: 'Craft a bedroll and place it inside. It\'s also where you\'ll respawn.',
     marker: 'bed',
     nudgeAfter: 25,
+  },
+  // round 6: index 13 (ONB_PLANT_STEP in sim save migrations: v3 saves at/after this index shift by one)
+  {
+    id: 'plant',
+    trigger: 'plantedCrop',
+    title: 'A first crop',
+    touch: 'Seeds and compost are in your pack. Build a Farm Plot (Build menu) beside your shelter, then tap it to plant.',
+    desktop: 'Seeds and compost are in your pack. Build a Farm Plot (B → Farm Plot) beside your shelter, then press E on it to plant.',
+    marker: 'farmPlot',
+    nudgeAfter: 30,
   },
   {
     id: 'eat',

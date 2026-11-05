@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CORE_CHOICES, QUEST_MAP, applyChoice, choicePending, endingPaths, endingPreview, isQuestDone, nextStep, objectiveProgress, tileAt, ENDINGS, type CoreChoice } from '@dg/sim';
 import { Tile } from '@dg/shared';
-import { ENDINGS as EPILOGUES, type EndingKey } from '../content/campaign';
+import { DISTRICT_INTROS, ENDINGS as EPILOGUES, type EndingKey } from '../content/campaign';
 import { audio } from '../audio/audio';
 import { S } from '../ui/strings';
 import { btn, h, tap } from '../ui/dom';
@@ -147,6 +147,7 @@ export class Story {
     this.t -= dt;
     if (this.t > 0) return;
     this.t = 2;
+    if (this.game.save) this.maybeRebootCard();
     // Act III: put the toll decision in front of the player once, when nothing else is open
     const w = this.game.save?.world;
     if (!w || this.tollPrompted || this.game.mode !== 'play' || this.ui.openScreen) return;
@@ -154,6 +155,66 @@ export class Story {
       this.tollPrompted = true;
       this.openToll();
     }
+  }
+
+  /** Where the current main objective is in the world (beacon + minimap), or null if "anywhere". */
+  target(): { pos: THREE.Vector3; label: string; kind: string } | null {
+    const g = this.game;
+    const w = g.save?.world;
+    if (!w) return null;
+    const ns = nextStep(w, g.questCtx());
+    if (!ns) return null;
+    const o = ns.step.obj;
+    const L = g.layout;
+    const at = (x: number, z: number, label: string, kind: string) => ({ pos: new THREE.Vector3(x, g.view.surface(x, z), z), label, kind });
+    const nearestNode = (key: string) => {
+      const di = L.districts.findIndex((d) => d.key === key);
+      const p = g.player.pos;
+      const n = L.nodes.filter((x) => x.district === di && !w.districts[di]?.nodesOnline.includes(x.id)).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+      return n ? at(n.x, n.z, S.reboot.targetNode, 'node') : null;
+    };
+    const odile = () => at(L.spawn.x + 8.6, L.spawn.z - 1.6, S.reboot.targetOdile, 'trader');
+    switch (o.type) {
+      case 'collect':
+        // the fuse: Odile sells it (until the player has one)
+        return o.item === 'misc.grid_fuse' ? odile() : null;
+      case 'reach':
+        // "Reach the control node in Old Downtown" leads to the node itself
+        if (ns.quest.id === 'q.first_node') return nearestNode(o.district);
+        {
+          const d = L.districts.find((x) => x.key === o.district);
+          return d ? at(d.cx, d.cz, DISTRICT_INTROS[d.key]?.name ?? d.key, 'district') : null;
+        }
+      case 'reboot':
+        return nearestNode(o.district);
+      case 'talk':
+        if (o.npc === 'guild_factor') return { ...odile(), label: 'Odile' };
+        if (o.npc === 'grid_core') return at(this.corePos.x, this.corePos.z, S.reboot.targetCore, 'core');
+        return null;
+      case 'survive': {
+        const bed = w.pieces.find((p) => p.piece === 'bed');
+        return bed ? at(bed.x, bed.z, S.reboot.targetBed, 'bed') : at(L.spawn.x + 8, L.spawn.z + 8, S.reboot.targetHaven, 'haven');
+      }
+      case 'build':
+        return Math.hypot(g.player.pos.x - L.spawn.x, g.player.pos.z - L.spawn.z) > 40 ? at(L.spawn.x + 8, L.spawn.z + 8, S.reboot.targetHaven, 'haven') : null;
+      default:
+        return null;
+    }
+  }
+
+  /** one-time card the first time the player nears a node they are meant to reboot */
+  private maybeRebootCard(): void {
+    const g = this.game;
+    const w = g.save.world;
+    if (w.flags['seen:rebootCard'] || this.ui.openScreen || g.mode !== 'play') return;
+    const t = this.target();
+    if (!t || t.kind !== 'node') return;
+    if (Math.hypot(t.pos.x - g.player.pos.x, t.pos.z - g.player.pos.z) > 25) return;
+    w.flags['seen:rebootCard'] = true;
+    const body = h('div.reboot-card', { 'data-reboot-card': '' });
+    for (const line of S.reboot.cardBody) body.append(h('p', null, line));
+    audio.play('node', { vol: 0.6 });
+    this.ui.dialog(S.reboot.cardTitle, body, [btn(S.reboot.cardOk, 'primary', () => this.ui.closeDialog())]);
   }
 
   /** Journal: open whichever decision is pending */

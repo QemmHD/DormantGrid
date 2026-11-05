@@ -121,6 +121,7 @@ export async function runHarness(): Promise<void> {
     },
     openScreen: (id: ScreenId | null) => ui?.open(id),
     takePerk: () => false,
+    setDifficulty: () => {},
   };
   ui = new UI(api);
   // fake world backdrop

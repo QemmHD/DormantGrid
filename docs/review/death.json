@@ -1,0 +1,132 @@
+{
+  "steps": [
+    {
+      "k": "recap names the killer and where",
+      "ok": true,
+      "detail": {
+        "text": "Killed by a Reaver Grunt · in Old Downtown, 150 m from HavenTip: Dodge the swing and hit back. Barricades hold it off your walls.You kept your gear (4 stacks): "
+      }
+    },
+    {
+      "k": "recap gives exactly one tip",
+      "ok": true,
+      "detail": {
+        "tips": 1
+      }
+    },
+    {
+      "k": "gear kept: weapon equipped, bandages, fuse, quick-bar food",
+      "ok": true,
+      "detail": {
+        "kept": [
+          "wpn.pipe×1",
+          "med.bandage×3",
+          "misc.grid_fuse×1",
+          "food.canned_beans×2"
+        ],
+        "equipped": "wpn.pipe"
+      }
+    },
+    {
+      "k": "haul dropped in a satchel where you fell",
+      "ok": true,
+      "detail": {
+        "satchel": [
+          "mat.scrap×18",
+          "mat.cloth×6"
+        ]
+      }
+    },
+    {
+      "k": "E gets you up at Haven",
+      "ok": true,
+      "detail": {
+        "mode": "play",
+        "fromHaven": 0
+      }
+    },
+    {
+      "k": "satchel is the beacon + minimap target",
+      "ok": true,
+      "detail": {
+        "beacon": "Your satchel",
+        "minimap": "Your satchel"
+      }
+    },
+    {
+      "k": "picking it up clears the marker",
+      "ok": true,
+      "detail": {
+        "scrap": 18,
+        "beacon": "",
+        "prompt": "EPick up Dropped pack"
+      }
+    },
+    {
+      "k": "death is logged (cause, place)",
+      "ok": true,
+      "detail": {
+        "cause": "raider",
+        "x": 376,
+        "z": 658,
+        "district": "Old Downtown",
+        "fromHaven": 150,
+        "day": 0,
+        "hour": 13,
+        "dropped": 24
+      }
+    },
+    {
+      "k": "bleed-out names the hound and gives the bandage tip",
+      "ok": true,
+      "detail": {
+        "text": "Bled out after a Feral Hound's hit · in Old Downtown, 151 m from HavenTip: Bleeding keeps hurting after the fight: use a Rag Bandage from the quick bar right aw"
+      }
+    },
+    {
+      "k": "starvation recap",
+      "ok": true,
+      "detail": {
+        "text": "Starved · in HavenTip: Keep two cooked meals on the quick bar. A campfire turns raw meat and canned food into full meals"
+      }
+    },
+    {
+      "k": "Haven safe zone: ambient raider never reaches you, backs off",
+      "ok": true,
+      "detail": {
+        "minD": 8.2,
+        "hpLost": 0,
+        "state": "flee",
+        "endFromHaven": 49
+      }
+    },
+    {
+      "k": "control: outside the ring the same raider attacks",
+      "ok": true,
+      "detail": {
+        "minD": 1.6,
+        "hpLost": 74,
+        "state": "chase",
+        "endFromHaven": 277
+      }
+    },
+    {
+      "k": "ambient spawns never land within 78 m of Haven",
+      "ok": true,
+      "detail": {
+        "n": 216,
+        "near": 0,
+        "tries": 1200,
+        "byOffset": {
+          "0": 0,
+          "85": 0,
+          "100": 0,
+          "115": 0,
+          "-100": 216
+        }
+      }
+    }
+  ],
+  "pageErrors": [],
+  "pass": true
+}

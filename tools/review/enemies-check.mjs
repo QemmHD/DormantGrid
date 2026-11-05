@@ -60,10 +60,10 @@ for (const k of KINDS) {
     window.__dg.setPaused(true);
   });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: `docs/review/shots/sil-${k}-on.png` });
+  await page.screenshot({ path: `docs/review/shots/sil-${k}-on.png`, timeout: 120000 });
   await page.evaluate(() => (window.__enemies.list[0].obj.visible = false));
   await page.waitForTimeout(400);
-  await page.screenshot({ path: `docs/review/shots/sil-${k}-off.png` });
+  await page.screenshot({ path: `docs/review/shots/sil-${k}-off.png`, timeout: 120000 });
   const a = await sharp(`docs/review/shots/sil-${k}-on.png`).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const b = await sharp(`docs/review/shots/sil-${k}-off.png`).removeAlpha().raw().toBuffer();
   const W = a.info.width, H = a.info.height;

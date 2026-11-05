@@ -50,7 +50,7 @@ const measure = () =>
 await place(HOUR);
 await page.waitForTimeout(6000);
 const before = await measure();
-await page.screenshot({ path: 'docs/review/shots/restore-before.png' });
+await page.screenshot({ path: 'docs/review/shots/restore-before.png', timeout: 120000 }); // slow software GPU: wait, don't fail
 // reboot every downtown node (same path a teammate's reboot takes: remoteOnline → restorationFor)
 await page.evaluate(() => {
   const g = window.__dg, i = g.layout.districts.findIndex((d) => d.key === 'downtown');
@@ -60,7 +60,7 @@ await page.evaluate(() => {
 await place(HOUR);
 await page.waitForTimeout(7000);
 const after = await measure();
-await page.screenshot({ path: 'docs/review/shots/restore-after.png' });
+await page.screenshot({ path: 'docs/review/shots/restore-after.png', timeout: 120000 });
 
 // pixel difference (luminance), ignoring nothing: HUD is identical in both frames
 const raw = async (f) => (await sharp(f).removeAlpha().raw().toBuffer({ resolveWithObject: true }));

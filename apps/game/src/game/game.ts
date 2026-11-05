@@ -1001,7 +1001,8 @@ export class Game implements GameAPI {
       if (t.piece.piece === 'farm_plot') {
         const c = this.save.world.crops.find((x) => x.plot === t.piece.id);
         const verb = !c || !c.crop ? 'Plant' : c.growth >= 1 ? 'Harvest' : c.water < 0.4 ? 'Water' : 'Check';
-        return { kind: 'farm', verb, name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
+        const grow = c?.crop ? this.farmHooks?.promptSub(t.piece.id) : null;
+        return { kind: 'farm', verb, name: t.name, sub: grow ?? 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
       }
       if (def?.storageSlots) return { kind: 'loot', verb: 'Open', name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
       if (def?.station) return { kind: 'build', verb: 'Craft', name: t.name, sub: 'hold: dismantle', hold: false, blocked: null, pos: t.pos, shape };
@@ -1369,16 +1370,19 @@ export class Game implements GameAPI {
         const any = this.inv.some((s) => s?.id.startsWith('seed.'));
         this.toast(any ? "None of your seeds will grow this season." : 'You need seeds. Bushes and gardens sometimes have them.', 'bad');
         audio.play('deny');
+        if (any) this.farmHooks?.seasonCard();
         return;
       }
       const planted = plantCrop(p.id, seed.id, w.hour, c);
       if (!planted) return;
       removeItem(this.inv, seed.id, 1);
+      planted.mine = true;
       if (c) Object.assign(c, planted);
       else w.crops.push((c = planted));
       audio.play('place', { vol: 0.5 });
       this.fx.dust(pos.x, pos.y - 0.4, pos.z, 4, 0x5a4a36);
       this.toast(`Planted ${getItem(seed.id)?.name.replace(' Seeds', '') ?? seed.id}.`, 'warm');
+      this.trigger('plantedCrop');
     } else {
       const water = this.inv.findIndex((s) => s && (s.id === 'drink.dirty_water' || s.id === 'drink.clean_water' || s.id === 'tool.watering_can'));
       const fert = this.inv.findIndex((s) => s?.id === 'misc.fertilizer');
@@ -1554,6 +1558,14 @@ export class Game implements GameAPI {
 
   /** Tracker perk: animals drawn on the minimap last frame (for checks) */
   trackedOnMap = 0;
+  /** objective marker drawn on the minimap last frame (checks) */
+  objectiveOnMap: { x: number; y: number; pinned: boolean; label: string } | null = null;
+  /** set by main (FarmGuide): growth timer on the plot prompt, one-time seasons card */
+  farmHooks: { promptSub(plot: number): string | null; seasonCard(): void } | null = null;
+  /** Odile's coin on the minimap (checks) */
+  traderOnMap: { x: number; y: number; call: boolean } | null = null;
+  /** raid direction chevron on the minimap (checks) */
+  raidOnMap: { x: number; y: number } | null = null;
 
   /** a noise at (x,z) heard within r metres (set by Enemies) */
   noiseHook: ((x: number, z: number, r: number) => void) | null = null;
@@ -1631,6 +1643,13 @@ export class Game implements GameAPI {
     this.onPerkPoint?.();
   }
 
+  setDifficulty(d: 'chill' | 'standard' | 'hard'): void {
+    if (!this.save || this.save.world.difficulty === d) return;
+    this.save.world.difficulty = d;
+    this.toast(S.difficulty.set(S.difficulty[d]));
+    this.persist('difficulty');
+  }
+
   takePerk(id: string): boolean {
     const p = this.save.player;
     if (!canTakePerk(p.perks, id, p.perkPoints)) {
@@ -1665,6 +1684,7 @@ export class Game implements GameAPI {
   hurt(amount: number, kind: 'blunt' | 'cut' | 'fall' | 'bite' | 'shot', cause = kind as string): void {
     if (this.mode === 'dead') return;
     const dealt = damagePlayer(this.save.player, amount * (1 - Math.min(0.6, this.pk('armor'))), kind, this.survivalCtx());
+    if (cause !== kind && cause !== 'fall') this.lastHit = { kind: cause, t: this.time };
     this.bus.emit({ type: 'damage', amount: dealt });
     audio.play('hurt');
     this.player.rig.hit(0.8);
@@ -1677,32 +1697,67 @@ export class Game implements GameAPI {
   /** bumped whenever a different save/session takes over, so stale timers bail */
   session = 0;
 
-  private die(cause: string): void {
+  /** last enemy kind that hit the player, and when (game time) — names the killer of a bleed-out */
+  private lastHit = { kind: '', t: -99 };
+  /** every death this session (audit: what killed the player and where) */
+  readonly deathLog: { cause: string; x: number; z: number; district: string; fromHaven: number; day: number; hour: number; dropped: number }[] = [];
+  /** set by main: shows the death recap (cause, where, one tip, what was kept) */
+  onDeathRecap: ((r: { cause: string; district: string; fromHaven: number; dropped: number; kept: number }) => void) | null = null;
+
+  /** what actually killed the player: enemy kind, fall, or the survival cause behind "exposure" */
+  private resolveCause(cause: string): string {
+    const p = this.save.player;
+    if (cause !== 'exposure') return cause;
+    if (p.thirst <= 0) return 'thirst';
+    if (p.hunger <= 0) return 'starve';
+    if (p.conditions.some((c) => c.id === 'bleeding')) return this.time - this.lastHit.t < 60 && this.lastHit.kind ? `bleed:${this.lastHit.kind}` : 'bleed';
+    if (p.conditions.some((c) => c.id === 'infected')) return 'infection';
+    return 'exposure';
+  }
+
+  private die(rawCause: string): void {
     if (this.mode === 'dead') return;
     this.stopBuild();
-    const sess = this.session;
     const p = this.save.player;
     const pos = this.player.pos.clone();
+    const cause = this.resolveCause(rawCause);
     const bed = p.bed ?? this.layout.spawn;
+    const equipped = p.equipped;
+    const before = p.inventory.filter((x) => !!x).length;
     const dropped = respawnPlayer(p, bed);
     const items = dropped.filter((s): s is ItemStack => !!s);
-    if (items.length) this.addDrop(pos.x, pos.z, items);
-    this.save.player.equipped = null;
+    if (items.length) {
+      this.addDrop(pos.x, pos.z, items);
+      this.save.world.flags['satchel'] = `${pos.x.toFixed(1)},${pos.z.toFixed(1)}`;
+    }
+    // gear is kept: stay armed if the weapon/tool survived
+    this.save.player.equipped = equipped && p.inventory.some((x) => x?.id === equipped) ? equipped : null;
     this.rebuildDrops();
     this.player.rig.setState('dead');
+    const sp = this.layout.spawn;
+    const district = this.layout.districts[districtAt(this.layout, pos.x, pos.z).index]?.name ?? '';
+    const fromHaven = Math.round(Math.hypot(pos.x - sp.x, pos.z - sp.z));
+    const w = this.save.world;
+    w.flags['deaths'] = Number(w.flags['deaths'] ?? 0) + 1;
+    this.deathLog.push({ cause, x: Math.round(pos.x), z: Math.round(pos.z), district, fromHaven, day: Math.floor(w.hour / 24), hour: Math.round((w.hour % 24) * 10) / 10, dropped: items.reduce((n, s) => n + s.n, 0) });
     this.setMode('dead');
-    this.toast(cause === 'fall' ? 'That was a long way down.' : 'You went down.', 'bad');
-    setTimeout(() => {
-      if (sess !== this.session || this.mode !== 'dead') return;
-      this.placePlayer(bed.x, bed.z);
-      this.view.loadAround(bed.x, bed.z);
-      this.player.rig.setState('idle');
-      this.setMode('play');
-      this.toast(items.length ? 'Your pack is where you fell. Go get it.' : 'You wake up sore.', 'warm');
-      this.bus.emit({ type: 'inventory' });
-      this.bus.emit({ type: 'meters' });
-      this.persist('death');
-    }, 3200);
+    this.onDeathRecap?.({ cause, district, fromHaven, dropped: items.length, kept: before - items.length });
+    this.persist('death');
+  }
+
+  /** "Get back up" on the death recap */
+  respawn(): void {
+    if (this.mode !== 'dead') return;
+    const p = this.save.player;
+    const bed = p.bed ?? this.layout.spawn;
+    this.placePlayer(bed.x, bed.z);
+    this.view.loadAround(bed.x, bed.z);
+    this.player.rig.setState('idle');
+    this.setMode('play');
+    this.toast(this.save.world.flags['satchel'] ? S.death.wakeSatchel : S.death.wake, 'warm');
+    this.bus.emit({ type: 'inventory' });
+    this.bus.emit({ type: 'meters' });
+    this.persist('respawn');
   }
 
   private trySleep(): void {
@@ -1821,6 +1876,15 @@ export class Game implements GameAPI {
     }
     const step = ONBOARDING[this.onbStep];
     if (step.trigger === 'moved') this.onbStartPos.copy(this.player.pos);
+    // first crop: hand over a seed pouch and compost once, so the step never dead-ends
+    if (step.trigger === 'plantedCrop' && !this.save.world.flags['gift:seeds']) {
+      this.save.world.flags['gift:seeds'] = true;
+      addItem(this.inv, 'seed.carrot', 4);
+      addItem(this.inv, 'mat.organic', 6);
+      addItem(this.inv, 'mat.timber', 4);
+      this.toast(S.farm.gift, 'warm');
+      this.bus.emit({ type: 'inventory' });
+    }
     if (step.trigger === 'looked') this.onbYaw = this.camera.yaw;
   }
 

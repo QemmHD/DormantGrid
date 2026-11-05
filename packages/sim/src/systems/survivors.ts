@@ -679,6 +679,9 @@ function hourStep(world: WorldSave, hour: number, ctx: TownContext, ev: TownEven
   stampStock(stock, hour);
 }
 
+/** game hours a ripe crop waits for the player before farmers bring it in */
+export const FARMER_HARVEST_DELAY = 6;
+
 function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: Weather, farmerPower: number, ctx: TownContext, ev: TownEvent[], rng: Rng): void {
   const plots = world.pieces.filter((p) => p.piece === 'farm_plot');
   if (plots.length === 0) return;
@@ -697,8 +700,10 @@ function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: 
         c.growth = 0;
         addStock(stock, 'mat.organic', 2, hour);
         ev.push({ type: 'spoiled', hour, text: `Frost took the ${def.name.toLowerCase()} bed.`, count: 0 });
-      } else tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation, growthBonus: ctx.growthBonus });
-      if (actions > 0 && c.growth >= 1) {
+      } else if (tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation, growthBonus: ctx.growthBonus }).ripened) c.ripeAt = hour;
+      // farmers leave the player's own ripe crop for FARMER_HARVEST_DELAY hours (the harvest reminder is theirs to act on)
+      const ripeFor = c.growth >= 1 && c.mine ? hour - (c.ripeAt ?? -1e9) : 1e9;
+      if (actions > 0 && c.growth >= 1 && ripeFor >= FARMER_HARVEST_DELAY) {
         for (const y of harvest(c, rng)) {
           addStock(stock, y.item, y.count, hour);
           if (y.item.startsWith('food.')) harvested += y.count;

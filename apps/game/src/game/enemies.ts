@@ -268,6 +268,9 @@ const ringGeo = (() => {
 
 const REAVERS: ReadonlySet<EnemyKind> = new Set(['raider', 'scout', 'brute', 'sniper', 'captain']);
 
+/** radius around Haven's centre that ambient enemies keep out of (raids and node waves excepted) */
+export const HAVEN_SAFE_R = 48;
+
 export class Enemies {
   list: Enemy[] = [];
   private nextId = 1;
@@ -479,6 +482,8 @@ export class Enemies {
     if (x < 10 || z < 10 || x > 1206 || z > 1206) return;
     const sd = districtAt(g.layout, x, z);
     if (sd.key === 'haven' || g.view.surface(x, z) < -0.2) return;
+    // never spawn near the Haven safe zone
+    if (Math.hypot(x - g.layout.spawn.x, z - g.layout.spawn.z) < HAVEN_SAFE_R + 30) return;
     // don't spawn inside buildings
     let blocked = false;
     g.collision.query(x - 1, z - 1, x + 1, z + 1, (c) => {
@@ -557,12 +562,24 @@ export class Enemies {
       }
       const playerAlive = g.mode === 'play' || g.mode === 'build';
       const speed = e.def.speed * (e.buff > 0 ? 1.2 : 1);
+      // Haven safe zone (round 6): ambient enemies never press into Haven. With the player inside
+      // the ring they give up the chase; one that strays inside backs off. Raids and node waves still come.
+      if (e.tag === '' && !e.wave && (e.state === 'chase' || e.state === 'wander' || e.state === 'windup' || e.state === 'recover')) {
+        const hs = g.layout.spawn;
+        const playerSafe = Math.hypot(pp.x - hs.x, pp.z - hs.z) < HAVEN_SAFE_R;
+        const selfIn = Math.hypot(e.pos.x - hs.x, e.pos.z - hs.z) < HAVEN_SAFE_R + 6;
+        if (selfIn || (playerSafe && e.state !== 'wander')) {
+          e.state = 'flee';
+          e.t = 0;
+        }
+      }
       // Shadow perk: enemies notice you later
       const sense = e.def.sense * (g.atm.daylight < 0.3 ? 0.75 : 1) * (1 - Math.min(0.6, g.pk('stealth')));
       const x0 = e.pos.x, z0 = e.pos.z;
       switch (e.state) {
         case 'wander': {
-          if ((dist < sense && playerAlive) || (e.wave && playerAlive)) {
+          const inHaven = !e.wave && e.tag === '' && Math.hypot(pp.x - g.layout.spawn.x, pp.z - g.layout.spawn.z) < HAVEN_SAFE_R;
+          if ((dist < sense && playerAlive && !inHaven) || (e.wave && playerAlive)) {
             e.state = 'chase';
             e.t = 0;
             this.firstSight(e);

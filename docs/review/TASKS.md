@@ -1,25 +1,21 @@
-# Round 5 tasks — variety, depth, co-op readiness (survives compaction)
+# Round 6 tasks — reliable, fair first hour (survives compaction)
 
-Source: docs/review/PLAN.md + docs/REVIEW.md on main. Work on build/main-line; merge to main after green steps.
-Before: 11/13 (P11 enemy variety and P13 recorded audio fail). P13 stays failing on purpose this round.
-Out of scope: new maps, content packs, 3D model integration, monetization.
+Source: docs/review/PLAN.md (pacing table), REVIEW.md, COOP_TEST.md on main. Before: 12/13 (P13 waits on audio files; out of scope).
+Rule: do NOT tune difficulty to the bot; bot = dead ends / stalls / unclear steps; human-plausible play sets difficulty.
 
-- [x] 1. Enemy variety (P11): all 11 sim types as distinct client kinds — silhouette (readable at 30 m), behaviour, counter; raids/ambient escalate by district + threat tier; measured check (silhouette IoU + behaviour signatures) → tools/review/enemies-check.mjs; re-measure budgets
-- [x] 2. Dead perks: implement or replace the 6 (Quiet Work, Patch Job, Site Foreman, Gridwright, Tracker, Warden); check that no perk is dead
-- [x] 3. Town Rank bar: progress + next 3 unlocks on HUD and Journal, iPhone-readable; check
-- [x] 4. Real-play pacing: bot plays collect/build steps for real; timestamps (first perk, first reboot, first faction contact, first raid repelled, first harvest, first night, end of act 1); targets + measured table in PLAN.md; flag <30 s or >10 min
-- [x] 5. Audio pipeline: file-driven by stable ID via ingest (AAC/MP3, size/duration budgets, loudness normalisation), synth fallback; docs/asset-requests/audio-sfx.md (60) + audio-music.md (6); P13 left failing honestly
-- [x] 6. Co-op readiness: (a) local Worker (wrangler dev / miniflare) + 2 headless clients: join, disconnect/reconnect, duplicate join, old client refused — check; (b) diagnostics overlay (state, RTT, snapshot age, desync count, copy report) toggled in Settings; (c) docs/review/COOP_TEST.md
-- [x] 7. Saves: migration if data changed + previous-version load test
-- [x] 8. Gates, budgets, CI deploy, live smoke both URLs; PLAN.md; final reply
+- [x] 1. Reboot flow → `tools/review/reboot-check.mjs` PASS (docs/review/reboot.json)
+- [x] 2. First raid fairness + difficulty → `tools/review/raid-check.mjs` PASS (docs/review/raid.json)
+- [x] 3. Deaths: safe zone, gear kept, satchel, recap → `tools/review/death-check.mjs` PASS (audit: from the pacing re-run's deathLog)
+- [x] 4. Farming → `tools/review/farm-check.mjs` PASS
+- [x] 5. Trader → `tools/review/trader-check.mjs` PASS (bot minute of contact comes from pacing.mjs)
+- [x] 6. Act I pacing: population 3 → 4; pacing-r6.json (bot Act I 62.4 min upper bound; Odile 6.0 min; first raid repelled 61.5 min; 15 deaths, 10 drones); PLAN.md table + death audit written
+- [x] 7. iPhone layout → `tools/review/layout-check.mjs` PASS on all three
+- [~] 8. Saves v4 + test DONE; npm run check GREEN; Playwright suites: all green except smoke salvage (environmental: round-5 live build fails identically here, ~2 fps SwiftShader) and restore/progress/enemies screenshot timeouts (retrying); then accept.mjs, merge, CI, live smoke both URLs, final reply
 
-## Findings (round 5)
-- P11 passes on a measured check (tools/review/enemies-check.mjs): silhouettes, 11/11 behaviour + counter, escalation 6 → 11 kinds.
-- Fixed while testing: sappers stalled against props; hounds circling one camp fire walked into another's light; ground cracks drawn on pale grass.
-- Gridwright replaced (no power budget exists); the other 5 dead perks now have systems; salvaging makes noise (new).
-- iPhone SE layout: objective card overlapped the quick bar (fixed). NOT fixed: the Jump button overlaps quick slot 4 on SE (pre-existing, logged).
-- Pacing bot found: first-node fuse step could stall (fuses only from rare heavies) → Odile sells fuses; quest text fixed.
-- Pacing bot's own bugs (not game): pause menu opened by a stray Escape; loop spun in zero game time waiting for the 1.5 s quest tick.
-- Co-op (found by tests/coop-local.mjs on workerd): server never completed the close handshake; client had no dead-link detection; a fresh-tab rejoin froze the player for others (seq restart). All fixed.
-- Audio: AAC overshoots short transients ~3 dB → peak target -6 dBFS with post-encode correction.
-- No save shape change this round; a frozen round-4 (schema 3) save loads (test).
+## Findings (round 6)
+- Reboot "never started" = bot navigation (straight-line walking stuck on props) + a game gap: after the tutorial, quest objectives had no world beacon and no minimap marker. Fixed (objective target system); bot now walks nav paths.
+- Real bug: Escape on a dialog closed it AND opened the pause menu (a raw keydown listener closed the dialog first, then ui.update saw Escape with nothing open). Fixed with Input.consume.
+- Real bug: town farmers harvested a crop the same hour it ripened, so the player never saw a ripe crop. Farmers now leave the player's own crop for 6 game hours (player-planted crops only; the 30-day soak starves if all crops wait).
+- Real gap: "Bring Haven to three residents" completed itself (three survivors are seeded at start).
+- Layout (before fixes): SE Jump × slot 4 and Jump × slot 3 (568 px Safari size), meters × objective card on all phones, top bar × clock (SE, 15 Pro Max), Zoom target 41 px (< 44), objective buttons in the stick zone.
+- Note: Playwright "iPhone SE landscape" = 1st-gen 568×320 Safari tab; layout-check uses full-screen PWA sizes.
