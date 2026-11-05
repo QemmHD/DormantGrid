@@ -168,4 +168,6 @@ export interface GameAPI {
   // progression
   /** learn a perk with a perk point; false if not allowed */
   takePerk(id: string): boolean;
+  /** change the current world's difficulty (Relaxed = 'chill' / Standard / Hard) */
+  setDifficulty(d: 'chill' | 'standard' | 'hard'): void;
 }

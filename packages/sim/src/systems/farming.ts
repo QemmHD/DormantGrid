@@ -116,6 +116,19 @@ export function tickCrop(c: CropSave, dtHours: number, env: CropEnv): CropTickRe
   return res;
 }
 
+/**
+ * Game hours until a crop is ripe at today's growth rate (UI growth timer). 0 when ripe,
+ * Infinity when it is not growing. Assumes the soil stays as it is now; watering speeds it up.
+ */
+export function hoursToRipe(c: CropSave, env: CropEnv): number {
+  const def = cropDef(c);
+  if (!def) return Infinity;
+  if (c.growth >= 1) return 0;
+  const f = growthFactor(c, env);
+  if (f <= 0) return Infinity;
+  return ((1 - c.growth) * def.growDays * 24) / f;
+}
+
 export function waterCrop(c: CropSave): void {
   c.water = 1;
 }
@@ -132,6 +145,8 @@ export function harvest(c: CropSave, rng: Rng, bonus = 0): { item: string; count
   const seeds = rng.int(def.seedBack[0], def.seedBack[1]);
   c.lastCrop = def.id;
   c.crop = '';
+  delete c.ripeAt;
+  delete c.mine;
   c.growth = 0;
   return [
     { item: def.produce, count: n },

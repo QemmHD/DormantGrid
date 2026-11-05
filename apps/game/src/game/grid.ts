@@ -187,7 +187,7 @@ export class Grid {
       if (this.active.phase === 'syncing') return { text: 'Control node', verb: 'Sync', kind: 'node' as const, hold: true, pos, sub: `${Math.round(this.active.sync * 100)}% — keep holding` };
       if (this.active.phase === 'defend') return { text: 'Control node', verb: 'Defend', kind: 'node' as const, pos, sub: 'stay close until the waves stop' };
     }
-    return { text: 'Control node', verb: 'Reboot', kind: 'node' as const, pos, sub: 'machines will notice' };
+    return { text: 'Control node', verb: S.reboot.verb, kind: 'node' as const, pos, sub: S.reboot.sub };
   }
 
   private handle(held: boolean, pressed: boolean, tapped: boolean, dt: number): boolean {

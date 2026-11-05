@@ -49,10 +49,17 @@ const result = await page.evaluate(async (SIM_MIN) => {
   const watch = async () => {
     const w = W();
     if (g.mode === 'dead' && !wasDead) { deaths++; wasDead = true; note('died'); }
+    // read the recap like a player, then get back up (round 6: no auto-respawn)
+    if (g.mode === 'dead') { await frames(20); document.querySelector('.death .btn.primary')?.click(); await frames(4); }
     if (g.mode !== 'dead') wasDead = false;
     if (g.save.player.perks.length) mark('firstPerk', g.save.player.perks[0]);
     if (w.districts.some((d) => d.nodesOnline.length)) mark('firstReboot');
     if (w.flags['talk:guild_factor']) mark('firstFactionContact', 'Odile (Meridian Guild)');
+    if (w.flags['trader:mentioned']) mark('traderMentioned', `game stamp min ${w.flags['trader:mentioned']}`);
+    if (w.flags['trader:met']) mark('firstTraderContact', `game stamp min ${w.flags['trader:met']}`);
+    if (w.crops.some((c) => c.crop)) mark('firstCropPlanted');
+    if (Number(w.flags['harvestReminders'] ?? 0) > 0) mark('harvestReminder');
+    if (Number(w.flags['raidsLost'] ?? 0) > 0) mark('firstRaidLost');
     if (Number(w.flags['raidsSurvived'] ?? 0) > 0) mark('firstRaidRepelled');
     if (Number(w.flags['harvested'] ?? 0) > 0) mark('firstHarvest', 'player harvest');
     const crops = new Set(sim.CROPS.flatMap((c) => [c.produce, ...(c.yields ?? []).map((y) => y.item)]).filter(Boolean));
@@ -97,8 +104,34 @@ const result = await page.evaluate(async (SIM_MIN) => {
     g.input.press('attack'); await frames(2); g.input.release('attack'); await frames(10);
     return true;
   };
-  // ---- movement ----
+  // ---- movement: follow the game's nav-grid path (a person walks around buildings) ----
+  let nav = null, navRemoved = -1;
+  const navGrid = () => {
+    if (!nav || navRemoved !== g.view.removedProps.size) {
+      nav = sim.buildNavGrid(g.layout, g.view.removedProps);
+      navRemoved = g.view.removedProps.size;
+    }
+    return nav;
+  };
   async function walkTo(x, z, stop = 1.8, maxS = 0) {
+    const d0 = Math.hypot(x - P().x, z - P().z);
+    if (d0 > 12) {
+      const path = sim.findPath(navGrid(), P().x, P().z, x, z, 150000);
+      if (path && path.length > 1) {
+        const start = T();
+        const limit = maxS || 20 + (d0 / 3.4) * 2.5;
+        for (let i = 1; i < path.length && T() - start < limit && now() < END; i++) {
+          const [wx, wz] = path[i];
+          if (i < path.length - 1 && Math.hypot(wx - P().x, wz - P().z) < 2) continue;
+          await walkStraight(wx, wz, i === path.length - 1 ? stop : 1.6, 30);
+          if (g.mode === 'dead') break;
+        }
+        return Math.hypot(x - P().x, z - P().z) < stop + 0.5;
+      }
+    }
+    return walkStraight(x, z, stop, maxS);
+  }
+  async function walkStraight(x, z, stop = 1.8, maxS = 0) {
     const start = T();
     const d0 = Math.hypot(x - P().x, z - P().z);
     const limit = maxS || 8 + (d0 / 3.4) * 1.8;
@@ -276,6 +309,9 @@ const result = await page.evaluate(async (SIM_MIN) => {
     await frames(6);
     await tap('KeyE');
     await frames(10);
+    // the free welcome trade on the first visit
+    const gift = document.querySelector('[data-welcome-trade] button');
+    if (gift) { gift.click(); note('took the welcome trade'); await frames(4); }
     g.openScreen(null);
     // sell scrap/timber surplus for chits, then buy
     // sell what Odile actually pays for (wiring, glass, components, tapes…), keep food, meds and tools
@@ -381,6 +417,8 @@ const result = await page.evaluate(async (SIM_MIN) => {
     if ((h >= 21 || h < 4) && W().pieces.some((p) => p.piece === 'bed')) await sleepNight();
     // keep crops going once there are plots and seeds
     if (W().pieces.some((p) => p.piece === 'farm_plot') && guard % 6 === 0) await tendPlots();
+    // a survivor mentioned Odile: go and say hello, like a player following the hint
+    if (W().flags['trader:mentioned'] && !W().flags['trader:met']) await trade(null);
     const o = n.type;
     const text = n.text;
     if (n.id === 'q.first_light' && n.index === 0) await gather('mat.scrap', 6);
@@ -430,6 +468,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
     day: Math.floor(w.hour / 24) - day0 + 1,
     milestones: ms,
     deaths,
+    deathLog: g.deathLog,
     steps: log.filter((l) => l.includes('step done')),
     quests: w.quests,
     log: log.slice(-80),

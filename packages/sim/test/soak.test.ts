@@ -1,7 +1,7 @@
 // Soak: 30 in-game days (multiple seasons) at accelerated speed via the coarse model.
 import { describe, expect, it } from 'vitest';
 import type { WorldSave } from '@dg/shared';
-import { tickTown, survivorTarget, assignJobs, computeNeeds, STOCK_SLOTS, type TownEvent } from '../src/systems/survivors';
+import { tickTown, survivorTarget, assignJobs, computeNeeds, STOCK_SLOTS, FARMER_HARVEST_DELAY, type TownEvent } from '../src/systems/survivors';
 import { seasonOf } from '../src/systems/time';
 import { townBoard } from '../src/systems/townboard';
 import { townFixture } from './balance.fixture';
@@ -75,5 +75,29 @@ describe('soak', () => {
       return JSON.stringify(w);
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('round 6: farmers leave the player-planted ripe crop for a while', () => {
+  it('a ripe crop the player planted waits FARMER_HARVEST_DELAY hours; a farmer-planted one does not', () => {
+    const world = townFixture(7, 6, 4, 8);
+    const ctx = { difficulty: 'standard' as const, home: { x: 600, z: 600 }, rank: 2, cap: 8 };
+    for (const s of world.survivors) s.job = 'farm';
+    const plots = world.pieces.filter((p) => p.piece === 'farm_plot').slice(0, 2);
+    expect(plots.length).toBe(2);
+    world.crops = world.crops.filter((c) => !plots.some((p) => p.id === c.plot));
+    const h = world.hour;
+    world.crops.push({ plot: plots[0].id, crop: 'carrot', planted: h - 80, growth: 0.999, water: 1, nutrients: 1, mine: true });
+    world.crops.push({ plot: plots[1].id, crop: 'carrot', planted: h - 80, growth: 0.999, water: 1, nutrients: 1 });
+    const mine = () => world.crops.find((c) => c.plot === plots[0].id)!;
+    const theirs = () => world.crops.find((c) => c.plot === plots[1].id)!;
+    tickTown(world, 1, ctx); // both ripen this hour
+    expect(theirs().crop === '' || theirs().growth < 1).toBe(true); // farmers took theirs
+    expect(mine().crop).toBe('carrot');
+    expect(mine().growth).toBe(1);
+    for (let i = 0; i < FARMER_HARVEST_DELAY - 1; i++) tickTown(world, 1, ctx);
+    expect(mine().growth).toBe(1); // still waiting for the player
+    for (let i = 0; i < 3; i++) tickTown(world, 1, ctx);
+    expect(mine().crop === '' || mine().growth < 1).toBe(true); // then the town brings it in
   });
 });

@@ -1,0 +1,201 @@
+{
+  "steps": [
+    {
+      "k": "tutorial step \"A first crop\" starts with seeds + compost + timber",
+      "ok": true,
+      "detail": {
+        "title": "Tutorial 14/18 · A first crop",
+        "body": "Seeds and compost are in your pack. Build a Farm Plot (B → Farm Plot) beside your shelter, then press E on it to plant.",
+        "seeds": 4,
+        "compost": 6,
+        "timber": 4,
+        "gift": true,
+        "beacon": [
+          8,
+          14
+        ]
+      }
+    },
+    {
+      "k": "beacon points at the plot spot",
+      "ok": true,
+      "detail": {
+        "beacon": [
+          8,
+          14
+        ],
+        "onPlot": 0
+      }
+    },
+    {
+      "k": "E on the plot plants the first crop; tutorial moves on",
+      "ok": true,
+      "detail": {
+        "planted": "carrot",
+        "onbStep": 14,
+        "nextTitle": "Tutorial 15/18 · Look after yourself",
+        "seasonCard": true,
+        "promptBefore": "EPlant Farm Plothold: dismantle"
+      }
+    },
+    {
+      "k": "one-time seasons card on first planting",
+      "ok": true,
+      "detail": {
+        "text": "A year is 28 days: spring, summer, autumn, winter, 7 days each. It is spring now.Each seed grows only in the seasons on "
+      }
+    },
+    {
+      "k": "growth timer on the plot prompt",
+      "ok": true,
+      "detail": {
+        "prompt": "ECheck Farm Plot0% · ripe in 4 d 11 h (about 1.8 h of play)"
+      }
+    },
+    {
+      "k": "growth timer on the objective card",
+      "ok": true,
+      "detail": {
+        "card": "🌱 Carrots: 0% grown · ripe in 4 d 11 h (about 1.8 h of play)"
+      }
+    },
+    {
+      "k": "crop ripens through the hourly town sim",
+      "ok": false,
+      "detail": {
+        "gameHours": 360,
+        "timeline": [
+          14,
+          21,
+          34,
+          46,
+          58,
+          69,
+          82,
+          93,
+          5,
+          15,
+          27,
+          36,
+          47,
+          57,
+          67,
+          76,
+          86,
+          94,
+          5,
+          15,
+          26,
+          36,
+          47,
+          57,
+          68,
+          77,
+          88,
+          96,
+          5,
+          13
+        ]
+      }
+    },
+    {
+      "k": "harvest reminder shown once",
+      "ok": false,
+      "detail": {
+        "toast": null,
+        "reminders": 0
+      }
+    },
+    {
+      "k": "beacon leads to the ripe plot; card says harvest",
+      "ok": false,
+      "detail": {
+        "beacon": "",
+        "card": "🌱 Potatos: 13% grown · ripe in 6 d 8 h (about 2.5 h of play)"
+      }
+    },
+    {
+      "k": "E harvests carrots",
+      "ok": false,
+      "detail": {
+        "harvested": 0,
+        "prompt": "ECheck Farm Plot13% · ripe in 6 d 8 h (about 2.5 h of play)"
+      }
+    }
+  ],
+  "raw": {
+    "step1": {
+      "title": "Tutorial 14/18 · A first crop",
+      "body": "Seeds and compost are in your pack. Build a Farm Plot (B → Farm Plot) beside your shelter, then press E on it to plant.",
+      "seeds": 4,
+      "compost": 6,
+      "timber": 4,
+      "gift": true,
+      "beacon": [
+        8,
+        14
+      ]
+    },
+    "beaconOnPlot": 0,
+    "promptBefore": "EPlant Farm Plothold: dismantle",
+    "step2": {
+      "planted": "carrot",
+      "onbStep": 14,
+      "nextTitle": "Tutorial 15/18 · Look after yourself",
+      "seasonCard": true,
+      "seasonText": "A year is 28 days: spring, summer, autumn, winter, 7 days each. It is spring now.Each seed grows only in the seasons on its label. Out of season it stalls, and winter frost kills tender crops.Plant before a season ends so the crop can ripen. Watered, tended soil grows faster."
+    },
+    "step3": {
+      "prompt": "ECheck Farm Plot0% · ripe in 4 d 11 h (about 1.8 h of play)",
+      "card": "🌱 Carrots: 0% grown · ripe in 4 d 11 h (about 1.8 h of play)",
+      "cardShown": true
+    },
+    "step4": {
+      "jumps": 30,
+      "gameHours": 360,
+      "timeline": [
+        14,
+        21,
+        34,
+        46,
+        58,
+        69,
+        82,
+        93,
+        5,
+        15,
+        27,
+        36,
+        47,
+        57,
+        67,
+        76,
+        86,
+        94,
+        5,
+        15,
+        26,
+        36,
+        47,
+        57,
+        68,
+        77,
+        88,
+        96,
+        5,
+        13
+      ],
+      "ripe": false,
+      "reminderToast": null,
+      "reminders": 0,
+      "beacon": "",
+      "card": "🌱 Potatos: 13% grown · ripe in 6 d 8 h (about 2.5 h of play)",
+      "remindersAfter": 0
+    },
+    "harvestPrompt": "ECheck Farm Plot13% · ripe in 6 d 8 h (about 2.5 h of play)",
+    "harvested": 0,
+    "seasonCardAgain": false
+  },
+  "pageErrors": [],
+  "pass": false
+}

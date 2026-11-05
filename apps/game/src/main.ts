@@ -133,16 +133,18 @@ async function start() {
     svc.safeMoment();
     ui.showMenu({ hasSave: true, username: svc.account.username ?? null });
   });
-  ui.setRespawnHandler(() => undefined);
+  ui.setRespawnHandler(() => game.respawn());
   ui.setDeviceReport(() => game.perf.report());
   ui.setMinimap((ctx, w, h) => drawMinimap(game, ctx, w, h, 0.9));
   ui.setMapDraw((ctx, w, h) => drawMap(game, ctx, w, h));
   ui.setJournalSource(() => journal(game));
   new CoopView(game, svc.coop);
   const trader = new Trader(game);
+  traderRef = () => ({ x: trader.pos.x, z: trader.pos.z, call: !!game.save.world.flags['trader:mentioned'] && !game.save.world.flags['trader:met'] });
   (window as unknown as { __trader: unknown }).__trader = trader;
   new Markers(game);
-  new Guide(game, ui);
+  const guide = new Guide(game, ui);
+  (window as unknown as { __guide: unknown }).__guide = guide;
   town.onTalk = (s) => {
     const wrap = document.createElement('div');
     const traits = s.traits.join(' · ');
@@ -180,7 +182,11 @@ async function start() {
   game.tickers.push(() => {
     if (ui.openScreen === 'ledger' && game.save) game.save.world.flags['ledgerOpened'] = true;
   });
-  (window as unknown as { __raids: unknown }).__raids = new Raids(game, enemies);
+  const raids = new Raids(game, enemies);
+  (window as unknown as { __raids: unknown }).__raids = raids;
+  guide.raidSource = () => raids.status();
+  guide.recoverySource = () => raids.recovery();
+  raidRef = () => raids.status();
   const { Restoration } = await import('./game/restoration');
   const restoration = new Restoration(game);
   game.restorationAt = (x, z) => restoration.stateAt(x, z);
@@ -191,6 +197,58 @@ async function start() {
   const { Story } = await import('./game/story');
   const story = new Story(game, ui);
   ui.storySource = () => story.info();
+  // a raid warning or a recovery objective outranks the story step: lead the player home
+  const THREE = await import('three');
+  const { S } = await import('./ui/strings');
+  const { isNight } = await import('@dg/sim');
+  const { HAVEN_SAFE_R } = await import('./game/enemies');
+  const havenTarget = (label: string) => {
+    const sp = game.layout.spawn;
+    return { pos: new THREE.Vector3(sp.x, game.view.surface(sp.x, sp.z) + 1.5, sp.z), label, kind: 'haven' };
+  };
+  const { FarmGuide } = await import('./game/farmguide');
+  const farm = new FarmGuide(game, ui);
+  game.farmHooks = farm;
+  guide.cropSource = () => farm.status();
+  (window as unknown as { __farm: unknown }).__farm = farm;
+  game.onDeathRecap = (r) => {
+    const kind = r.cause.startsWith('bleed:') ? r.cause.slice(6) : r.cause;
+    const foe = S.enemy[kind];
+    const cause = r.cause.startsWith('bleed:') && foe ? S.death.bledAfter(foe.name) : foe ? S.death.killedBy(foe.name) : (S.death.causes[r.cause] ?? S.causeUnknown);
+    const night = isNight(game.save.world.hour);
+    const tip = foe && night && r.fromHaven > 100 ? S.death.tips.night : r.cause.startsWith('bleed:') ? S.death.tips.bleed : foe ? foe.counter : (S.death.tips[r.cause] ?? S.death.tips.exposure);
+    ui.showDeathRecap({ cause, where: S.death.where(r.district, r.fromHaven), tip, kept: S.death.kept(r.kept), dropped: r.dropped ? S.death.satchel(r.dropped) : S.death.nothingLost });
+  };
+  // the satchel dropped on death, while any of it is still on the ground
+  const satchelTarget = () => {
+    const f = game.save.world.flags['satchel'];
+    if (typeof f !== 'string') return null;
+    const [x, z] = f.split(',').map(Number);
+    if (!game.save.world.drops.some((d) => Math.hypot(d.x - x, d.z - z) < 2.5 && d.items.length)) {
+      delete game.save.world.flags['satchel'];
+      return null;
+    }
+    return { pos: new THREE.Vector3(x, game.view.surface(x, z) + 1, z), label: S.death.satchelTarget, kind: 'satchel' };
+  };
+  // one-time note the first time the player walks back into the Haven safe zone
+  let wasOut = false;
+  game.tickers.push(() => {
+    if (game.mode !== 'play' || !game.save) return;
+    const d = Math.hypot(game.player.pos.x - game.layout.spawn.x, game.player.pos.z - game.layout.spawn.z);
+    if (d > HAVEN_SAFE_R + 20) wasOut = true;
+    else if (wasOut && d < HAVEN_SAFE_R && !game.save.world.flags['tip:safeZone']) {
+      game.save.world.flags['tip:safeZone'] = true;
+      game.toast(S.death.safeZone, 'warm');
+    }
+  });
+  const objective = () => {
+    const r = raids.status();
+    if (r && r.phase === 'warning' && Math.hypot(game.player.pos.x - game.layout.spawn.x, game.player.pos.z - game.layout.spawn.z) > 40) return havenTarget(S.raid.targetHaven);
+    if (raids.recovery()) return havenTarget(S.raid.recoverTarget);
+    return satchelTarget() ?? farm.ripeTarget() ?? story.target();
+  };
+  guide.objectiveSource = objective;
+  objectiveRef = objective;
   const { rankOf } = await import('./game/town');
   // review tools read sim data tables (salvage yields, recipes) through this
   (window as unknown as { __sim: unknown }).__sim = await import('@dg/sim');
@@ -243,6 +301,27 @@ async function start() {
     const head = document.createElement('p');
     head.textContent = `Guild chits: ${trader.chits()}  ·  Reputation: ${Math.round(trader.rep)}`;
     wrap.append(head);
+    if (!game.save.world.flags['trader:gift']) {
+      // round 6: a small free trade on the first visit
+      const box = document.createElement('div');
+      box.className = 'li welcome-trade';
+      box.setAttribute('data-welcome-trade', '');
+      const main = document.createElement('div');
+      main.className = 'main';
+      const b = document.createElement('b');
+      b.textContent = S.trader.giftTitle;
+      const sm = document.createElement('small');
+      sm.textContent = S.trader.giftText;
+      main.append(b, sm);
+      const take = document.createElement('button');
+      take.className = 'btn small primary';
+      take.textContent = S.trader.giftBtn;
+      take.addEventListener('click', () => {
+        if (trader.welcomeGift()) openTrade();
+      });
+      box.append(main, take);
+      wrap.append(box);
+    }
     const ct = trader.contract();
     if (ct?.item && ct.count) {
       const box = document.createElement('div');
@@ -441,6 +520,9 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.restore();
   drawNodes(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
   if (game.pk('tracker') > 0) drawWildlife(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
+  drawObjective(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
+  drawRaid(game, ctx, w, h, Math.PI - game.camera.yaw);
+  drawTrader(game, ctx, w, h, px, pz, span, Math.PI - game.camera.yaw);
   ctx.fillStyle = '#e8a65a';
   ctx.beginPath();
   ctx.moveTo(w / 2, h / 2 - 7);
@@ -448,6 +530,116 @@ function drawMinimap(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: n
   ctx.lineTo(w / 2 - 5, h / 2 + 5);
   ctx.closePath();
   ctx.fill();
+}
+
+/** current objective (set once Story exists) */
+let objectiveRef: (() => { pos: { x: number; z: number }; label: string } | null) | null = null;
+
+/** Odile's stall (set once the Trader exists); `call` = mentioned but not yet visited */
+let traderRef: (() => { x: number; z: number; call: boolean }) | null = null;
+
+/** trader: a gold coin on the minimap (edge-pinned and pulsing until the first visit) */
+function drawTrader(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {
+  const t = traderRef?.();
+  if (!t || !game.save) {
+    game.traderOnMap = null;
+    return;
+  }
+  const k = w / (span * 2);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const dx = t.x / 4 - px, dz = t.z / 4 - pz;
+  let rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+  const edge = Math.max(Math.abs(rx), Math.abs(rz)) / (span * 0.88);
+  if (edge > 1 && !t.call) {
+    game.traderOnMap = null;
+    return;
+  }
+  if (edge > 1) {
+    rx /= edge;
+    rz /= edge;
+  }
+  const x = w / 2 + rx * k, y = h / 2 + rz * k;
+  const r = t.call ? 5 + 1.5 * Math.sin(performance.now() / 160) : 4.5;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffd27a';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#3a2a08';
+  ctx.stroke();
+  ctx.fillStyle = '#3a2a08';
+  ctx.font = 'bold 8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('¢', x, y + 0.5);
+  game.traderOnMap = { x, y, call: t.call };
+}
+
+/** announced raid (set once Raids exists) */
+let raidRef: (() => { phase: string; dir: number } | null) | null = null;
+
+/** raid direction: a red chevron on the minimap edge, pointing in from where they come */
+function drawRaid(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, rot: number): void {
+  const r = raidRef?.();
+  if (!r) {
+    game.raidOnMap = null;
+    return;
+  }
+  const dx = Math.cos(r.dir), dz = Math.sin(r.dir);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+  const m = Math.max(Math.abs(rx), Math.abs(rz));
+  const x = w / 2 + (rx / m) * (w / 2 - 9), y = h / 2 + (rz / m) * (h / 2 - 9);
+  const blink = 0.6 + 0.4 * Math.sin(performance.now() / 140);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.atan2(rz, rx) + Math.PI); // point inward
+  ctx.globalAlpha = blink;
+  ctx.fillStyle = '#ff4a3a';
+  ctx.strokeStyle = '#2a0503';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(8, 0);
+  ctx.lineTo(-6, -7);
+  ctx.lineTo(-2, 0);
+  ctx.lineTo(-6, 7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  game.raidOnMap = { x, y };
+}
+
+/** objective marker: a pulsing diamond, pinned to the minimap edge when out of range */
+function drawObjective(game: GameT, ctx: CanvasRenderingContext2D, w: number, h: number, px: number, pz: number, span: number, rot: number): void {
+  const o = objectiveRef?.();
+  if (!o) {
+    game.objectiveOnMap = null;
+    return;
+  }
+  const k = w / (span * 2);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const dx = o.pos.x / 4 - px, dz = o.pos.z / 4 - pz;
+  let rx = dx * cs - dz * sn, rz = dx * sn + dz * cs;
+  const edge = Math.max(Math.abs(rx), Math.abs(rz)) / (span * 0.88);
+  const pinned = edge > 1;
+  if (pinned) {
+    rx /= edge;
+    rz /= edge;
+  }
+  const x = w / 2 + rx * k, y = h / 2 + rz * k;
+  const pulse = 1 + 0.25 * Math.sin(performance.now() / 180);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = '#39e6d0';
+  ctx.strokeStyle = '#062420';
+  ctx.lineWidth = 2;
+  const s = 6 * pulse;
+  ctx.fillRect(-s, -s, s * 2, s * 2);
+  ctx.strokeRect(-s, -s, s * 2, s * 2);
+  ctx.restore();
+  game.objectiveOnMap = { x, y, pinned, label: o.label };
 }
 
 /** Tracker perk: hounds and boars within 80 m as brown dots */

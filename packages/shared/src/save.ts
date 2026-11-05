@@ -4,7 +4,7 @@
 import type { ConditionId, ItemStack } from './items';
 import type { RestorationState } from './world';
 
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 
 export type Difficulty = 'chill' | 'standard' | 'hard';
 
@@ -76,6 +76,10 @@ export interface CropSave {
   water: number; // 0..1
   nutrients: number; // 0..1
   lastCrop?: string;
+  /** game hour it ripened */
+  ripeAt?: number;
+  /** planted by the player: farmers leave it ripe for them for a few hours (round 6 harvest reminder) */
+  mine?: boolean;
 }
 
 export interface DistrictSave {

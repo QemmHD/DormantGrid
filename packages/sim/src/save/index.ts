@@ -244,6 +244,8 @@ function validateCrop(v: unknown, path: string): CropSave {
     nutrients: num(o.nutrients, `${path}.nutrients`, 0, 1),
   };
   if (o.lastCrop !== undefined) c.lastCrop = str(o.lastCrop, `${path}.lastCrop`, 32);
+  if (o.ripeAt !== undefined) c.ripeAt = num(o.ripeAt, `${path}.ripeAt`, -1e9, 1e9);
+  if (o.mine === true) c.mine = true;
   return c;
 }
 
@@ -413,7 +415,21 @@ export const MIGRATIONS: Record<number, (raw: Obj) => Obj> = {
     retroactiveProgress(p, w);
     return { ...raw, schema: 3, player: p, world: w };
   },
+  // v3 -> v4 (round 6): the tutorial gained a "plant a first crop" step at index
+  // ONB_PLANT_STEP. world.flags.onb is a step index, so saves at or past it shift by one.
+  3: (raw) => {
+    const w = isObj(raw.world) ? { ...raw.world } : {};
+    if (isObj(w.flags)) {
+      const f = { ...w.flags };
+      if (typeof f.onb === 'number' && f.onb >= ONB_PLANT_STEP) f.onb = f.onb + 1;
+      w.flags = f;
+    }
+    return { ...raw, schema: 4, world: w };
+  },
 };
+
+/** index of the tutorial's "plant a first crop" step (apps/game content/onboarding.ts) */
+export const ONB_PLANT_STEP = 13;
 
 /**
  * Move a save to a newer worldgen version. Versions only append props, so all

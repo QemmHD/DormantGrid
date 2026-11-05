@@ -9,6 +9,7 @@ import type { UI } from '../ui/ui';
 import { KIND_COLOR } from './markers';
 import { rankOf } from './town';
 import { S } from '../ui/strings';
+import type { RaidStatus } from './raids';
 
 interface Advice {
   text: string;
@@ -33,6 +34,22 @@ export class Guide {
   private tipUntil = 0;
   private v = new THREE.Vector3();
   private lastStep = -1;
+  /** current quest objective in the world (set by main from Story) */
+  objectiveSource: (() => { pos: THREE.Vector3; label: string } | null) | null = null;
+  private targetLabel = '';
+  /** what the beacon points at right now (checks) */
+  get beaconTarget(): { pos: THREE.Vector3 | null; label: string } {
+    return { pos: this.target, label: this.targetLabel };
+  }
+  /** announced/ongoing raid (set by main from Raids) */
+  raidSource: (() => RaidStatus | null) | null = null;
+  /** recovery objective after a lost raid (set by main from Raids) */
+  recoverySource: (() => { title: string; text: string } | null) | null = null;
+  /** soonest crop's growth line (set by main from FarmGuide) */
+  cropSource: (() => { text: string; hours: number } | null) | null = null;
+  private cropEl: HTMLDivElement;
+  private raidEl: HTMLDivElement;
+  private raidKey = '';
   private rankEl: HTMLDivElement;
   private rankLbl: HTMLElement;
   private rankFill: HTMLElement;
@@ -80,7 +97,16 @@ export class Guide {
     this.rankNext = document.createElement('div');
     this.rankNext.className = 'rnext';
     this.rankEl.append(top, this.rankNext);
-    this.el.append(this.titleEl, this.bodyEl, this.progEl, this.rankEl, row);
+    // raid warning: who, from where, countdown, and a short prep checklist
+    this.raidEl = document.createElement('div');
+    this.raidEl.className = 'oraid';
+    this.raidEl.setAttribute('data-raidcard', '');
+    this.raidEl.style.display = 'none';
+    this.cropEl = document.createElement('div');
+    this.cropEl.className = 'ocrop';
+    this.cropEl.setAttribute('data-cropline', '');
+    this.cropEl.style.display = 'none';
+    this.el.append(this.titleEl, this.bodyEl, this.progEl, this.raidEl, this.cropEl, this.rankEl, row);
     for (const b of [next, help, this.skipBtn]) {
       b.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
       b.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -153,6 +179,8 @@ export class Guide {
         return placed('workbench1') ?? plot;
       case 'bed':
         return placed('bed') ?? plot;
+      case 'farmPlot':
+        return placed('farm_plot') ?? new THREE.Vector3(s.x + 8, g.view.surface(s.x + 8, s.z + 14) + 0.5, s.z + 14);
       default:
         return null;
     }
@@ -171,6 +199,50 @@ export class Guide {
     this.rankNext.textContent = next.length ? S.rankbar.next(next.map((u) => u.label).join(' · ')) : S.rankbar.max;
   }
 
+  private refreshRaid(): void {
+    const r = this.raidSource?.() ?? null;
+    if (!r) {
+      if (this.raidKey) {
+        this.raidKey = '';
+        this.raidEl.style.display = 'none';
+        this.el.classList.remove('raid');
+      }
+      return;
+    }
+    const h = Math.floor(r.hoursLeft);
+    const m = Math.floor((r.hoursLeft - h) * 60);
+    const key = `${r.phase}:${h}:${m}:${r.prep.wall}:${r.prep.trap}:${r.prep.weapon}:${r.from}`;
+    if (key === this.raidKey) return;
+    const fresh = !this.raidKey;
+    this.raidKey = key;
+    this.raidEl.style.display = '';
+    this.el.classList.add('raid');
+    this.raidEl.replaceChildren();
+    const head = document.createElement('b');
+    head.textContent = S.raid.cardTitle(r.who, r.from);
+    const time = document.createElement('small');
+    time.className = 'rtime';
+    time.textContent = r.phase === 'active' ? S.raid.cardNow : S.raid.cardTime(h, m);
+    this.raidEl.append(head, time);
+    if (r.phase === 'warning') {
+      const ul = document.createElement('ul');
+      ul.className = 'rprep';
+      ul.setAttribute('aria-label', S.raid.prepTitle);
+      for (const [done, text] of [[r.prep.wall, S.raid.prepWall], [r.prep.trap, S.raid.prepTrap], [r.prep.weapon, S.raid.prepWeapon]] as [boolean, string][]) {
+        const li = document.createElement('li');
+        li.className = done ? 'done' : '';
+        li.textContent = `${done ? '✓' : '○'} ${text}`;
+        ul.append(li);
+      }
+      this.raidEl.append(ul);
+    }
+    if (fresh) {
+      this.el.classList.remove('flash');
+      void this.el.offsetWidth;
+      this.el.classList.add('flash');
+    }
+  }
+
   refresh(): void {
     const g = this.game;
     if (!g.save || g.mode === 'menu' || g.mode === 'cinematic') {
@@ -181,6 +253,11 @@ export class Guide {
     this.el.style.opacity = '1';
     this.el.style.pointerEvents = ''; // CSS decides (short screens: text passes touches to the stick)
     this.refreshRank();
+    this.refreshRaid();
+    const crop = this.cropSource?.() ?? null;
+    this.cropEl.style.display = crop ? '' : 'none';
+    if (crop && this.cropEl.textContent !== `🌱 ${crop.text}`) this.cropEl.textContent = `🌱 ${crop.text}`;
+    this.cropEl.classList.toggle('ripe', !!crop && crop.hours <= 0);
     const touch = g.input.usingTouch || document.documentElement.classList.contains('touch');
     const step = g.onbStep < ONBOARDING.length ? ONBOARDING[g.onbStep] : null;
     this.skipBtn.style.display = step ? '' : 'none';
@@ -196,11 +273,16 @@ export class Guide {
         this.lastStep = g.onbStep;
       }
     } else {
-      const obj = g.objectives().find((o) => !o.done);
+      const obj = this.recoverySource?.() ?? g.objectives().find((o) => !o.done);
       this.titleEl.textContent = obj ? 'Objective' : 'Free play';
       this.bodyEl.textContent = obj ? obj.text : 'Rebuild the city your way. Tap Next? for a suggestion.';
       this.progEl.textContent = obj ? obj.title : '';
-      if (Date.now() > this.adviceUntil) this.target = null;
+      // the quest objective drives the world beacon (and the minimap marker via main)
+      if (Date.now() > this.adviceUntil) {
+        const o = this.objectiveSource?.() ?? null;
+        this.target = o ? o.pos : null;
+        this.targetLabel = o ? o.label : '';
+      }
     }
   }
 
@@ -330,7 +412,7 @@ export class Guide {
       const r = this.el.getBoundingClientRect();
       if (sx > r.left - 24 && sx < r.right + 24 && sy > r.top - 40 && sy < r.bottom + 30) sx = r.right + 34;
       this.beacon.style.transform = `translate(${sx}px, ${sy}px)`;
-      const lbl = `${Math.round(dist)} m`;
+      const lbl = this.targetLabel && Date.now() > this.adviceUntil ? `${this.targetLabel} · ${Math.round(dist)} m` : `${Math.round(dist)} m`;
       if (this.beaconLbl.textContent !== lbl) this.beaconLbl.textContent = lbl;
     }
   }
