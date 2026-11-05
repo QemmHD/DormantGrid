@@ -237,3 +237,13 @@ PASS P15-restoration-payoff: lamps 0→72, decor 104, walkers 3, hazards near pl
 10. **18** Shadow cost on medium (needs a device report).
 11. **19 (rest)** Survivor avoidance, `scanTargets` allocations, mouse-look hint, daylight window emission.
 12. **20** Depth systems.
+
+### Deploy (main `ee22979`)
+- CI: "Deploy (Cloudflare)" run 23 and "Deploy fallback (GitHub Pages)" run 21 both succeeded.
+- Live smoke, Worker (https://dormant-grid.dg-server.workers.dev): 14/14 pass, serving the same `index-oZau0SM8.js` as the local build.
+- Live smoke, Pages (https://qemmhd.github.io/DormantGrid, `--offline`; it has no API): pass. Round-4 strings are present in its precached assets.
+- Gates on the merged build:
+  - `npm run check` (101 sim + 36 + 61 tests, lint 0 warnings, bundle 0.61 MB, secret scan clean).
+  - smoke, feel, guide, systems-flow, grid-flow, raid-flow, defense-flow (3/3 after the wall-footprint fix), walk (world hash `ff749351`), models-flow.
+  - budget-tris: downtown 292k tris / 58 calls at medium.
+  - controls2, session 30, progress-check, pack-step, smoke-check, restore-check.
