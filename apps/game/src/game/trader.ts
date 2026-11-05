@@ -1,7 +1,7 @@
 // Meridian Guild trader at the Haven camp (barter in Guild chits) and
 // readable lore terminals scattered through the ruins.
 import * as THREE from 'three';
-import { FACTION_MAP, addItem, buyPrice, changeRep, countItem, generateContract, getItem, removeItem, sellPrice, type Contract } from '@dg/sim';
+import { FACTION_MAP, XP, addItem, buyPrice, changeRep, countItem, generateContract, getItem, removeItem, sellPrice, type Contract } from '@dg/sim';
 import { Rng } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import { LORE_TERMINALS } from '../content/lore';
@@ -66,6 +66,8 @@ export class Trader {
   private handle(tapped: boolean): boolean {
     if (tapped) {
       const f = FACTION_MAP.get(FACTION);
+      // campaign: "Talk to Odile, the Meridian Guild factor"
+      this.game.save.world.flags['talk:guild_factor'] = true;
       this.game.bus.emit({ type: 'subtitle', who: 'Odile', text: f?.lines.greet ?? 'Show me what you found.' });
       this.onOpen?.();
     }
@@ -176,6 +178,7 @@ export class Trader {
     w.factions[FACTION] = changeRep(w.factions, FACTION, c.rep);
     w.flags['contract'] = '';
     w.flags['contractsDone'] = Number(w.flags['contractsDone'] ?? 0) + 1;
+    this.game.award(XP.contract);
     audio.play('levelUp', { vol: 0.6 });
     this.game.toast(`Contract done: +${c.rewardChits} Guild chits, Guild reputation up.`, 'warm');
     this.game.bus.emit({ type: 'inventory' });
@@ -196,7 +199,10 @@ export class Trader {
     w.flags[`lore:${pick.id}`] = true;
     audio.play('node');
     g.fx.glowBurst(p.x, g.view.height(p.x, p.z) + 1.2, p.z, 8);
-    if (first) g.toast('Lore added to your journal.', 'warm');
+    if (first) {
+      g.toast('Lore added to your journal.', 'warm');
+      g.award(XP.lore);
+    }
     this.onLore?.(pick.title, pick.header, pick.body);
   }
 

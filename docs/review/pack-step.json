@@ -1,0 +1,37 @@
+{
+  "cases": {
+    "touch-tap": {
+      "stepBefore": 4,
+      "cardText": "Tutorial 1/17 · Get movingDrag anywhere on the left side to walk.Next?HelpSkip",
+      "opened": "inventory",
+      "stepAfter": 5,
+      "pass": true,
+      "pageErrors": 0
+    },
+    "Tab": {
+      "stepBefore": 4,
+      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Next?HelpSkip",
+      "opened": "inventory",
+      "stepAfter": 5,
+      "pass": true,
+      "pageErrors": 0
+    },
+    "KeyI": {
+      "stepBefore": 4,
+      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Next?HelpSkip",
+      "opened": "inventory",
+      "stepAfter": 5,
+      "pass": true,
+      "pageErrors": 0
+    },
+    "early-open": {
+      "stepBefore": 3,
+      "cardText": "Tutorial 1/17 · Get movingWalk with W A S D.Next?HelpSkip",
+      "opened": "inventory",
+      "stepAfter": 5,
+      "pass": true,
+      "pageErrors": 0
+    }
+  },
+  "pass": true
+}

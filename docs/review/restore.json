@@ -1,0 +1,42 @@
+{
+  "hour": 22.5,
+  "thresholds": {
+    "lamps": 6,
+    "decor": 10,
+    "walkers": 2,
+    "cleared": 5,
+    "pixelFrac": 0.12
+  },
+  "before": {
+    "litLamps": 0,
+    "decor": 0,
+    "walkers": 0,
+    "cleared": 12,
+    "effectiveState": 0,
+    "hazardsVisibleWithin60m": 42,
+    "downtownState": 0,
+    "nodesOnline": 0
+  },
+  "after": {
+    "litLamps": 72,
+    "decor": 104,
+    "walkers": 3,
+    "cleared": 165,
+    "effectiveState": 3,
+    "hazardsVisibleWithin60m": 10,
+    "downtownState": 3,
+    "nodesOnline": 3
+  },
+  "pixelFrac": 0.128,
+  "checks": {
+    "lampsBeforeZero": true,
+    "lamps": true,
+    "decor": true,
+    "walkers": true,
+    "cleared": true,
+    "pixels": true,
+    "noErrors": true
+  },
+  "pass": true,
+  "pageErrors": []
+}

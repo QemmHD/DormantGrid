@@ -148,10 +148,10 @@ describe('save safety across worldgen versions', () => {
     expect(json.length).toBeLessThan(20_000);
   });
 
-  it('a schema-1 save migrates to schema 2 with genVersion 1 and keeps its removed ids', () => {
+  it('a schema-1 save migrates to the current schema with genVersion 1 and keeps its removed ids', () => {
     const raw = schema1Save();
     const m = migrateSave(JSON.parse(JSON.stringify(raw)));
-    expect(m.schema).toBe(2);
+    expect(m.schema).toBe(SAVE_SCHEMA_VERSION);
     expect(m.world.genVersion).toBe(1);
     expect(m.world.removedProps).toEqual([...((raw.world as { removedProps: number[] }).removedProps)].sort((a, b) => a - b));
     expect(m.world.removedPieces).toEqual({ '3': [0, 2] });

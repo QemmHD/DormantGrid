@@ -3,8 +3,9 @@
 // restoration showpiece (lights ripple on outward from the node).
 import * as THREE from 'three';
 import { RESTORATION_NAMES, hash2, type ControlNodeDef, type RestorationState } from '@dg/shared';
-import { NODE_RANGE, RELAYS_PER_NODE, restorationFor, routeRelay, startReboot, tickReboot, type NodeEvent, type NodeReboot } from '@dg/sim';
+import { NODE_CUSTODIAN_REP, NODE_RANGE, PERK_POINT_PER_NODE, RELAYS_PER_NODE, XP, applyRep, restorationFor, routeRelay, startReboot, tickReboot, type NodeEvent, type NodeReboot } from '@dg/sim';
 import { MeshBuilder } from '../render/geo';
+import { S } from '../ui/strings';
 import { makeChunkMaterial } from '../render/materials';
 import { audio } from '../audio/audio';
 import { NODE_LINES, RESTORATION_LINES, DISTRICT_INTROS } from '../content/campaign';
@@ -274,6 +275,10 @@ export class Grid {
     const st = restorationFor({ nodesOnline: ds?.nodesOnline.length ?? 1, nodesTotal: total, residents, rank: Number(w.flags['rank'] ?? 1), key: d.key });
     if (ds) ds.state = Math.max(before, st) as RestorationState;
     w.flags[`rebooted:${d.key}`] = Number(w.flags[`rebooted:${d.key}`] ?? 0) + 1;
+    // progression: XP, a perk point, and the Custodians notice someone is maintaining the Grid
+    applyRep(w, { custodians: NODE_CUSTODIAN_REP });
+    g.award(XP.node);
+    g.givePerkPoints(PERK_POINT_PER_NODE, S.prog.nodeOnline);
     this.active = null;
     this.activeView = null;
     for (const m of v.relayMeshes) m.visible = false;
@@ -283,6 +288,7 @@ export class Grid {
     this.beam.visible = true;
     (this.beam.material as THREE.MeshBasicMaterial).opacity = 0.9;
     g.fx.glowBurst(v.def.x, y + 3.6, v.def.z, 40);
+    this.onOnline?.(v.def.x, y, v.def.z);
     audio.play('powerUp', { vol: 1 });
     setTimeout(() => audio.play('levelUp', { vol: 0.8 }), 900);
     g.camera.addTrauma(0.35);
@@ -345,6 +351,9 @@ export class Grid {
     if (ev.length) this.handleEvents(ev);
     if (this.active && this.active.phase === 'syncing' && !holding && g.input.wasReleased('interact')) g.bus.emit({ type: 'progress', value: null });
   }
+
+  /** called when a node this player rebooted comes online (restoration cinematic beat) */
+  onOnline: ((x: number, y: number, z: number) => void) | null = null;
 
   /** A teammate brought a node online: recompute restoration and refresh visuals. */
   remoteOnline(_node: number, district: number): void {

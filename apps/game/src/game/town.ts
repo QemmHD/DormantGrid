@@ -3,7 +3,7 @@
 // One model drives near and far, so walking up to someone never pops.
 import * as THREE from 'three';
 import { Rng, hash2, type SurvivorSave } from '@dg/shared';
-import { barkFor, buildNavGrid, computeNeeds, cropStage, findPath, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
+import { XP, barkFor, clinicOn, irrigationOn, buildNavGrid, computeNeeds, cropStage, findPath, defenseScore, generateSurvivor, getPiece, survivorCap, survivorTarget, tickTown, townRank, type JobId, type TownEvent } from '@dg/sim';
 import type { WorldSave } from '@dg/shared';
 import { CharacterRig, randomLook } from '../render/character';
 import type { Game } from './game';
@@ -119,7 +119,12 @@ export class Town {
     const w = this.game.save.world;
     const rank = rankOf(w).rank;
     const restored = w.districts.filter((d) => d.state >= 2).length;
-    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: restored * 2 };
+    const keys = this.game.layout.districts.map((d) => d.key);
+    // Grid water reaches the plots once a Waterworks pump syncs; a Powered hospital opens the clinic
+    // perks: Heart of Haven (+mood while you are in town), Green Thumb (crop growth)
+    const inTown = Math.hypot(this.game.player.pos.x - this.home.x, this.game.player.pos.z - this.home.z) < 60;
+    const mood = restored * 2 + (inTown ? this.game.pk('townMood') : 0);
+    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: mood, irrigation: irrigationOn(w, keys), clinic: clinicOn(w, keys), growthBonus: this.game.pk('growth') };
   }
 
   /**
@@ -176,7 +181,10 @@ export class Town {
       }
       if (e.type === 'arrival' || e.type === 'death' || e.type === 'injury' || e.type === 'blueprint') {
         this.game.toast(e.text, e.type === 'arrival' || e.type === 'blueprint' ? 'warm' : 'bad');
-        if (e.type === 'arrival') audio.play('levelUp', { vol: 0.4 });
+        if (e.type === 'arrival') {
+          audio.play('levelUp', { vol: 0.4 });
+          this.game.award(XP.arrival);
+        }
       }
     }
     // one clear message instead of one per survivor

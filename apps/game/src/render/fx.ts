@@ -240,7 +240,7 @@ export class FX {
   /** Rising smoke puff (camp fires, chimneys). */
   smoke(x: number, y: number, z: number, color = 0x5e5a55): void {
     // soft, growing, fading puff drifting up and downwind (was an opaque box, review finding #2)
-    this.puff(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, color, 0.5 + Math.random() * 0.3, 0.7, 3.2 + Math.random() * 1.6, 0.62, (Math.random() - 0.5) * 0.3 + 0.25, 0.8 + Math.random() * 0.35, (Math.random() - 0.5) * 0.3, 0.25);
+    this.puff(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, color, 0.8 + Math.random() * 0.4, 1.0, 3.4 + Math.random() * 1.6, 0.78, (Math.random() - 0.5) * 0.3 + 0.25, 0.8 + Math.random() * 0.35, (Math.random() - 0.5) * 0.3, 0.25);
   }
 
   sparks(x: number, y: number, z: number, n = 8, color = 0xffc070): void {

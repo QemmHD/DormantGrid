@@ -16,7 +16,7 @@ export const PERKS: readonly PerkDef[] = [
   P('scavenger', 1, 'light_fingers', 'Light Fingers', 'Deconstruct 15% faster.', { deconSpeed: 0.15 }),
   P('scavenger', 2, 'pack_mule', 'Pack Mule', '+15 kg carry weight.', { carry: 15 }),
   P('scavenger', 3, 'eye_for_wire', 'Eye for Wire', 'Wiring yields +1 from electronics.', { wiringBonus: 1 }),
-  P('scavenger', 4, 'careful_hands', 'Careful Hands', 'Glass no longer breaks when salvaged.', { glassSafe: 1 }),
+  P('scavenger', 4, 'careful_hands', 'Careful Hands', 'Salvage one extra glass from anything that has it.', { glassSafe: 1 }),
   P('scavenger', 5, 'blueprint_hunter', 'Blueprint Hunter', 'Double chance to find blueprints.', { bpChance: 1 }),
   P('scavenger', 6, 'quiet_work', 'Quiet Work', 'Deconstruction makes half the noise.', { deconNoise: -0.5 }),
   P('scavenger', 7, 'magnet', 'Magnet', 'Pickup range +100%.', { pickupRange: 1 }),

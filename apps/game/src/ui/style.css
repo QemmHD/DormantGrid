@@ -555,3 +555,39 @@ html.touch .prompt { display: none; }
   .district-banner p { display: none; }
   .district-banner h2 { font-size: 22px; }
 }
+
+/* ---- round 4: perks, next step, decisions ---- */
+.tab { min-height: 44px; }
+.topbar .icon-btn { position: relative; }
+.icon-btn .badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ffd27a; color: #2a1d05; font-size: 11px; font-weight: 800; display: none; place-items: center; line-height: 18px; text-align: center; }
+.icon-btn .badge.on { display: block; animation: badge-pop 1.6s ease-in-out infinite; }
+@keyframes badge-pop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+.perk-head { display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); margin-bottom: 8px; }
+.perk-head .xpbar { height: 10px; border-radius: 5px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.perk-head .xpbar i { display: block; height: 100%; background: linear-gradient(90deg, #e8a65a, #ffd27a); border-radius: 5px; }
+.perk-head small { color: var(--text-dim); font-size: calc(12px * var(--text-scale)); }
+.perk-head .pts.on { color: #ffd27a; }
+.li.perk { min-height: 60px; cursor: default; }
+.li.perk .tierno { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; font-weight: 800; border: 1px solid var(--line); color: var(--text-dim); }
+.li.perk.owned { border-color: rgba(255,210,122,0.5); background: rgba(255,210,122,0.07); }
+.li.perk.owned .tierno { background: #ffd27a; color: #2a1d05; border-color: transparent; }
+.li.perk .check { color: #ffd27a; font-weight: 800; font-size: 20px; padding: 0 10px; }
+.li.perk .btn { min-height: 44px; min-width: 72px; }
+.next-step { display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(57,230,208,0.45); background: rgba(57,230,208,0.08); box-shadow: inset 3px 0 0 var(--accent); }
+.next-step .kicker { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.next-step b { font-size: calc(15px * var(--text-scale)); }
+.next-step small { color: var(--text-dim); font-size: calc(12px * var(--text-scale)); }
+.next-step .btn { justify-self: start; min-height: 44px; margin-top: 6px; }
+.rep-line { color: var(--text-dim); font-size: calc(12px * var(--text-scale)); margin: 0 0 8px; }
+.choice-list { margin-top: 10px; max-height: 52vh; overflow-y: auto; }
+.li.choice { min-height: 56px; }
+.li.choice:hover, .li.choice:active { border-color: var(--accent); }
+.li.choice.unmet small { color: var(--warm); }
+.dialog .ending p { margin: 0 0 10px; line-height: 1.5; }
+.li.obj.done-on .check { background: rgba(57,230,208,0.2); border-color: var(--accent); color: var(--accent); }
+.li.obj.ending-row.met .check { border-color: var(--accent); color: var(--accent); }
+/* round 4: 8 top-bar buttons (★ added) cover the clock on 568-px-wide phones (iPhone SE);
+   there the clock sits just under the top bar, left of the minimap */
+@media (max-width: 640px) {
+  .clock { top: calc(var(--safe-t) + 62px); left: auto; right: calc(var(--safe-r) + 118px); transform: none; text-align: right; }
+}

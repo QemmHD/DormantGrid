@@ -180,3 +180,40 @@ export const SERVICE_DESC: Record<ServiceId, string> = {
 export function servicesOpen(states: { key: DistrictKey; state: RestorationState }[]): ServiceId[] {
   return states.filter((d) => d.state >= 2).map((d) => DISTRICT_SERVICE[d.key]);
 }
+
+// ------------------------------------------------------------------ power + water
+/** A district supplies Grid power from Powered (2) upward, i.e. once every node in it is online. */
+export const POWERED_STATE = 2;
+
+interface GridWorld {
+  districts: readonly { state: number; nodesOnline: readonly number[] }[];
+}
+
+/** First non-Haven district that is Powered (it feeds Haven), or null. */
+export function havenPowerSource(world: GridWorld, keys: readonly DistrictKey[]): DistrictKey | null {
+  for (let i = 0; i < world.districts.length; i++) if (keys[i] !== 'haven' && world.districts[i].state >= POWERED_STATE) return keys[i] ?? null;
+  return null;
+}
+
+/**
+ * Does a machine that needsPower work in district `index`? Yes if that district is Powered;
+ * Haven is fed by any Powered district (the first full reboot lights Haven's workshop).
+ */
+export function districtPowered(world: GridWorld, keys: readonly DistrictKey[], index: number): boolean {
+  const d = world.districts[index];
+  if (!d) return false;
+  if (d.state >= POWERED_STATE) return true;
+  return keys[index] === 'haven' && havenPowerSource(world, keys) !== null;
+}
+
+/** Grid water reaches Haven's plots as soon as a Waterworks pump node syncs. */
+export function irrigationOn(world: GridWorld, keys: readonly DistrictKey[]): boolean {
+  const i = keys.indexOf('waterworks');
+  return i >= 0 && (world.districts[i]?.nodesOnline.length ?? 0) > 0;
+}
+
+/** Hospital Powered: clinic service (injured survivors heal faster). */
+export function clinicOn(world: GridWorld, keys: readonly DistrictKey[]): boolean {
+  const i = keys.indexOf('hospital');
+  return i >= 0 && (world.districts[i]?.state ?? 0) >= POWERED_STATE;
+}

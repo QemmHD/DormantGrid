@@ -2,7 +2,7 @@
 // and Ashline raiders. Simple readable state machines with telegraphed attacks,
 // full hit feedback, and fairness rules (no spawns in view, none in restored areas).
 import * as THREE from 'three';
-import { RESTORATION_FX, districtAt, getItem, getPiece } from '@dg/sim';
+import { RESTORATION_FX, XP, districtAt, getItem, getPiece } from '@dg/sim';
 import type { RestorationState } from '@dg/shared';
 import { MeshBuilder } from '../render/geo';
 import { makeChunkMaterial } from '../render/materials';
@@ -311,7 +311,8 @@ export class Enemies {
         continue;
       }
       const playerAlive = g.mode === 'play' || g.mode === 'build';
-      const sense = e.def.sense * (g.atm.daylight < 0.3 ? 0.75 : 1);
+      // Shadow perk: enemies notice you later
+      const sense = e.def.sense * (g.atm.daylight < 0.3 ? 0.75 : 1) * (1 - Math.min(0.6, g.pk('stealth')));
       switch (e.state) {
         case 'wander': {
           if ((dist < sense && playerAlive) || (e.wave && playerAlive)) {
@@ -338,7 +339,16 @@ export class Enemies {
             }
             const tp = e.targetPiece >= 0 ? g.base.pos.get(e.targetPiece) : undefined;
             if (tp) {
-              const pd = Math.hypot(tp.x - e.pos.x, tp.z - e.pos.z);
+              // distance to the piece's footprint, not its centre: a 4 m wall is hit anywhere
+              // along it (centre distance left raiders pushing forever at a wall's end)
+              const pc = g.save.world.pieces.find((q) => q.id === e.targetPiece);
+              let pd = Math.hypot(tp.x - e.pos.x, tp.z - e.pos.z);
+              const pdef = pc ? getPiece(pc.piece) : undefined;
+              if (pc && pdef) {
+                const odd = pc.rot % 2 === 1;
+                const hw = (odd ? pdef.size.d : pdef.size.w) / 2, hd = (odd ? pdef.size.w : pdef.size.d) / 2;
+                pd = Math.hypot(Math.max(Math.abs(tp.x - e.pos.x) - hw, 0), Math.max(Math.abs(tp.z - e.pos.z) - hd, 0)) + 0.6;
+              }
               if (pd < 2.2) {
                 e.state = 'windup';
                 e.t = 0;
@@ -542,8 +552,31 @@ export class Enemies {
       // soft aim assist: snap toward the nearest enemy in a wider arc
       return false;
     }
-    this.damage(best, damage, this.tmp.set(best.pos.x - pp.x, 0, best.pos.z - pp.z).normalize());
+    // Takedown perk: a hit on an enemy that has not noticed you yet
+    const sneak = best.state === 'wander' && !best.wave ? Math.max(1, g.pk('sneakMult')) : 1;
+    this.damage(best, damage * sneak, this.tmp.set(best.pos.x - pp.x, 0, best.pos.z - pp.z).normalize());
     return true;
+  }
+
+  /** nearest live enemy within r of (x,z), or null (turrets) */
+  nearest(x: number, z: number, r: number): Enemy | null {
+    let best: Enemy | null = null;
+    let bd = r;
+    for (const e of this.list) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.pos.x - x, e.pos.z - z);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /** damage from a non-player source (turrets) */
+  hitFrom(e: Enemy, damage: number, fromX: number, fromZ: number): void {
+    if (e.state === 'dead') return;
+    this.damage(e, damage, this.tmp.set(e.pos.x - fromX, 0, e.pos.z - fromZ).normalize());
   }
 
   private damage(e: Enemy, damage: number, dir: THREE.Vector3): void {
@@ -582,6 +615,7 @@ export class Enemies {
     g.grant(loot.filter((l) => getItem(l.item)), p.setY(p.y + 0.6));
     const f = g.save.world.flags;
     f[`killed:${e.kind}`] = Number(f[`killed:${e.kind}`] ?? 0) + 1;
+    g.award(e.kind === 'bot' ? XP.killHeavy : XP.kill);
   }
 
   clear(): void {
