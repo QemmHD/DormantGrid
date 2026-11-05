@@ -121,7 +121,10 @@ export class Town {
     const restored = w.districts.filter((d) => d.state >= 2).length;
     const keys = this.game.layout.districts.map((d) => d.key);
     // Grid water reaches the plots once a Waterworks pump syncs; a Powered hospital opens the clinic
-    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: restored * 2, irrigation: irrigationOn(w, keys), clinic: clinicOn(w, keys) };
+    // perks: Heart of Haven (+mood while you are in town), Green Thumb (crop growth)
+    const inTown = Math.hypot(this.game.player.pos.x - this.home.x, this.game.player.pos.z - this.home.z) < 60;
+    const mood = restored * 2 + (inTown ? this.game.pk('townMood') : 0);
+    return { difficulty: w.difficulty, home: this.home, rank, cap: survivorCap(rank), moodBonus: mood, irrigation: irrigationOn(w, keys), clinic: clinicOn(w, keys), growthBonus: this.game.pk('growth') };
   }
 
   /**

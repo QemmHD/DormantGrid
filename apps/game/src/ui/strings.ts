@@ -220,6 +220,7 @@ export const S = {
     take: 'Take',
     locked: (prev: string) => `Needs ${prev} first`,
     tier: (t: number) => `Tier ${t}`,
+    notYet: 'No effect in this build yet (it still unlocks the next tier)',
     taken: (name: string) => `Perk learned: ${name}.`,
     ownedCount: (n: number, total: number) => `${n} of ${total} perks learned`,
   },

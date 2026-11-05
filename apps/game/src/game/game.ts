@@ -832,7 +832,7 @@ export class Game implements GameAPI {
     if (def.kind === 'roof' || def.kind === 'floor') level += 1;
     const yaw = fwdYaw + (b.rot * Math.PI) / 2;
     const cand = snapPiece(b.piece, ax, level * 3, az, yaw);
-    const check = validatePlacement(this.save.world.pieces, { piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot });
+    const check = validatePlacement(this.save.world.pieces, { piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot }, this.pk('stability'));
     const cost = this.buildCost();
     const afford = hasAll(this.inv, cost);
     let blocked = false;
@@ -864,7 +864,7 @@ export class Game implements GameAPI {
       }
       takeItems(this.inv, cost);
       const id = this.pieceIdBase ? this.pieceIdBase + (this.save.world.nextPieceId++ % 1_000_000) : this.save.world.nextPieceId++;
-      const placed: PlacedPiece = { id, piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot, hp: def.hp };
+      const placed: PlacedPiece = { id, piece: b.piece, tier: b.tier as 0 | 1 | 2 | 3, x: cand.x, y: cand.y, z: cand.z, rot: cand.rot, hp: Math.round(def.hp * (b.tier === 2 ? 1 + this.pk('brickHp') : 1)) };
       if (def.storageSlots) placed.store = new Array(def.storageSlots).fill(null);
       this.save.world.pieces.push(placed);
       this.onWorldAction?.({ type: 'piecePlaced', piece: placed });
@@ -911,7 +911,7 @@ export class Game implements GameAPI {
       return Math.acos(Math.min(1, dot)) * 1.9 + d * 0.3 + extra;
     };
     this.save.world.drops.forEach((dp, i) => {
-      if (Math.hypot(dp.x - px, dp.z - pz) > INTERACT_RANGE) return;
+      if (Math.hypot(dp.x - px, dp.z - pz) > INTERACT_RANGE * (1 + this.pk('pickupRange'))) return;
       const sc = score(dp.x, dp.z, -1);
       if (sc < bestScore) {
         bestScore = sc;
@@ -1158,9 +1158,12 @@ export class Game implements GameAPI {
 
   rollYields(ys: readonly Yield[], mult: number): { item: string; n: number }[] {
     const out: { item: string; n: number }[] = [];
+    const bp = 1 + this.pk('bpChance');
+    const glass = this.pk('glassSafe');
     for (const y of ys) {
-      if (y.chance !== undefined && !this.rng.chance(y.chance)) continue;
-      const n = Math.round(this.rng.int(y.min, y.max) * mult);
+      // Blueprint Hunter doubles blueprint drop chances
+      if (y.chance !== undefined && !this.rng.chance(y.item.startsWith('bp.') ? Math.min(1, y.chance * bp) : y.chance)) continue;
+      const n = Math.round(this.rng.int(y.min, y.max) * mult) + (y.item === 'mat.glass' ? glass : 0);
       if (n > 0) out.push({ item: y.item, n });
     }
     return out;
@@ -1405,7 +1408,7 @@ export class Game implements GameAPI {
       audio.play(p.tier >= 2 ? 'hitStone' : 'hitWood', { pos, vol: 0.7 });
     }
     if (p.hp > 0) return;
-    const fallen = collapsePlacedAfterRemoval(w.pieces, id);
+    const fallen = collapsePlacedAfterRemoval(w.pieces, id, this.pk('stability'));
     const all = [id, ...fallen];
     for (const pid of all) this.onWorldAction?.({ type: 'pieceRemoved', id: pid });
     w.pieces = w.pieces.filter((x) => !all.includes(x.id));
@@ -1424,7 +1427,7 @@ export class Game implements GameAPI {
 
   private dismantlePlaced(p: PlacedPiece): void {
     const w = this.save.world;
-    const fallen = collapsePlacedAfterRemoval(w.pieces, p.id);
+    const fallen = collapsePlacedAfterRemoval(w.pieces, p.id, this.pk('stability'));
     const all = [p.id, ...fallen];
     const refunds: { item: string; n: number }[] = [];
     for (const id of all) {
@@ -1588,8 +1591,8 @@ export class Game implements GameAPI {
     return this.save ? perkFx(this.save.player.perks, key) : 0;
   }
 
-  perkMods(): { sickness: number; medicine: number; staminaRegen: number } {
-    return { sickness: this.pk('sickness'), medicine: this.pk('medicine'), staminaRegen: this.pk('staminaRegen') };
+  perkMods(): { sickness: number; medicine: number; staminaRegen: number; cooking: number; spoil: number } {
+    return { sickness: this.pk('sickness'), medicine: this.pk('medicine'), staminaRegen: this.pk('staminaRegen'), cooking: this.pk('cooking'), spoil: this.pk('spoil') };
   }
 
   /** set by main: perk point earned (UI badge/refresh) */

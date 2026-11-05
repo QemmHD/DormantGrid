@@ -4,6 +4,11 @@
 import type { ConditionId, Difficulty, ItemStack, PlayerSave } from '@dg/shared';
 import { Rng } from '@dg/shared';
 import { getItem } from '../data/items';
+import { RECIPES } from '../data/recipes';
+
+/** foods made at a campfire or kitchen (Camp Cook perk) */
+const COOKED: ReadonlySet<string> = new Set(RECIPES.filter((r) => (r.station === 'campfire' || r.station === 'kitchen') && r.out.startsWith('food.')).map((r) => r.out));
+
 
 export const DIFFICULTY: Record<Difficulty, { drain: number; damageTaken: number; raid: number; loot: number }> = {
   chill: { drain: 0.6, damageTaken: 0.6, raid: 0.5, loot: 1.25 },
@@ -33,7 +38,7 @@ export interface SurvivalContext {
   exposed?: boolean;
   rng: Rng;
   /** perk modifiers */
-  perks?: { sickness?: number; medicine?: number; staminaRegen?: number };
+  perks?: { sickness?: number; medicine?: number; staminaRegen?: number; cooking?: number; spoil?: number };
 }
 
 export interface SurvivalEvents {
@@ -208,9 +213,11 @@ export function consume(p: PlayerSave, stack: ItemStack, hour: number, ctx: Surv
   const res: ConsumeResult = { ok: false, becameSick: false, spoiled: false, cured: [], message: '' };
   if (!def) return res;
   if (def.food) {
-    const fresh = freshness(stack, hour);
+    // Preserver: spoils slower (spoil -0.4 → lasts 1/0.6 as long)
+    const fresh = freshness(stack, hour, 1 / Math.max(0.2, 1 + (ctx.perks?.spoil ?? 0)));
     res.spoiled = fresh <= 0;
-    const q = res.spoiled ? 0.4 : 1;
+    // Camp Cook: cooked meals restore more
+    const q = (res.spoiled ? 0.4 : 1) * (COOKED.has(stack.id) ? 1 + (ctx.perks?.cooking ?? 0) : 1);
     p.hunger = clamp(p.hunger + def.food.hunger * q);
     p.thirst = clamp(p.thirst + def.food.thirst * q);
     let sickChance = (def.food.sickness ?? 0) + (res.spoiled ? 0.45 : 0);

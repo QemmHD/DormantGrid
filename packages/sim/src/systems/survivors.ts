@@ -80,6 +80,8 @@ export interface TownContext {
   permadeath?: boolean;
   /** mood bonus from restoration (e.g. +2 per restored district) */
   moodBonus?: number;
+  /** Green Thumb perk: crop growth bonus */
+  growthBonus?: number;
   /** clinic service open */
   clinic?: boolean;
   /** Grid water: irrigated plots */
@@ -688,7 +690,7 @@ function townFarming(world: WorldSave, stock: Inventory, hour: number, weather: 
         c.growth = 0;
         addStock(stock, 'mat.organic', 2, hour);
         ev.push({ type: 'spoiled', hour, text: `Frost took the ${def.name.toLowerCase()} bed.`, count: 0 });
-      } else tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation });
+      } else tickCrop(c, 1, { hour, weather, tended, irrigated: ctx.irrigation, growthBonus: ctx.growthBonus });
       if (actions > 0 && c.growth >= 1) {
         for (const y of harvest(c, rng)) {
           addStock(stock, y.item, y.count, hour);

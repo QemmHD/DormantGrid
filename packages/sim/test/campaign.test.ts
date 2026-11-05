@@ -193,3 +193,31 @@ describe('schema 2 → 3 migration', () => {
     expect(again.player.perkPoints).toBe(4);
   });
 });
+
+describe('perk effects in the sim', () => {
+  it('Camp Cook makes cooked food restore more; raw food is unchanged', async () => {
+    const { consume } = await import('../src/systems/survival');
+    const { Rng } = await import('@dg/shared');
+    const eat = (id: string, cooking: number) => {
+      const s = newGame(1, 'standard', { x: 0, z: 0 });
+      s.player.hunger = 10;
+      consume(s.player, { id, n: 1 }, 0, { difficulty: 'standard', rng: new Rng(1), perks: { cooking } });
+      return s.player.hunger;
+    };
+    expect(eat('food.cooked_meat', 0.2)).toBeGreaterThan(eat('food.cooked_meat', 0));
+    expect(eat('food.canned_beans', 0.2)).toBe(eat('food.canned_beans', 0));
+  });
+  it('Preserver keeps food fresh longer', async () => {
+    const { consume } = await import('../src/systems/survival');
+    const { Rng } = await import('@dg/shared');
+    const { getItem } = await import('../src/data/items');
+    const id = 'food.cooked_meat';
+    const hours = getItem(id)!.food!.spoilHours!;
+    const ate = (spoil: number) => {
+      const s = newGame(1, 'standard', { x: 0, z: 0 });
+      return consume(s.player, { id, n: 1, t: 0 }, hours * 1.2, { difficulty: 'standard', rng: new Rng(1), perks: { spoil } }).spoiled;
+    };
+    expect(ate(0)).toBe(true);
+    expect(ate(-0.4)).toBe(false);
+  });
+});
