@@ -5,56 +5,56 @@
   },
   "silhouettes": {
     "px": {
-      "raider": 155,
-      "scout": 196,
-      "brute": 328,
-      "sniper": 188,
-      "captain": 227,
-      "drone": 102,
-      "bot": 932,
-      "crawler": 92,
-      "heavy": 2035,
-      "hound": 139,
-      "boar": 363
+      "raider": 215,
+      "scout": 210,
+      "brute": 390,
+      "sniper": 180,
+      "captain": 231,
+      "drone": 106,
+      "bot": 987,
+      "crawler": 82,
+      "heavy": 1239,
+      "hound": 164,
+      "boar": 324
     },
     "size": {
-      "raider": "12×31",
-      "scout": "12×38",
-      "brute": "23×40",
-      "sniper": "17×31",
+      "raider": "16×31",
+      "scout": "10×39",
+      "brute": "23×41",
+      "sniper": "16×32",
       "captain": "14×73",
-      "drone": "35×64",
-      "bot": "30×39",
-      "crawler": "22×7",
-      "heavy": "53×51",
-      "hound": "24×15",
-      "boar": "28×19"
+      "drone": "28×64",
+      "bot": "34×39",
+      "crawler": "18×7",
+      "heavy": "40×51",
+      "hound": "22×15",
+      "boar": "23×19"
     },
     "worstPairs": [
       [
-        "scout",
-        "sniper",
-        0.548
-      ],
-      [
-        "raider",
-        "scout",
-        0.539
-      ],
-      [
-        "raider",
-        "sniper",
-        0.485
-      ],
-      [
         "bot",
         "heavy",
-        0.363
+        0.498
       ],
       [
-        "brute",
-        "bot",
-        0.315
+        "raider",
+        "sniper",
+        0.496
+      ],
+      [
+        "scout",
+        "sniper",
+        0.483
+      ],
+      [
+        "raider",
+        "scout",
+        0.476
+      ],
+      [
+        "hound",
+        "boar",
+        0.419
       ]
     ],
     "pass": true
@@ -66,7 +66,7 @@
       "pass": true
     },
     "scout": {
-      "behaviour": "max sideways offset on approach 4.5 m",
+      "behaviour": "max sideways offset on approach 4.6 m",
       "counter": "bear trap pinned it 5.4 s",
       "pass": true
     },
@@ -76,7 +76,7 @@
       "pass": true
     },
     "sniper": {
-      "behaviour": "median distance 13.0 m, fired 4",
+      "behaviour": "median distance 13.1 m, fired 4",
       "counter": "behind cover: fired 0 (blind 0)",
       "pass": true
     },
@@ -86,8 +86,8 @@
       "pass": true
     },
     "drone": {
-      "behaviour": "orbited 449°, cruise 3.4 m, dipped to 1.5 m to fire",
-      "counter": "melee at cruise height hit 0/74; while dipped 38/38",
+      "behaviour": "orbited 438°, cruise 3.4 m, dipped to 1.5 m to fire",
+      "counter": "melee at cruise height hit 0/76; while dipped 40/40",
       "pass": true
     },
     "bot": {

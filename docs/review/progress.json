@@ -43,9 +43,11 @@
       "✓ q.roof_over#3 survive: state",
       "✓ q.first_neighbors#0 build: state",
       "✓ q.first_neighbors#1 reach: state",
+      "✓ q.first_neighbors#2 population: state",
       "✓ q.first_node#0 collect: state",
       "✓ q.first_node#1 reach: state",
       "✓ q.first_node#2 reboot: state",
+      "✓ q.guild_contact#0 talk: UI: walked up to Odile, pressed E (talk flag false)",
       "✓ q.guild_contact#0 talk: UI: walked up to Odile, pressed E (talk flag true)",
       "✓ q.guild_contact#1 rep: state",
       "✓ q.water#0 reach: state",
@@ -62,6 +64,7 @@
       "✓ q.hospital#1 reboot: state"
     ],
     "uiSteps": [
+      "talk:guild_factor",
       "talk:guild_factor",
       "choice:toll",
       "talk:grid_core",
