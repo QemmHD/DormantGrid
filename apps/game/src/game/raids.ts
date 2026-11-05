@@ -144,6 +144,7 @@ export class Raids {
     finishRaid(st, w.hour);
     storeRaidState(w, st);
     w.flags['raidsSurvived'] = Number(w.flags['raidsSurvived'] ?? 0) + (out.won ? 1 : 0);
+    w.flags['raidsLost'] = Number(w.flags['raidsLost'] ?? 0) + (out.won ? 0 : 1);
     if (out.won) {
       g.toast(offscreen ? 'Raid at Haven — the guards held.' : 'Raid repelled. Haven holds.', 'warm');
       audio.play('levelUp', { vol: 0.7 });

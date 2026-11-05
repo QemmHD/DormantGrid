@@ -65,13 +65,13 @@ export const QUESTS: readonly QuestDef[] = [
       { text: 'Find the woman signalling from the Residential Rows.', hint: 'Follow the mirror flashes north.', obj: { type: 'reach', district: 'residential' } },
       { text: 'Bring Haven to three residents.', hint: 'Beds attract survivors. One bed, one neighbor.', obj: { type: 'population', count: 3 } },
     ],
-    reward: { items: [{ item: 'bp.workbench2', count: 1 }], rep: { hearth: 10 }, xp: 120 },
+    reward: { items: [{ item: 'bp.workbench2', count: 1 }, { item: 'misc.guild_chit', count: 30 }], rep: { hearth: 10 }, xp: 120 },
   },
   // ---- Act II: Reboot ----
   {
     id: 'q.first_node', act: 'reboot', title: 'Something Still Hums', requires: ['q.first_neighbors'], main: true,
     steps: [
-      { text: 'Get a Grid fuse.', hint: 'Odile sells them for Guild chits (sell her scrap). Custodian heavies carry them too.', obj: { type: 'collect', item: 'misc.grid_fuse', count: 1 } },
+      { text: 'Get a Grid fuse.', hint: 'Odile at Haven sells them for 24 Guild chits (finishing Neighbors pays 30; she also buys wiring, circuits and data tapes). Custodian heavies carry them too.', obj: { type: 'collect', item: 'misc.grid_fuse', count: 1 } },
       { text: 'Reach the control node in Old Downtown.', hint: 'The tall mast with the dead blue light.', obj: { type: 'reach', district: 'downtown' } },
       { text: 'Reboot the node and hold it until sync completes.', hint: 'Route power, then hold to sync. Then survive.', obj: { type: 'reboot', district: 'downtown', count: 1 } },
     ],

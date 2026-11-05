@@ -43,7 +43,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
   const W = () => g.save.world;
   const count = (id) => g.save.player.inventory.reduce((a, s) => a + (s && s.id === id ? s.n : 0), 0);
   const day0 = Math.floor(W().hour / 24);
-  let deaths = 0, wasDead = false;
+  let deaths = 0, wasDead = false, raidsSeen = 0;
   const stepSince = {};
   // ---- milestones from game state (never set by the bot) ----
   const watch = async () => {
@@ -55,6 +55,11 @@ const result = await page.evaluate(async (SIM_MIN) => {
     if (w.flags['talk:guild_factor']) mark('firstFactionContact', 'Odile (Meridian Guild)');
     if (Number(w.flags['raidsSurvived'] ?? 0) > 0) mark('firstRaidRepelled');
     if (Number(w.flags['harvested'] ?? 0) > 0) mark('firstHarvest', 'player harvest');
+    const crops = new Set(sim.CROPS.flatMap((c) => [c.produce, ...(c.yields ?? []).map((y) => y.item)]).filter(Boolean));
+    if (w.townStock.some((x) => x && crops.has(x.id))) mark('firstHarvest', 'survivors harvested into the town stock');
+    // raids: log every outcome
+    const rs = Number(w.flags['raidsSurvived'] ?? 0), rl = Number(w.flags['raidsLost'] ?? 0);
+    if (rs + rl !== raidsSeen) { note(`raid resolved: survived ${rs}, lost ${rl}`); raidsSeen = rs + rl; }
     if (Number(w.flags['nights'] ?? 0) > 0 || Math.floor((w.hour - 6) / 24) > day0) mark('firstNightSurvived', `nights slept ${w.flags['nights'] ?? 0}`);
     if ((w.quests['q.first_neighbors'] ?? 0) >= 3) mark('endOfAct1');
     const n = story.info().next;
@@ -273,7 +278,8 @@ const result = await page.evaluate(async (SIM_MIN) => {
     await frames(10);
     g.openScreen(null);
     // sell scrap/timber surplus for chits, then buy
-    for (const r of trader.rows()) if (r.kind === 'sell' && (r.item === 'mat.scrap' || r.item === 'mat.plastic' || r.item === 'mat.cloth') && r.have > 4) trader.trade(r, r.have - 4);
+    // sell what Odile actually pays for (wiring, glass, components, tapes…), keep food, meds and tools
+    for (const r of trader.rows()) if (r.kind === 'sell' && r.price > 0 && !/^(food|drink|med|tool|wpn|seed)\./.test(r.item)) trader.trade(r, r.have);
     if (buy) {
       const row = trader.rows().find((r) => r.kind === 'buy' && r.item === buy);
       if (row && trader.chits() >= row.price) { trader.trade(row, 1); note(`bought ${buy} for ${row.price} chits`); return true; }
@@ -342,6 +348,31 @@ const result = await page.evaluate(async (SIM_MIN) => {
     lastT = now();
     await watch();
     if (g.mode === 'dead') { await frames(40); continue; }
+    // a raid is announced hours ahead: a player goes home and defends (the town fights alone otherwise)
+    const pend = (() => { try { return JSON.parse(String(W().flags['raid.pending'] ?? 'null')); } catch { return null; } })();
+    if (pend && W().hour >= pend.warnHour - 0.5) {
+      note(`raid warning (${pend.faction}, ${pend.units.map((u) => `${u.count} ${u.enemy}`).join(', ')}): going home to defend`);
+      const s0 = g.layout.spawn;
+      await walkTo(s0.x, s0.z, 4, 600);
+      const t1 = now();
+      while (now() - t1 < 900 && now() < END && W().flags['raid.pending']) {
+        if (g.mode === 'dead') { await frames(40); continue; }
+        const en = (window.__enemies?.list ?? []).filter((e) => e.state !== 'dead' && Math.hypot(e.pos.x - s0.x, e.pos.z - s0.z) < 40).sort((a, b) => Math.hypot(a.pos.x - P().x, a.pos.z - P().z) - Math.hypot(b.pos.x - P().x, b.pos.z - P().z));
+        if (en.length && Math.hypot(en[0].pos.x - P().x, en[0].pos.z - P().z) > 2.5) await walkTo(en[0].pos.x, en[0].pos.z, 2.2, 8);
+        else if (!(await fight())) await frames(20);
+        await watch();
+      }
+      note(`raid over after ${(now() - t1).toFixed(0)} s at Haven`);
+      continue;
+    }
+    // badly hurt: go home, heal, rest
+    if (g.save.player.health < 35 && g.mode === 'play') {
+      note(`hurt (${g.save.player.health.toFixed(0)} hp): retreating to Haven`);
+      const i = g.save.player.inventory.findIndex((x) => x && x.id.startsWith('med.'));
+      if (i >= 0) g.useSlot(i);
+      await walkTo(g.layout.spawn.x, g.layout.spawn.z, 4, 300);
+      for (let k = 0; k < 40 && g.save.player.health < 60; k++) await frames(30);
+    }
     const info = story.info();
     const n = info.next;
     if (!n) { note('campaign: no next step'); break; }
