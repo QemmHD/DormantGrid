@@ -1,0 +1,78 @@
+{
+  "base": "localhost (wrangler dev / workerd)",
+  "results": [
+    {
+      "ok": true,
+      "msg": "game built into a temp dir"
+    },
+    {
+      "ok": true,
+      "msg": "wrangler dev (workerd) answers on http://127.0.0.1:8801"
+    },
+    {
+      "ok": true,
+      "msg": "A hosted room TPQNA"
+    },
+    {
+      "ok": true,
+      "msg": "B joined by code and sees A"
+    },
+    {
+      "ok": true,
+      "msg": "B sees A move (695.4 m)"
+    },
+    {
+      "ok": true,
+      "msg": "B's socket closed and B reconnected by itself (reconnects 1; non-online state observed: true)"
+    },
+    {
+      "ok": true,
+      "msg": "A still sees B after the reconnect (not in grace)"
+    },
+    {
+      "ok": true,
+      "msg": "silent drop detected (stale 1) and B resumed online"
+    },
+    {
+      "ok": true,
+      "msg": "third tab carries B's account (dgl_b_qsuf)"
+    },
+    {
+      "ok": true,
+      "msg": "duplicate join: new tab online (true), old tab replaced (status \"offline\")"
+    },
+    {
+      "ok": true,
+      "msg": "A sees one other player (B's account, now on the new tab), not two (1)"
+    },
+    {
+      "ok": true,
+      "msg": "A sees the replacement tab move (0.92 m)"
+    },
+    {
+      "ok": true,
+      "msg": "old client (0.0.1) refused: close 4006, {\"t\":\"error\",\"error\":\"update_required\",\"message\":\"A game update is required. Reload to update.\"}"
+    },
+    {
+      "ok": true,
+      "msg": "overlay shows state, RTT, snapshot age, desyncs: \"CO-OP | online · room TPQNA · 2 players | Round trip 25 ms | Snapshot age 404 ms | Desyncs 0 (rejected 0, out of order 0) | Reconnects 0 | COPY CO-OP REPORT\""
+    },
+    {
+      "ok": true,
+      "msg": "snapshots are fresh (228 ms old)"
+    },
+    {
+      "ok": true,
+      "msg": "no desyncs in this session (0)"
+    },
+    {
+      "ok": true,
+      "msg": "\"Copy co-op report\" gives JSON (status online, room TPQNA, rtt 20 ms)"
+    },
+    {
+      "ok": true,
+      "msg": "no page errors "
+    }
+  ],
+  "pass": true
+}

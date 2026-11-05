@@ -21,6 +21,8 @@ const PING_MS = 8000;
 const BACKOFF = [500, 1000, 2000, 4000, 8000, 15000];
 const RECONNECT_WINDOW_MS = 60_000;
 const NO_RECONNECT = new Set([4001, 4003, 4004, 4005, 4006, 4007]);
+/** ms without any server message before the link counts as dead (pongs arrive every PING_MS even when idle) */
+const STALE_MS = 20_000;
 const MAX_BUFFER = 30;
 const MAX_SEEN = 4096;
 
@@ -101,6 +103,8 @@ export class CoopClient {
   private stateSeq = 0;
   private lastStateAt = -1e9;
   private lastPingAt = 0;
+  /** last message from the server; silence longer than STALE_MS means a dead link */
+  private lastMsgAt = 0;
   private seen = new Set<string>();
   private seenOrder: string[] = [];
   private retries = 0;
@@ -108,6 +112,12 @@ export class CoopClient {
   private retryTimer: unknown = null;
   private wantOpen = false;
   rtt = 0;
+  /** diagnostics (co-op overlay + report) */
+  readonly diag = { lastSnapshotAt: 0, snapshots: 0, rejects: 0, outOfOrder: 0, replayed: 0, reconnects: 0, stale: 0, msgsIn: 0, msgsOut: 0, connectedAt: 0, lastError: '' };
+  /** a desync is the server rejecting one of our world actions, or a snapshot arriving out of order */
+  get desyncs(): number {
+    return this.diag.rejects + this.diag.outOfOrder;
+  }
 
   onWorldEvent: ((ev: WorldEvent, from: string, mine: boolean, seq: number) => void) | null = null;
   onReject: ((seq: number, reason: string) => void) | null = null;
@@ -142,6 +152,29 @@ export class CoopClient {
   get isHost(): boolean {
     return this.me !== null && this.me === this.host;
   }
+  /** ms since the last position snapshot from the room (Infinity before the first) */
+  snapshotAge(): number {
+    return this.diag.lastSnapshotAt ? this.now() - this.diag.lastSnapshotAt : Infinity;
+  }
+
+  /** everything a tester needs to paste into a bug report */
+  report(): Record<string, unknown> {
+    return {
+      at: new Date().toISOString(),
+      status: this.status,
+      room: this.code,
+      me: this.me,
+      host: this.host,
+      players: this.playerIds,
+      reconnecting: [...this.reconnecting],
+      rttMs: Math.round(this.rtt),
+      snapshotAgeMs: Number.isFinite(this.snapshotAge()) ? Math.round(this.snapshotAge()) : null,
+      desyncs: this.desyncs,
+      ...this.diag,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    };
+  }
+
   get playerIds(): string[] {
     return [...this.buffers.keys()];
   }
@@ -197,11 +230,14 @@ export class CoopClient {
     }
     this.ws = ws;
     ws.onopen = () => {
+      this.lastMsgAt = this.now();
       const creds = this.api.creds;
       if (!creds) return;
       this.send({ t: 'hello', user: creds.user, token: creds.token, clientVersion: GAME_VERSION, resume: this.resumeToken ?? undefined });
     };
     ws.onmessage = (ev) => {
+      this.diag.msgsIn++;
+      this.lastMsgAt = this.now();
       if (typeof ev.data === 'string') this.handleMessage(ev.data);
     };
     ws.onerror = () => {
@@ -296,6 +332,7 @@ export class CoopClient {
     if (s.length > MAX_WS_MSG_BYTES) return false;
     try {
       ws.send(s);
+      this.diag.msgsOut++;
       return true;
     } catch {
       return false;
@@ -332,6 +369,8 @@ export class CoopClient {
         this.disconnectedAt = 0;
         const players = Array.isArray(m.players) ? m.players.filter(isState) : [];
         for (const p of players) if (p.id !== this.me) this.push(p, now);
+        if (this.diag.connectedAt) this.diag.reconnects++;
+        this.diag.connectedAt = Date.now();
         this.setStatus('online');
         this.onWelcome?.({ you: m.you, host: this.host, hour: num(m.hour) ? m.hour : 0, seed: this.seed, players });
         this.onPlayers?.();
@@ -339,12 +378,16 @@ export class CoopClient {
       }
       case 'snapshot': {
         if (!Array.isArray(m.players)) return;
+        this.diag.lastSnapshotAt = now;
+        this.diag.snapshots++;
         for (const p of m.players) if (isState(p) && p.id !== this.me) this.push(p, now);
         return;
       }
       case 'join':
         if (isState(m.player) && m.player.id !== this.me) {
           this.reconnecting.delete(m.player.id);
+          // a (re)joining client may restart its state numbering: start this player's buffer over
+          this.buffers.delete(m.player.id);
           this.push(m.player, now);
           this.onPlayers?.();
         }
@@ -363,7 +406,10 @@ export class CoopClient {
       case 'event': {
         if (typeof m.from !== 'string' || !num(m.seq) || !isEvent(m.ev)) return;
         const key = `${m.from}:${m.seq}`;
-        if (this.seen.has(key)) return; // replay after resume: idempotent
+        if (this.seen.has(key)) {
+          this.diag.replayed++;
+          return; // replay after resume: idempotent
+        }
         this.seen.add(key);
         this.seenOrder.push(key);
         if (this.seenOrder.length > MAX_SEEN) this.seen.delete(this.seenOrder.shift()!);
@@ -371,6 +417,7 @@ export class CoopClient {
         return;
       }
       case 'reject':
+        this.diag.rejects++;
         if (num(m.seq)) this.onReject?.(m.seq, typeof m.reason === 'string' ? m.reason : 'rejected');
         return;
       case 'pong':
@@ -384,6 +431,7 @@ export class CoopClient {
         return;
       case 'error':
         if (typeof m.message === 'string') this.bus?.emit({ type: 'toast', kind: 'bad', text: m.message.slice(0, 160) });
+        if (typeof m.error === 'string') this.diag.lastError = m.error;
         return;
       default:
         return;
@@ -394,7 +442,10 @@ export class CoopClient {
     let b = this.buffers.get(s.id);
     if (!b) this.buffers.set(s.id, (b = []));
     const last = b[b.length - 1];
-    if (last && s.seq < last.s.seq) return; // out of order
+    if (last && s.seq < last.s.seq) {
+      this.diag.outOfOrder++;
+      return; // out of order
+    }
     b.push({ t, s: { ...s } });
     if (b.length > MAX_BUFFER) b.shift();
   }
@@ -462,6 +513,20 @@ export class CoopClient {
   /** Heartbeat; call each frame (cheap). */
   tick(now: number = this.now()): void {
     if (!this.ws || this.ws.readyState !== 1) return;
+    // a link that went silent (phone switched networks, Wi-Fi dropped) never fires onclose quickly:
+    // treat it as dropped and resume on a fresh socket
+    if (this.status === 'online' && this.lastMsgAt && now - this.lastMsgAt > STALE_MS) {
+      const ws = this.ws;
+      this.ws = null;
+      this.diag.stale++;
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      this.handleClose(1006, 'stale');
+      return;
+    }
     if (now - this.lastPingAt >= PING_MS) {
       this.lastPingAt = now;
       this.send({ t: 'ping', at: now });

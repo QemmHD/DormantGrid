@@ -83,6 +83,10 @@ async function start() {
   await game.boot((p) => bootProgress(0.3 + p * 0.6));
   const svc = new Services(game.bus);
   (window as unknown as { __svc: unknown }).__svc = svc;
+  // co-op diagnostics overlay (Settings → Co-op diagnostics)
+  const { CoopDiag } = await import('./ui/coopdiag');
+  const coopDiag = new CoopDiag(svc.coop, () => game.settings, (text) => game.toast(text, 'info'));
+  game.tickers.push((dt) => coopDiag.update(dt));
   const town = new Town(game);
   const enemies = new Enemies(game);
   const grid = new Grid(game, enemies);

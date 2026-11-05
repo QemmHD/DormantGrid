@@ -18,7 +18,6 @@ const grepCount = (pattern, dir, flags = 'rniE') => {
 };
 const session = J('docs/review/session.json');
 const c2 = J('docs/review/controls2.json');
-const content = J('docs/review/content.json');
 const restore = J('docs/review/restore.json');
 const smoke = J('docs/review/smoke.json');
 const progress = J('docs/review/progress.json');

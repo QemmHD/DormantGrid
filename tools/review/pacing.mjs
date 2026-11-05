@@ -67,7 +67,14 @@ const result = await page.evaluate(async (SIM_MIN) => {
       const b = document.querySelector('.screen.show button[data-perk].primary');
       if (b) { b.click(); note(`took perk ${b.getAttribute('data-perk')}`); }
       await frames(3);
-      await tap('Escape');
+      g.openScreen(null); // close like the X button (Escape with nothing open would pause)
+    }
+    // never leave the game paused or a screen/dialog open
+    if (g.paused || document.querySelector('.screen.show')) {
+      g.openScreen(null);
+      document.querySelectorAll('.screen.show .btn.ghost').forEach((x) => x.click());
+      g.setPaused(false);
+      g.input.uiBlocking = false;
     }
     // eat / drink when low
     const p = g.save.player;
@@ -264,8 +271,7 @@ const result = await page.evaluate(async (SIM_MIN) => {
     await frames(6);
     await tap('KeyE');
     await frames(10);
-    await tap('Escape');
-    if (g.openScreen) g.openScreen(null);
+    g.openScreen(null);
     // sell scrap/timber surplus for chits, then buy
     for (const r of trader.rows()) if (r.kind === 'sell' && (r.item === 'mat.scrap' || r.item === 'mat.plastic' || r.item === 'mat.cloth') && r.have > 4) trader.trade(r, r.have - 4);
     if (buy) {
@@ -323,8 +329,17 @@ const result = await page.evaluate(async (SIM_MIN) => {
   await walkTo(P().x + 5, P().z + 5, 1);
   g.input.lookX += 60;
   let guard = 0;
-  while (now() < END && guard++ < 400) {
-    if (guard % 10 === 0) note(`loop ${guard} t=${now()} next=${story.info().next?.id ?? '-'}#${story.info().next?.index ?? ''} mode=${g.mode}`);
+  let lastT = -1, frozen = 0;
+  while (now() < END && guard++ < 4000) {
+    await frames(10); // let the game's 1.5 s quest tick catch up; never spin in zero game time
+    if (guard % 50 === 0) note(`loop ${guard} t=${now()} next=${story.info().next?.id ?? '-'}#${story.info().next?.index ?? ''} mode=${g.mode}`);
+    if (now() === lastT) {
+      if (++frozen >= 3) {
+        note(`FROZEN diag ${JSON.stringify({ paused: g.paused, mode: g.mode, hitstop: g.hitstop, last: g.last, fake: performance.now(), screen: document.querySelector('.screen.show')?.className ?? null, uiBlocking: g.input.uiBlocking, err: g.perf?.report?.().slice?.(0, 600) })}`);
+        break;
+      }
+    } else frozen = 0;
+    lastT = now();
     await watch();
     if (g.mode === 'dead') { await frames(40); continue; }
     const info = story.info();

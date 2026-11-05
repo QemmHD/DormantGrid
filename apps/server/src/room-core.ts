@@ -350,6 +350,8 @@ export class RoomCore {
       this.players.set(key, player);
     }
     player.graceUntil = null;
+    // a fresh client (new tab, app restart) numbers its states from 1 again: start its sequence over
+    if (!resumed) player.last = { ...player.last, seq: 0 };
     player.resumeToken = toHex(randomBytes(16));
     att.user = display;
     att.state = player.last;

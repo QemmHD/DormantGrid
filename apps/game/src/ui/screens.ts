@@ -579,7 +579,7 @@ function settingsScreen(c: ScreenCtx): () => void {
       }
       return el;
     };
-    const toggle = (k: 'muted' | 'invertY' | 'leftHanded' | 'colorblind' | 'reduceShake' | 'subtitles' | 'showPerf' | 'fpsCap30' | 'hints') =>
+    const toggle = (k: 'muted' | 'invertY' | 'leftHanded' | 'colorblind' | 'reduceShake' | 'subtitles' | 'showPerf' | 'coopDiag' | 'fpsCap30' | 'hints') =>
       seg(s[k] ? 'on' : 'off', [['off', 'Off'], ['on', 'On']], (v) => set(k, v === 'on'));
     const slider = (k: 'master' | 'music' | 'sfx' | 'ambience' | 'sensitivity', min: number, max: number, step: number) => {
       const r = h('input', { type: 'range', min, max, step, value: s[k] }) as HTMLInputElement;
@@ -593,6 +593,7 @@ function settingsScreen(c: ScreenCtx): () => void {
       row(S.sQuality, seg(s.quality, [['auto', S.qAuto], ['low', S.qLow], ['medium', S.qMed], ['high', S.qHigh]], (v) => set('quality', v))),
       row(S.sBattery, toggle('fpsCap30')),
       row(S.sPerf, toggle('showPerf')),
+      row(S.sCoopDiag, toggle('coopDiag'), S.sCoopDiagHint),
       section(S.sAudio),
       row(S.sMaster, slider('master', 0, 1, 0.05)),
       row(S.sMusic, slider('music', 0, 1, 0.05)),

@@ -63,6 +63,8 @@ export interface Settings {
   reduceShake: boolean;
   subtitles: boolean;
   showPerf: boolean;
+  /** co-op diagnostics overlay (state, RTT, snapshot age, desyncs, copy report) */
+  coopDiag: boolean;
   fpsCap30: boolean; // battery saver / Low Power Mode
   dayMinutes: number; // real minutes per in-game day (default 24)
   hints: boolean;
@@ -83,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceShake: false,
   subtitles: true,
   showPerf: false,
+  coopDiag: false,
   fpsCap30: false,
   dayMinutes: 24,
   hints: true,

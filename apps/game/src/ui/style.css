@@ -617,3 +617,10 @@ html.touch .prompt { display: none; }
   .objective .orow .obtn:nth-child(2) { display: none; }
   .objective .ot { font-size: 9.5px; letter-spacing: 0.1em; }
 }
+/* round 5: co-op diagnostics overlay */
+.coop-diag { position: fixed; left: calc(var(--safe-l) + 12px); bottom: calc(var(--safe-b) + 96px); z-index: 30; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: rgba(13,16,20,0.82); border: 1px solid var(--line); font: 500 calc(11px * var(--text-scale))/1.35 var(--font, system-ui); color: var(--text-dim); pointer-events: auto; }
+.coop-diag b { display: block; color: var(--accent); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 2px; }
+.coop-diag[data-status="online"] b { color: var(--ok, #6fd36f); }
+.coop-diag[data-status="offline"] b, .coop-diag[data-status="error"] b { color: var(--danger); }
+.coop-diag .btn { margin-top: 6px; min-height: 44px; width: 100%; }
+.coop-diag .coop-report { display: none; max-height: 120px; overflow: auto; font-size: 10px; white-space: pre-wrap; user-select: text; -webkit-user-select: text; }
