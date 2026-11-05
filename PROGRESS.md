@@ -17,6 +17,33 @@
 
 To run it locally instead: `npm ci && npm run build && cd apps/game && npx vite preview` (offline), or `cd apps/server && npx wrangler dev` (game + API).
 
+### Round 6 (2026-11-05): reliable, fair first hour — done
+- **Done** (details: `docs/review/PLAN.md` "Round 6 status"):
+  - Reboot guidance: beacon, minimap, "Reboot node", explainer.
+  - Fair first two raids: sized to preparation, warning card, checklist, soft loss and recovery. Difficulty setting Relaxed / Standard / Hard.
+  - Deaths: Haven safe zone, gear kept, marked satchel, death recap with one tip.
+  - First crop in the tutorial: timer, harvest reminder, seasons card.
+  - Odile introduced early, with a free first trade.
+  - Act I: four residents.
+  - iPhone landscape layout fixes.
+  - Save schema v4.
+- **Checks:**
+  - accept 12/13 (P13 audio is out of scope).
+  - 6 new checks pass: `tools/review/{reboot,raid,death,farm,trader,layout}-check.mjs`.
+  - Pacing re-measured (`docs/review/pacing-r6.json`).
+- **Known issues:**
+  - The first harvest takes ~1.7 h of play.
+  - The first node defence vs drones is untested by a person.
+  - Act I for a person is estimated at ~20–32 min (unconfirmed).
+  - The `tests/smoke.mjs` salvage step can't finish in this container (~2 fps software GPU; round-5 build fails it identically).
+- **Morning test list:**
+  1. First 45 min on iPhone: is Odile met early? Is the crop planted?
+  2. When do you finish Act I?
+  3. Take a pipe into the first raid.
+  4. Reboot the first downtown node: are the drones too much?
+  5. Read the death recap.
+  6. Check the SE / 13 / 15 Pro Max layout: Jump vs. slot 4, clock, objective card.
+
 ### This round (2026-11-04, "Next round") — status
 1. **Save safety + worldgen v2 — done.**
    - Saves store `world.seed`, `world.genVersion` and deltas only (removed prop/piece ids, placed pieces, drops, crops, survivors, player). A test asserts no generated props or buildings are in a save.
@@ -173,6 +200,12 @@ No `phase-N` tags were created, because the Phase 0 acceptance line (deploys to 
 4. Optional: the title decision (DECISIONS #15).
 
 ## NEXT ACTIONS
+0. **Round 6 follow-ups (do first):**
+   - Device-test the morning list above.
+   - First harvest within ~60 min (quick tutorial crop or a tended-plot bonus).
+   - Soften the first node's drone wave if the device test says so.
+   - If Act I is under 25 min for a person, make the 4th resident the Residential woman, arriving at dawn.
+   - Bot: attack drones in their dip and boil water (review tooling).
 1. **Owner:** rotate the Cloudflare token that was pasted in chat (if not done) and re-save the secret. CI deploys on push to main and retries the live smoke 3× with rollback.
 2. **Owner:** an iPhone device report with **Settings → Show performance overlay → Copy device report** in downtown, on medium and on low. Decide whether medium keeps shadows and facade patterns.
 3. Wire GLB **buildings**: replace intact landmark buildings (lot + footprint match, scale ±25%) and drop back to procedural pieces on first damage.
