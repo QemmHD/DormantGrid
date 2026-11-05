@@ -687,3 +687,7 @@ html.touch .prompt { display: none; }
 @media (max-height: 500px) and (max-width: 700px) {
   #ui .objective { width: 186px; }
 }
+/* 568×320-class screens (1st-gen SE Safari tab): keep the round-5 narrow card left of the quick bar */
+@media (max-width: 600px) and (max-height: 340px) {
+  #ui .objective { width: 136px; top: calc(var(--safe-t) + 108px); max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 116px); }
+}
