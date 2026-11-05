@@ -66,3 +66,4 @@ Newest last. Each entry: what, why, and what would change it.
 - **Turrets** need rifle rounds from the Town Stockpile or the player's pack (the item text always said so); 16 m range, 16 damage, 1.1 s.
 - **Save schema 3:** v2 saves get retroactive credit once, for quest XP, quest rep, node XP, perk points and Custodian rep. A frozen v2 fixture (`packages/sim/test/fixtures/save-v2.ts`) must keep loading.
 - **Tutorial "Check your pack":** it works for humans (Tab, I and a touch tap all pass, measured in real-time Chromium). The review bot failed it because it opened the pack during step 3. The game now remembers a pack opened before its step (`flags.seenPack`) so nobody is asked twice.
+- **Bundle baseline** moved 0.54 → 0.61 MB gzip (budget 12 MB). Round 3 was already +4% (0.590 MB). Round 4 adds 16 KB of JS: the perks screen, story/ending flow, power module and sim campaign rules. Accepted on purpose (`UPDATE_BASELINE=1`). The 10% growth guard stays.
